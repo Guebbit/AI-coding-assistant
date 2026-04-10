@@ -1,0 +1,4 @@
+# data/
+#
+# Runtime data used by the agent (files to read/write, scratch space, etc.).
+# Contents are excluded from version control via .gitignore.

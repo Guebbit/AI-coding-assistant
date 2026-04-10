@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+
+# Playwright browser downloads
+/packages/tools/node_modules/
+
+# Data directory contents (keep the folder, ignore actual data files)
+data/*
+!data/.gitkeep

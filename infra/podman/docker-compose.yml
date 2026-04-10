@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Personal AI Agent System — Podman / Docker Compose
+#
+# Services:
+#   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
+#   open-webui    — Chat UI connected to Ollama
+#   model-loader  — One-shot container that pulls / builds Ollama models
+#
+# Usage:
+#   1. Copy infra/podman/.env.example → infra/podman/.env and fill in values
+#   2. From this directory: docker compose --env-file .env up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+      # Limit threads so the host stays responsive; tune to taste
+      - OLLAMA_NUM_THREADS=1
+      # Keep models loaded for 5 minutes after the last request
+      - OLLAMA_KEEP_ALIVE=5m
+    volumes:
+      # Shared model cache — host path so models survive container rebuilds.
+      # Treat as read-only from the host; writes happen inside the container.
+      - /home/${LINUX_USERNAME}/.ollama:/root/.ollama:z,rw
+      # Container-specific temp / cache
+      - ollama-data:/root/.ollama-data:rw,Z,rprivate
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nvidia-smi || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Resource limits — adjust to your hardware (machine has 32 GB RAM / 16 cores)
+    mem_limit: 16g
+    shm_size: 8g
+    cpus: "8.0"
+    devices:
+      - nvidia.com/gpu=all
+    security_opt:
+      - label=disable
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest
+    depends_on:
+      - ollama
+    ports:
+      # Access the UI at http://localhost:3000
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MAX_RESPONSE_TOKENS=1024
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-secret-key-change-me-in-production}
+      - REQUEST_TIMEOUT=120
+      - ENABLE_SIGNUP=${ENABLE_SIGNUP:-true}
+    volumes:
+      - open-webui-data:/app/backend/data:Z
+    restart: unless-stopped
+
+  model-loader:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      # Mount custom Modelfiles into the container
+      - ./modelfiles:/modelfiles:rw
+      # The startup script handles waiting + pulling + creating models
+      - ./create-models.sh:/create-models.sh:rw
+    entrypoint: ["bash", "-c"]
+    command: ["/create-models.sh"]
+    restart: on-failure
+
+volumes:
+  ollama-data:
+    driver: local
+  open-webui-data:
+    driver: local
