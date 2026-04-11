@@ -11,7 +11,7 @@ Before the scenarios, keep these runtime rules in mind:
 3. If the model asks for a tool that does not exist, the runtime does not crash:
    - it appends an error to context with the list of valid tools
    - it asks the model again on the next loop step
-4. If a tool exists but fails (for example boundary/safety rejection), the error is added to context and the loop continues.
+4. If a tool exists but fails (for example, boundary/safety rejection), the error is added to context and the loop continues.
 5. If the task cannot be completed with available tools, the run ends with either:
    - a limitation-aware answer (`action: "none"`), or
    - max-step fallback (`Max steps reached without a conclusive answer.`)

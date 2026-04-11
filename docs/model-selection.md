@@ -63,7 +63,7 @@ Rule of thumb:
 
 From `infra/docs/notes.md`, these limits matter in practice:
 
-- quantization reduces VRAM usage (quality/speed tradeoff)
+- quantization (reducing numeric precision of model weights) reduces VRAM usage (quality/speed tradeoff)
 - large prompts and outputs increase token/memory pressure
 - on constrained hardware, keep:
   - `OLLAMA_MAX_LOADED_MODELS=1`
