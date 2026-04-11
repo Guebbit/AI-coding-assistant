@@ -114,6 +114,8 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 - `MYSQL_USER` (default `root`)
 - `MYSQL_PASSWORD` (default empty)
 - `MYSQL_DATABASE` (default empty)
+- `QDRANT_URL` (default `http://localhost:6333`)
+- `QDRANT_COLLECTION` (example: `agent_memory`)
 
 ### Infra compose variables
 
@@ -125,6 +127,76 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 
 So yes: currently only compose-specific vars are defined there.
 App/API vars are separate and can be exported in your shell or managed with your preferred env workflow.
+
+## Add and use a vector database (Qdrant)
+
+If you want semantic memory (retrieve "similar" past context, not just latest entries), use Qdrant.
+
+### 1) Start Qdrant
+
+```bash
+docker run -d \
+  --name qdrant \
+  -p 6333:6333 \
+  -v $(pwd)/data/qdrant:/qdrant/storage \
+  qdrant/qdrant
+```
+
+Comment: this runs a local Qdrant node and persists vectors on disk.
+
+### 2) Install the Qdrant client in this project
+
+```bash
+npm install @qdrant/js-client-rest
+```
+
+Comment: this package lets the Node API upsert/search vectors in Qdrant.
+
+### 3) Export Qdrant configuration
+
+```bash
+export QDRANT_URL="http://localhost:6333"
+export QDRANT_COLLECTION="agent_memory"
+```
+
+Comment: keep connection details configurable instead of hardcoding them.
+
+### 4) Create embeddings for each memory entry
+
+Add an embedding function (local model or API) and transform each memory text into a fixed-size vector.
+
+Comment: Qdrant stores vectors, so raw text must be converted first.
+
+### 5) Replace `packages/memory/src/memory.ts` in-memory operations with Qdrant operations
+
+- `addMemory(entry)`:
+  - create embedding for `entry`
+  - upsert point `{ id, vector, payload: { text: entry, createdAt } }`
+- `getMemory(n)`:
+  - embed current task/context query
+  - run vector search (`limit: n`)
+  - return matched payload texts
+- `clearMemory()`:
+  - delete points from the configured collection (or recreate collection)
+
+Comment: keep the same function names to avoid changing the agent loop contract.
+
+### 6) Keep a small hybrid strategy
+
+Use both:
+- a short recent window (last few entries) for recency
+- semantic matches from Qdrant for relevance
+
+Comment: this avoids missing immediate context while still enabling long-term recall.
+
+### 7) Verify end-to-end behavior
+
+1. Start API: `npm run dev`
+2. Run one task that writes memory.
+3. Run a second task that should recall related prior context.
+4. Confirm the second answer improves with semantic retrieval.
+
+Comment: this validates that ingestion + retrieval are both wired correctly.
 
 ## Why compose has no database
 
