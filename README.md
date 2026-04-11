@@ -1,146 +1,156 @@
 # AI Coding Assistant
 
-> **Personal Agent System v1** — local-first, extensible, built with TypeScript + Node.js + Ollama.
+Personal local-first agent system built with TypeScript, Node.js, and Ollama.
 
----
+## What this project is (and is not)
+
+- **Open WebUI (`http://localhost:3000`)** is a generic chat interface for Ollama models.
+- **This project** is an API (`http://localhost:3001`) that runs an **agentic loop** with tools.
+
+If you only use Open WebUI, you are chatting with models directly.
+If you call this project's `/run` endpoint, the model can reason over multiple steps and use tools.
 
 ## Architecture
 
-```
+```text
 ai-assistant/
 ├── apps/
-│   └── api/          ← Express HTTP server (entry point)
+│   └── api/          ← Express API entry point (`POST /run`)
 ├── packages/
-│   ├── agent/        ← Core reasoning loop
-│   ├── llm/          ← Ollama wrapper
-│   ├── tools/        ← Tool implementations
-│   ├── memory/       ← In-memory context store
-│   └── events/       ← Synchronous event bus
+│   ├── agent/        ← Agent loop
+│   ├── events/       ← Event bus
+│   ├── llm/          ← Ollama wrapper ("lim" in your note likely means this)
+│   ├── memory/       ← In-memory short-term memory
+│   └── tools/        ← Tool interface + built-in tools
 ├── infra/
-│   └── podman/       ← Docker Compose stack (Ollama + Open WebUI)
-├── data/             ← Runtime data (gitignored)
-├── package.json
-└── tsconfig.json
+│   └── podman/       ← Ollama + Open WebUI compose stack
+└── data/             ← Runtime data (gitignored)
 ```
 
----
+## Quick start
 
-## Quick Start
-
-### Prerequisites
-
-- **Node.js ≥ 18**
-- **Ollama** running locally (or via Docker Compose below)
-
-### 1 — Install dependencies
+### 1) Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2 — Start Ollama (GPU-accelerated via Docker Compose)
+### 2) Start Ollama + Open WebUI
 
 ```bash
 cd infra/podman
-cp .env.example .env          # fill in LINUX_USERNAME and WEBUI_SECRET_KEY
+cp .env.example .env
+# fill LINUX_USERNAME and WEBUI_SECRET_KEY
+
 docker compose --env-file .env up -d
 ```
 
-Open WebUI is then available at **http://localhost:3000**.
+- Open WebUI: `http://localhost:3000`
+- Ollama API: `http://localhost:11434`
 
-### 3 — Run the API in development mode
+### 3) Start this project API
 
 ```bash
+cd /path/to/ai-assistant
 npm run dev
 ```
 
-The API starts on **http://localhost:3001** (or `PORT` env var).
+Default API URL: `http://localhost:3001`
 
-> **Note:** Port 3000 is used by Open WebUI when running the Docker Compose stack.  
-> The API defaults to **3001** to avoid conflict.
-
-### 4 — Send a task
+### 4) Run a task through the agent
 
 ```bash
 curl -X POST http://localhost:3001/run \
   -H "Content-Type: application/json" \
-  -d '{"task": "List the files in the current directory"}'
+  -d '{"task":"List files in the current directory"}'
 ```
 
----
+## How tools are used
 
-## Environment Variables
+Tools are configured in `apps/api/src/index.ts` when creating the `Agent`.
 
-| Variable           | Default                     | Description                          |
-| ------------------ | --------------------------- | ------------------------------------ |
-| `OLLAMA_BASE_URL`  | `http://localhost:11434`    | Ollama API endpoint                  |
-| `OLLAMA_MODEL`     | `llama3`                    | Default model to use                 |
-| `PORT`             | `3001`                      | HTTP port for the API (3000 is Open WebUI) |
-| `MYSQL_HOST`       | `localhost`                 | MySQL host (for `mysql_query` tool)  |
-| `MYSQL_PORT`       | `3306`                      | MySQL port                           |
-| `MYSQL_USER`       | `root`                      | MySQL user                           |
-| `MYSQL_PASSWORD`   | *(empty)*                   | MySQL password                       |
-| `MYSQL_DATABASE`   | *(empty)*                   | MySQL database name                  |
+Current enabled tools:
 
----
+- `read_file`
+- `shell`
+- `mysql_query`
 
-## Available Tools
+`browser_fetch` exists but is not enabled by default (requires Playwright browser install).
 
-| Tool name       | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| `read_file`     | Read a file from disk (restricted to project root)       |
-| `shell`         | Run a whitelisted shell command with a timeout           |
-| `mysql_query`   | Execute a read-only `SELECT` query against MySQL         |
-| `browser_fetch` | Fetch title + visible text from a URL via Playwright     |
+To enable it:
 
-> **Note:** `browser_fetch` requires Playwright browsers.  
-> Run `npx playwright install chromium` once before enabling it.
+1. Install Chromium for Playwright:
+   ```bash
+   npx playwright install chromium
+   ```
+2. Add `browserTool` to the `Agent([...])` tool list in `apps/api/src/index.ts`.
 
----
+## How the agentic loop works
+
+Implemented in `packages/agent/src/agent.ts`.
+
+For each task:
+
+1. Build prompt (task + context + memory + tool descriptions)
+2. Ask LLM for strict JSON output: `thought`, `action`, `input`
+3. If `action !== "none"`, execute selected tool
+4. Append tool result to context
+5. Repeat up to max steps (currently 5)
+6. Stop when `action: "none"` or max steps reached
+
+Lifecycle events are emitted through `packages/events` and logged by the API.
+
+## Environment variables
+
+### Application/API variables
+
+Used by Node app (shell environment, `.env` loader, container env, etc.):
+
+- `OLLAMA_BASE_URL` (default `http://localhost:11434`)
+- `OLLAMA_MODEL` (default `llama3`)
+- `PORT` (default `3001`)
+- `MYSQL_HOST` (default `localhost`)
+- `MYSQL_PORT` (default `3306`)
+- `MYSQL_USER` (default `root`)
+- `MYSQL_PASSWORD` (default empty)
+- `MYSQL_DATABASE` (default empty)
+
+### Infra compose variables
+
+`infra/podman/.env` is only for the compose stack (Ollama/Open WebUI/model-loader), mainly:
+
+- `LINUX_USERNAME`
+- `WEBUI_SECRET_KEY`
+- `ENABLE_SIGNUP`
+
+So yes: currently only compose-specific vars are defined there.
+App/API vars are separate and can be exported in your shell or managed with your preferred env workflow.
+
+## Why compose has no database
+
+Correct: `infra/podman/docker-compose.yml` does **not** include MySQL.
+
+Reason: MySQL is optional and only needed if you want `mysql_query` to hit a real DB.
+You can either:
+
+- point to an external/local MySQL instance via `MYSQL_*`, or
+- add a MySQL service to compose if you want everything in one stack.
 
 ## Development
 
 ```bash
-npm run typecheck   # TypeScript type-check without emitting files
-npm run build       # Compile to dist/
-npm run dev         # Run the API via tsx (no compilation step)
+npm run typecheck
+npm run build
+npm run dev
 ```
 
----
+## Package docs
 
-## Build Your Own Tool
+See:
 
-Every capability is a `Tool` object:
-
-```typescript
-import type { Tool } from "./packages/tools/src/types";
-
-export const myTool: Tool = {
-  name: "my_tool",
-  description: "What it does — seen by the LLM when choosing actions.",
-  async execute({ someParam }) {
-    // ... do work
-    return { result: "..." };
-  },
-};
-```
-
-Register it in `apps/api/src/index.ts`:
-
-```typescript
-const agent = new Agent([readFileTool, shellTool, myTool]);
-```
-
----
-
-## Phases Implemented
-
-| Phase | Description                          | Status   |
-| ----- | ------------------------------------ | -------- |
-| 0     | Principles & project structure       | ✅        |
-| 1     | Minimal working core (LLM + API)     | ✅        |
-| 2     | Shell, MySQL, Browser tools + Memory | ✅        |
-| 3     | Hybrid model strategy (stub)         | 🔜 TODO  |
-| 4     | Event-driven system                  | ✅        |
-| 5     | Podman / Docker Compose integration  | ✅        |
-| 6     | Observability (console logging)      | ✅        |
+- `packages/README.md`
+- `packages/agent/README.md`
+- `packages/events/README.md`
+- `packages/llm/README.md`
+- `packages/memory/README.md`
+- `packages/tools/README.md`
