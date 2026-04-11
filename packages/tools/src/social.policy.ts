@@ -37,15 +37,18 @@ export function assertAllowedHost(
 }
 
 function sanitizeText(value: string): string {
+  // Broad RFC-style email detector for redaction (not strict validation).
   const emailPattern =
     /\b[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+\b/g;
+  // Captures phone-like sequences, then digit-length checks limit false positives.
   const phoneCandidatePattern = /(?:\+?\d[\d\s().-]{8,}\d)/g;
 
   return value
     .replace(emailPattern, "[REDACTED_EMAIL]")
     .replace(phoneCandidatePattern, (candidate) => {
       const digitCount = candidate.replace(/\D/g, "").length;
-      return digitCount >= 10 && digitCount <= 15
+      const hasPhoneSeparator = /[\s().-]/.test(candidate);
+      return hasPhoneSeparator && digitCount >= 10 && digitCount <= 15
         ? "[REDACTED_PHONE]"
         : candidate;
     });

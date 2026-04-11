@@ -94,8 +94,8 @@ export async function exchangeCodeForToken(
   const response = await fetch(policy.tokenUrl, {
     method: "POST",
     headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
     },
     body: body.toString(),
   });
@@ -142,4 +142,3 @@ export async function exchangeCodeForToken(
     accountId,
   };
 }
-

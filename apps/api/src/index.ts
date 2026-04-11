@@ -42,6 +42,7 @@ const agent = new Agent([
 const app = express();
 app.use(express.json());
 
+// OAuth endpoints are externally reachable and can be abuse targets; keep a tight cap.
 const oauthRateLimiter = rateLimit({
   windowMs: 60_000,
   max: 20,

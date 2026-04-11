@@ -38,8 +38,8 @@ async function providerGet(
   const response = await fetch(url, {
     method: "GET",
     headers: {
-      authorization: `Bearer ${token}`,
-      accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
       ...(provider === "linkedin" ? { "x-restli-protocol-version": "2.0.0" } : {}),
       ...(provider === "github" ? { "user-agent": "AI-coding-assistant" } : {}),
     },
@@ -111,4 +111,3 @@ export const githubProfileLookupTool: Tool = {
     };
   },
 };
-
