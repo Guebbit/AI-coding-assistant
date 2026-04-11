@@ -8,8 +8,6 @@
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 
-const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? "llama3";
-
 export interface GenerateOptions {
   /** Ollama model name (default: llama3 or OLLAMA_MODEL env var) */
   model?: string;
@@ -48,7 +46,7 @@ export async function generateWithMetadata(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<GenerateResult> {
-  const { model = DEFAULT_MODEL, stream = false } = options;
+  const { model = process.env.OLLAMA_MODEL ?? "llama3", stream = false } = options;
 
   const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
     method: "POST",
