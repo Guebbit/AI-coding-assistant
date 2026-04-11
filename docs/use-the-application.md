@@ -20,6 +20,16 @@ docker compose --env-file .env up -d
 - Open WebUI: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
 
+## 2.5) Start Qdrant (semantic memory)
+
+```bash
+docker run -d \
+  --name qdrant \
+  -p 6333:6333 \
+  -v $(pwd)/data/qdrant:/qdrant/storage \
+  qdrant/qdrant
+```
+
 ## 3) Start the API
 
 ```bash
@@ -45,17 +55,15 @@ curl -X POST http://localhost:3001/run \
 - Tool executes (if `action` is not `none`)
 - Loop repeats until done or max 5 steps
 
-## 6) Enable optional browser tool
+## 6) Browser tool is enabled by default
 
-```bash
-npx playwright install chromium
-```
-
-Then add `browserTool` in `apps/api/src/index.ts` when creating `new Agent([...])`.
+`browser_fetch` is already wired in `apps/api/src/index.ts`.
+Chromium is installed automatically on `npm install` via the project `postinstall` script.
 
 ## 7) Common troubleshooting
 
 - Ollama not reachable: check `OLLAMA_BASE_URL` (default `http://localhost:11434`)
+- Qdrant not reachable: check `QDRANT_URL` (default `http://localhost:6333`)
 - Empty/invalid request: ensure body includes non-empty `"task"`
 - MySQL tool fails: verify `MYSQL_*` env vars and DB availability
 

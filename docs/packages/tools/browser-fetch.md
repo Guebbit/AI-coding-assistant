@@ -23,13 +23,10 @@ Fetch title and visible page text using Playwright (Chromium, headless).
 - URL must be valid
 - Protocol must be `http` or `https`
 
-## Prerequisite
+## Runtime setup
 
-```bash
-npx playwright install chromium
-```
-
-Then enable `browserTool` in `apps/api/src/index.ts`.
+- `browserTool` is enabled by default in `apps/api/src/index.ts`
+- Chromium is installed automatically during `npm install` (`postinstall`)
 
 ## Good test prompts
 

@@ -74,16 +74,10 @@ Current enabled tools:
 - `read_file`
 - `shell`
 - `mysql_query`
+- `browser_fetch`
 
-`browser_fetch` exists but is not enabled by default (requires Playwright browser install).
-
-To enable it:
-
-1. Install Chromium for Playwright:
-   ```bash
-   npx playwright install chromium
-   ```
-2. Add `browserTool` to the `Agent([...])` tool list in `apps/api/src/index.ts`.
+`browser_fetch` is enabled by default.
+Chromium is installed automatically during `npm install` via `postinstall`.
 
 ## How the agentic loop works
 
@@ -108,6 +102,7 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 
 - `OLLAMA_BASE_URL` (default `http://localhost:11434`)
 - `OLLAMA_MODEL` (default `llama3`)
+- `OLLAMA_EMBED_MODEL` (default `nomic-embed-text`)
 - `PORT` (default `3001`)
 - `MYSQL_HOST` (default `localhost`)
 - `MYSQL_PORT` (default `3306`)
@@ -128,75 +123,31 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 So yes: currently only compose-specific vars are defined there.
 App/API vars are separate and can be exported in your shell or managed with your preferred env workflow.
 
-## Add and use a vector database (Qdrant)
+## Memory now uses Qdrant by default
 
-If you want semantic memory (retrieve "similar" past context, not just latest entries), use Qdrant.
+The memory package now uses a hybrid approach:
 
-### 1) Start Qdrant
+- recent in-process ring buffer (up to 20 entries)
+- semantic recall from Qdrant using Ollama embeddings
 
-```bash
-docker run -d \
-  --name qdrant \
-  -p 6333:6333 \
-  -v $(pwd)/data/qdrant:/qdrant/storage \
-  qdrant/qdrant
-```
+Runtime requirements:
 
-Comment: this runs a local Qdrant node and persists vectors on disk.
+1. Start Qdrant:
+   ```bash
+   docker run -d \
+     --name qdrant \
+     -p 6333:6333 \
+     -v $(pwd)/data/qdrant:/qdrant/storage \
+     qdrant/qdrant
+   ```
+2. Configure env vars (optional if defaults are fine):
+   ```bash
+   export QDRANT_URL="http://localhost:6333"
+   export QDRANT_COLLECTION="agent_memory"
+   export OLLAMA_EMBED_MODEL="nomic-embed-text"
+   ```
 
-### 2) Install the Qdrant client in this project
-
-```bash
-npm install @qdrant/js-client-rest
-```
-
-Comment: this package lets the Node API upsert/search vectors in Qdrant.
-
-### 3) Export Qdrant configuration
-
-```bash
-export QDRANT_URL="http://localhost:6333"
-export QDRANT_COLLECTION="agent_memory"
-```
-
-Comment: keep connection details configurable instead of hardcoding them.
-
-### 4) Create embeddings for each memory entry
-
-Add an embedding function (local model or API) and transform each memory text into a fixed-size vector.
-
-Comment: Qdrant stores vectors, so raw text must be converted first.
-
-### 5) Replace `packages/memory/src/memory.ts` in-memory operations with Qdrant operations
-
-- `addMemory(entry)`:
-  - create embedding for `entry`
-  - upsert point `{ id, vector, payload: { text: entry, createdAt } }`
-- `getMemory(n)`:
-  - embed current task/context query
-  - run vector search (`limit: n`)
-  - return matched payload texts
-- `clearMemory()`:
-  - delete points from the configured collection (or recreate collection)
-
-Comment: keep the same function names to avoid changing the agent loop contract.
-
-### 6) Keep a small hybrid strategy
-
-Use both:
-- a short recent window (last few entries) for recency
-- semantic matches from Qdrant for relevance
-
-Comment: this avoids missing immediate context while still enabling long-term recall.
-
-### 7) Verify end-to-end behavior
-
-1. Start API: `npm run dev`
-2. Run one task that writes memory.
-3. Run a second task that should recall related prior context.
-4. Confirm the second answer improves with semantic retrieval.
-
-Comment: this validates that ingestion + retrieval are both wired correctly.
+If Qdrant is unavailable, the app continues with local in-memory recent memory only.
 
 ## Why compose has no database
 
