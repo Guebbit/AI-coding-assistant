@@ -111,6 +111,9 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 - `MYSQL_DATABASE` (default empty)
 - `QDRANT_URL` (default `http://localhost:6333`)
 - `QDRANT_COLLECTION` (example: `agent_memory`)
+- `LOG_ENABLED` (`true`/`false`, default `true`)
+- `LOG_LEVEL` (default `info`, for example: `error`, `warn`, `info`, `debug`)
+- `LOG_PRETTY` (`true`/`false`, default `false`; when `false`, logs are JSON)
 
 ### Infra compose variables
 

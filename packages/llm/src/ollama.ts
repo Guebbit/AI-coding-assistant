@@ -17,6 +17,19 @@ export interface GenerateOptions {
   stream?: boolean;
 }
 
+export interface GenerateResult {
+  response: string;
+  model: string;
+  done: boolean;
+  doneReason?: string;
+  totalDurationNs?: number;
+  loadDurationNs?: number;
+  promptEvalCount?: number;
+  promptEvalDurationNs?: number;
+  evalCount?: number;
+  evalDurationNs?: number;
+}
+
 /**
  * Send a prompt to Ollama and return the full text response.
  *
@@ -27,6 +40,14 @@ export async function generate(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<string> {
+  const result = await generateWithMetadata(prompt, options);
+  return result.response;
+}
+
+export async function generateWithMetadata(
+  prompt: string,
+  options: GenerateOptions = {}
+): Promise<GenerateResult> {
   const { model = DEFAULT_MODEL, stream = false } = options;
 
   const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
@@ -42,6 +63,29 @@ export async function generate(
     );
   }
 
-  const data = (await res.json()) as { response: string };
-  return data.response;
+  const data = (await res.json()) as {
+    response: string;
+    model?: string;
+    done?: boolean;
+    done_reason?: string;
+    total_duration?: number;
+    load_duration?: number;
+    prompt_eval_count?: number;
+    prompt_eval_duration?: number;
+    eval_count?: number;
+    eval_duration?: number;
+  };
+
+  return {
+    response: data.response,
+    model: data.model ?? model,
+    done: data.done ?? true,
+    doneReason: data.done_reason,
+    totalDurationNs: data.total_duration,
+    loadDurationNs: data.load_duration,
+    promptEvalCount: data.prompt_eval_count,
+    promptEvalDurationNs: data.prompt_eval_duration,
+    evalCount: data.eval_count,
+    evalDurationNs: data.eval_duration,
+  };
 }

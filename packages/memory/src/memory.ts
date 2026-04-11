@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { QdrantClient } from "@qdrant/js-client-rest";
+import { getLogger } from "../../logger/src/logger";
 
 /**
  * Hybrid short-term memory:
@@ -12,6 +13,7 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
 const QDRANT_URL = process.env.QDRANT_URL ?? "http://localhost:6333";
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? "agent_memory";
+const log = getLogger("memory");
 
 const recentMemory: string[] = [];
 const qdrant = new QdrantClient({ url: QDRANT_URL });
@@ -81,9 +83,14 @@ async function ensureCollection(size: number): Promise<void> {
 
 /** Append a new entry to local memory and Qdrant (when available). */
 export async function addMemory(entry: string): Promise<void> {
+  const startedAt = Date.now();
   addToRecentMemory(entry);
 
   if (!qdrantEnabled) {
+    log.info("memory_added_local_only", {
+      recentCount: recentMemory.length,
+      durationMs: Date.now() - startedAt,
+    });
     return;
   }
 
@@ -104,10 +111,18 @@ export async function addMemory(entry: string): Promise<void> {
     });
   } catch (err) {
     qdrantEnabled = false;
-    console.warn(
-      `Qdrant memory disabled for this process (falling back to in-memory only): ${String(err)}`
-    );
+    log.warn("memory_qdrant_disabled", {
+      error: String(err),
+      message: "Falling back to in-memory only",
+    });
+    return;
   }
+
+  log.info("memory_added", {
+    recentCount: recentMemory.length,
+    vectorSize,
+    durationMs: Date.now() - startedAt,
+  });
 }
 
 /** Return recent + semantic memory for a task query (default cap: 10 entries). */
@@ -115,10 +130,17 @@ export async function getMemory(
   query = "",
   n = DEFAULT_RETURN_COUNT
 ): Promise<string[]> {
+  const startedAt = Date.now();
   const cappedN = Math.max(1, n);
   const recent = recentMemory.slice(-cappedN);
 
   if (!qdrantEnabled || query.trim() === "") {
+    log.info("memory_read_recent_only", {
+      queryLength: query.length,
+      returnedCount: recent.length,
+      qdrantEnabled,
+      durationMs: Date.now() - startedAt,
+    });
     return recent;
   }
 
@@ -147,18 +169,33 @@ export async function getMemory(
         seen.add(item);
       }
     }
-    return merged.slice(0, cappedN);
+    const output = merged.slice(0, cappedN);
+    log.info("memory_read_hybrid", {
+      queryLength: query.length,
+      recentCount: recent.length,
+      semanticCount: semantic.length,
+      returnedCount: output.length,
+      durationMs: Date.now() - startedAt,
+    });
+    return output;
   } catch (err) {
-    console.warn(`Qdrant memory search failed, using recent memory only: ${String(err)}`);
+    log.warn("memory_qdrant_search_failed", {
+      error: String(err),
+      queryLength: query.length,
+      returnedCount: recent.length,
+      durationMs: Date.now() - startedAt,
+    });
     return recent;
   }
 }
 
 /** Wipe local entries and clear Qdrant memory collection when available. */
 export async function clearMemory(): Promise<void> {
+  const startedAt = Date.now();
   recentMemory.length = 0;
 
   if (!qdrantEnabled) {
+    log.info("memory_cleared_recent_only", { durationMs: Date.now() - startedAt });
     return;
   }
 
@@ -166,6 +203,12 @@ export async function clearMemory(): Promise<void> {
     await qdrant.deleteCollection(QDRANT_COLLECTION);
     vectorSize = null;
   } catch (err) {
-    console.warn(`Failed to clear Qdrant memory collection: ${String(err)}`);
+    log.warn("memory_clear_failed", {
+      error: String(err),
+      durationMs: Date.now() - startedAt,
+    });
+    return;
   }
+
+  log.info("memory_cleared", { durationMs: Date.now() - startedAt });
 }

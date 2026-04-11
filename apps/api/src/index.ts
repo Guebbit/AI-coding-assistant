@@ -7,10 +7,13 @@ import {
   browserTool,
 } from "../../../packages/tools/src/index";
 import { on } from "../../../packages/events/src/bus";
+import { getLogger } from "../../../packages/logger/src/logger";
+
+const log = getLogger("api");
 
 // ── Observability: log all agent events to stdout ──────────────────────────
 on("*", (event) => {
-  console.log(`[event] ${event.type}`, JSON.stringify(event.payload));
+  log.info("event_emitted", { eventType: event.type, payload: event.payload });
 });
 
 // ── Initialise agent with available tools ──────────────────────────────────
@@ -38,10 +41,12 @@ app.post("/run", async (req, res) => {
   }
 
   try {
+    log.info("run_request_received", { task });
     const result = await agent.run(task.trim());
+    log.info("run_request_completed", { taskLength: task.length });
     res.json({ result });
   } catch (err) {
-    console.error("Agent error:", err);
+    log.error("run_request_failed", { error: String(err) });
     res.status(500).json({ error: String(err) });
   }
 });
@@ -60,9 +65,8 @@ app.get("/health", (_req, res) => {
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`);
-  console.log(
-    "Ollama URL:",
-    process.env.OLLAMA_BASE_URL ?? "http://localhost:11434"
-  );
+  log.info("api_started", { url: `http://localhost:${PORT}` });
+  log.info("ollama_configured", {
+    ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
+  });
 });

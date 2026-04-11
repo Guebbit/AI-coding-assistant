@@ -1,7 +1,8 @@
-import { generate } from "../../llm/src/ollama";
+import { generateWithMetadata } from "../../llm/src/ollama";
 import { addMemory, getMemory } from "../../memory/src/memory";
 import { emit } from "../../events/src/bus";
 import type { Tool } from "../../tools/src/types";
+import { getLogger } from "../../logger/src/logger";
 
 interface AgentStep {
   thought: string;
@@ -11,6 +12,7 @@ interface AgentStep {
 
 /** Maximum number of reasoning steps before giving up. */
 const MAX_STEPS = 5;
+const log = getLogger("agent");
 
 /**
  * Core agent loop.
@@ -30,29 +32,59 @@ export class Agent {
   constructor(private readonly tools: Tool[]) {}
 
   async run(task: string): Promise<string> {
+    const runStartedAt = Date.now();
     let context = "";
+    log.info("agent_run_started", {
+      task,
+      taskLength: task.length,
+      maxSteps: MAX_STEPS,
+      toolCount: this.tools.length,
+    });
+
+    const memoryStartedAt = Date.now();
     const memory = await getMemory(task);
+    log.info("agent_memory_loaded", {
+      memoryCount: memory.length,
+      durationMs: Date.now() - memoryStartedAt,
+    });
 
     emit({ type: "agent:start", payload: { task } });
 
     for (let step = 0; step < MAX_STEPS; step++) {
+      const stepStartedAt = Date.now();
       const prompt = this.buildPrompt(task, context, memory);
-
-      console.log({
+      log.info("agent_step_started", {
         step,
-        prompt: prompt.length > 300 ? prompt.slice(0, 300) + "…" : prompt,
+        contextLength: context.length,
+        promptLength: prompt.length,
+        promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + "…" : prompt,
       });
 
       // ── Call the LLM ────────────────────────────────────────────────────────
       let response: string;
       try {
-        response = await generate(prompt);
+        const llmStartedAt = Date.now();
+        const llmResult = await generateWithMetadata(prompt);
+        response = llmResult.response;
+        log.info("agent_llm_response_received", {
+          step,
+          responseLength: response.length,
+          durationMs: Date.now() - llmStartedAt,
+          model: llmResult.model,
+          done: llmResult.done,
+          doneReason: llmResult.doneReason,
+          totalDurationNs: llmResult.totalDurationNs,
+          loadDurationNs: llmResult.loadDurationNs,
+          promptEvalCount: llmResult.promptEvalCount,
+          promptEvalDurationNs: llmResult.promptEvalDurationNs,
+          evalCount: llmResult.evalCount,
+          evalDurationNs: llmResult.evalDurationNs,
+        });
       } catch (err) {
+        log.error("agent_llm_call_failed", { step, error: String(err) });
         emit({ type: "agent:error", payload: { step, error: String(err) } });
         throw err;
       }
-
-      console.log({ step, response });
 
       // ── Parse the LLM response ──────────────────────────────────────────────
       let parsed: AgentStep;
@@ -65,14 +97,29 @@ export class Agent {
         context +=
           "\nYour previous response was not valid JSON. " +
           "Please respond ONLY with a single valid JSON object.";
+        log.warn("agent_invalid_json_response", {
+          step,
+          responseLength: response.length,
+          contextLength: context.length,
+        });
         continue;
       }
 
+      log.info("agent_step_parsed", {
+        step,
+        action: parsed.action,
+        thoughtLength: parsed.thought.length,
+      });
       emit({ type: "agent:step", payload: { step, parsed } });
 
       // ── Done — no tool action needed ────────────────────────────────────────
       if (parsed.action === "none") {
         await addMemory(`Task: ${task} → ${parsed.thought}`);
+        log.info("agent_run_completed", {
+          step,
+          durationMs: Date.now() - runStartedAt,
+          finalThoughtLength: parsed.thought.length,
+        });
         emit({ type: "agent:done", payload: { thought: parsed.thought } });
         return parsed.thought;
       }
@@ -80,6 +127,11 @@ export class Agent {
       // ── Find and execute the requested tool ─────────────────────────────────
       const tool = this.tools.find((t) => t.name === parsed.action);
       if (!tool) {
+        log.warn("agent_unknown_tool", {
+          step,
+          action: parsed.action,
+          availableTools: this.tools.map((t) => t.name),
+        });
         context +=
           `\nTool "${parsed.action}" does not exist. ` +
           `Available tools: ${this.tools.map((t) => t.name).join(", ")}.`;
@@ -88,9 +140,27 @@ export class Agent {
 
       let result: unknown;
       try {
+        const toolStartedAt = Date.now();
         result = await tool.execute(parsed.input);
+        let resultSize = -1;
+        try {
+          resultSize = JSON.stringify(result).length;
+        } catch {
+          resultSize = -1;
+        }
+        log.info("agent_tool_executed", {
+          step,
+          tool: parsed.action,
+          durationMs: Date.now() - toolStartedAt,
+          resultSize,
+        });
       } catch (err) {
         context += `\nTool "${parsed.action}" failed: ${String(err)}`;
+        log.warn("agent_tool_failed", {
+          step,
+          tool: parsed.action,
+          error: String(err),
+        });
         emit({
           type: "tool:error",
           payload: { tool: parsed.action, error: String(err) },
@@ -100,8 +170,17 @@ export class Agent {
 
       emit({ type: "tool:result", payload: { tool: parsed.action, result } });
       context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
+      log.info("agent_step_finished", {
+        step,
+        durationMs: Date.now() - stepStartedAt,
+        contextLength: context.length,
+      });
     }
 
+    log.warn("agent_max_steps_reached", {
+      durationMs: Date.now() - runStartedAt,
+      task,
+    });
     emit({ type: "agent:max_steps", payload: { task } });
     return "Max steps reached without a conclusive answer.";
   }

@@ -13,6 +13,8 @@
  * when you need durability or cross-process fan-out.
  */
 
+import { getLogger } from "../../logger/src/logger";
+
 export interface AgentEvent {
   type: string;
   payload: unknown;
@@ -21,6 +23,7 @@ export interface AgentEvent {
 type EventHandler = (event: AgentEvent) => void;
 
 const handlers = new Map<string, EventHandler[]>();
+const log = getLogger("events");
 
 /**
  * Subscribe to a specific event type.
@@ -55,7 +58,10 @@ export function emit(event: AgentEvent): void {
     try {
       h(event);
     } catch (err) {
-      console.error(`[bus] Error in handler for "${event.type}":`, err);
+      log.error("event_handler_failed", {
+        eventType: event.type,
+        error: String(err),
+      });
     }
   });
 }

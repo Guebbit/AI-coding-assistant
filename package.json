@@ -20,7 +20,8 @@
     "@qdrant/js-client-rest": "^1.15.1",
     "express": "^4.21.2",
     "mysql2": "^3.12.0",
-    "playwright": "^1.55.1"
+    "playwright": "^1.55.1",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
