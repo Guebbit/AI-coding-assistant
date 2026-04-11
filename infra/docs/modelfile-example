@@ -1,0 +1,128 @@
+# https://oneuptime.com/blog/post/2026-02-02-ollama-custom-modelfiles/view
+
+
+# Base model to derive from
+FROM qwen3:4b
+
+
+# ===== RANDOMNESS / CREATIVITY =====
+
+# Controls randomness of output, lower temperature = less rambling (0 - 1.5)
+# Lower = deterministic, precise
+# Higher = creative, varied
+# Does NOT affect speed
+# Typical:
+#   coding → 0.2–0.4
+#   chat → 0.6–0.8
+#   creative → 0.9–1.5
+PARAMETER temperature 0.7
+
+# Alternative randomness control (nucleus sampling) (0 - 1)
+# Model considers tokens whose cumulative probability ≤ top_p
+#   Lower = safer answers
+#   Usually keep near 0.9
+PARAMETER top_p 0.9
+
+# Limits selection to top K most likely tokens (0 - 200)
+#   Lower = more deterministic
+#   Higher = more diverse
+#   Often 40–100
+PARAMETER top_k 50
+
+# Filter out very unlikely tokens (0 - 1)
+# Lower = more diverse
+# Higher = more deterministic
+PARAMETER min_p 0.05
+
+# ===== REPETITION CONTROL =====
+
+# Discourages repeating repeating the same phrases (0 - 2)
+# >1.0 reduces repetition
+# Too high → strange wording
+# Useful for long outputs
+PARAMETER repeat_penalty 1.2
+
+# Encourages introducing new topics (-2 - 2)
+PARAMETER presence_penalty 0.3
+
+# If set, control the random numer generator used in sampling.
+# Same prompt + same parameter + same seed = same output every time
+# PARAMETER seed 42
+
+# ===== STOP CONDITIONS =====
+
+# Hard stop conditions. Stop generating when these text appears (stopped tokens included)
+# Useful for structured outputs or chat formatting
+# Example stops:
+#   "User:"
+#   "Assistant:"
+#   "</s>"
+# PARAMETER stop "User:"
+# PARAMETER stop "dangerous text"
+
+
+
+
+# ===== OPTIONAL PERFORMANCE TUNING =====
+
+# Batch size for prompt processing (How many tokens are processed simultaneously per step).
+# LLM generation loop: 1 token → compute → next token → compute → …
+# Higher = faster prompt ingestion but more VRAM
+# PARAMETER batch_size 512      # num_batch is the same??
+
+
+
+
+# How many transformer layers are placed on the GPU instead of CPU (how much brain runs on the GPU).
+# OLLAMA_GPU_LAYERS for docker-compose global value
+#       | More GPU layers | Less GPU layers |
+#       | --------------- | --------------- |
+#       | Faster          | Slower          |
+#       | More VRAM       | Less VRAM       |
+#       | Less CPU load   | More CPU load   |
+#       | Crash risk ↑    | Stability ↑     |
+# PARAMETER num_gpu 100
+
+
+# ===== NOT SUPPORTED BY OLLAMA? =====
+
+# Tail free sampling.
+# Reduces low-probability tail noise (based on how fast probability drops)
+# very likely tokens  ██████████
+# possible tokens     █████
+# unlikely tail       ██
+# rare nonsense       ░
+#   0	disabled
+#   1	mild tail trimming
+#   1.5–2	aggressive (very safe output)
+# PARAMETER tfs_z 1.2
+
+
+
+# Maximum context window (tokens kept in memory)
+# Higher = can remember longer conversations
+# Lower = faster + less VRAM usage
+#       | Context | Stability  |
+#       | ------- | ---------- |
+#       | 1024    | ultra safe |
+#       | 2048    | safe       |
+#       | 4096    | risky      |
+#       | 8192    | danger     |
+PARAMETER num_ctx 2048
+
+# Maximum tokens the model can generate in the reply
+# Prevents infinite responses and controls latency
+# Set lower for fast answers, higher for long essays/code
+# Working? Changed name? "max_new_tokens or "max_tokens"?
+# PARAMETER num_predict 256
+
+
+
+
+
+# ===== SYSTEM PROMPT =====
+
+# Default behavior/personality of the model
+# Applied automatically to every conversation
+SYSTEM You are a concise, accurate assistant. Prefer short answers.
+

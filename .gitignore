@@ -23,3 +23,5 @@ Thumbs.db
 # Data directory contents (keep the folder, ignore actual data files)
 data/*
 !data/.gitkeep
+
+.idea

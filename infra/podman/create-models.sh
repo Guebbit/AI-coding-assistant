@@ -1,49 +1,36 @@
-#!/usr/bin/env bash
-# create-models.sh
-#
-# Runs inside the model-loader container.
-# Waits for Ollama to be ready, then pulls the default model and creates
-# any custom models defined in /modelfiles/*.Modelfile.
-#
-# Add custom Modelfiles to infra/podman/modelfiles/ — the file name (without
-# the .Modelfile extension) becomes the model name.
+#!/bin/bash
+set -e
 
-set -euo pipefail
+MODELS_DIR="/modelfiles"
 
-OLLAMA_HOST="${OLLAMA_HOST:-http://ollama:11434}"
-MAX_RETRIES=30
-RETRY_INTERVAL=5
+echo "Processing models dynamically..."
 
-# ── Wait for Ollama ──────────────────────────────────────────────────────────
-echo "Waiting for Ollama at ${OLLAMA_HOST}…"
+# For every directory within MODELS_DIR, treat it as a base model, and for every Modelfile within that directory, create a customized model.
+for base_dir in "$MODELS_DIR"/*; do
+  [ -d "$base_dir" ] || continue
 
-for i in $(seq 1 "$MAX_RETRIES"); do
-  if curl -sf "${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
-    echo "Ollama is ready."
-    break
+  base_model="$(basename "$base_dir")"
+  base_name="$(echo "$base_model" | cut -d':' -f1)"
+  base_tag="$(echo "$base_model" | cut -d':' -f2)"
+
+  echo "Checking base model $base_model..."
+
+  # If the model doesn't exist, pull it.
+  if ! ollama list | grep -q "^$base_name"; then
+    echo "Pulling $base_model..."
+    ollama pull "$base_model"
   fi
 
-  echo "Attempt ${i}/${MAX_RETRIES} — not ready yet; retrying in ${RETRY_INTERVAL}s…"
-  sleep "$RETRY_INTERVAL"
+  # Enter the the directory and create customized models based on Modelfiles within
+  for modelfile in "$base_dir"/*; do
+    [ -f "$modelfile" ] || continue
 
-  if [ "$i" -eq "$MAX_RETRIES" ]; then
-    echo "ERROR: Ollama did not become ready in time. Exiting."
-    exit 1
-  fi
+    customization="$(basename "$modelfile" | sed 's/Modelfile-//')"
+    custom_model="${base_name}-${base_tag}-${customization}"
+
+    echo "Creating $custom_model..."
+    ollama create "$custom_model" -f "$modelfile"
+  done
 done
 
-# ── Pull the default model ───────────────────────────────────────────────────
-DEFAULT_MODEL="${DEFAULT_MODEL:-llama3}"
-echo "Pulling model: ${DEFAULT_MODEL}"
-ollama pull "${DEFAULT_MODEL}"
-
-# ── Create custom models from Modelfiles ─────────────────────────────────────
-shopt -s nullglob
-for modelfile in /modelfiles/*.Modelfile; do
-  model_name="$(basename "${modelfile%.Modelfile}")"
-  echo "Creating custom model: ${model_name} (from ${modelfile})"
-  ollama create "${model_name}" -f "${modelfile}"
-done
-shopt -u nullglob
-
-echo "Model setup complete."
+echo "All models processed."
