@@ -4,6 +4,7 @@ import {
   readFileTool,
   shellTool,
   mysqlQueryTool,
+  browserTool,
 } from "../../../packages/tools/src/index";
 import { on } from "../../../packages/events/src/bus";
 
@@ -14,9 +15,7 @@ on("*", (event) => {
 
 // ── Initialise agent with available tools ──────────────────────────────────
 // Add / remove tools here as you expand the system.
-// The browser tool is excluded by default because it requires Playwright
-// browsers to be installed (`npx playwright install chromium`).
-const agent = new Agent([readFileTool, shellTool, mysqlQueryTool]);
+const agent = new Agent([readFileTool, shellTool, mysqlQueryTool, browserTool]);
 
 // ── HTTP server ────────────────────────────────────────────────────────────
 const app = express();

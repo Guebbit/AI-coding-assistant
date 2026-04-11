@@ -6,8 +6,6 @@ import type { Tool } from "./types";
  *
  * Supports scraping and interaction with web pages.
  * Returns the page title and the first 5 000 characters of visible text.
- *
- * Usage note: run `npx playwright install chromium` once before using this tool.
  */
 export const browserTool: Tool = {
   name: "browser_fetch",

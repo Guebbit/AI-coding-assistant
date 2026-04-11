@@ -5,6 +5,7 @@
 #   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
 #   open-webui    — Chat UI connected to Ollama
 #   model-loader  — One-shot container that pulls / builds Ollama models
+#   qdrant        — Local vector database for agent memory
 #
 # Usage:
 #   1. Copy infra/podman/.env.example → infra/podman/.env and fill in values
@@ -77,8 +78,18 @@ services:
     command: ["/create-models.sh"]
     restart: on-failure
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage:Z
+    restart: unless-stopped
+
 volumes:
   ollama-data:
     driver: local
   open-webui-data:
+    driver: local
+  qdrant-data:
     driver: local

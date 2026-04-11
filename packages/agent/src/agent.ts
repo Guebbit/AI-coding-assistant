@@ -31,7 +31,7 @@ export class Agent {
 
   async run(task: string): Promise<string> {
     let context = "";
-    const memory = getMemory();
+    const memory = await getMemory(task);
 
     emit({ type: "agent:start", payload: { task } });
 
@@ -72,7 +72,7 @@ export class Agent {
 
       // ── Done — no tool action needed ────────────────────────────────────────
       if (parsed.action === "none") {
-        addMemory(`Task: ${task} → ${parsed.thought}`);
+        await addMemory(`Task: ${task} → ${parsed.thought}`);
         emit({ type: "agent:done", payload: { thought: parsed.thought } });
         return parsed.thought;
       }

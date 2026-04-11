@@ -2,7 +2,10 @@
 
 ## What
 
-Stores recent context in memory (RAM).
+Stores recent context with a hybrid strategy:
+
+- local in-process recent memory
+- semantic vector memory in Qdrant
 
 ## Role
 
@@ -10,14 +13,15 @@ Stores recent context in memory (RAM).
 
 ## Behavior
 
-- Non-persistent
-- Capacity: **20** entries max
-- Oldest entries are evicted first
+- Local recent memory capacity: **20** entries max (oldest evicted first)
+- Semantic recall comes from Qdrant similarity search
+- Embeddings are generated with Ollama (`OLLAMA_EMBED_MODEL`)
+- If Qdrant is unavailable, memory gracefully falls back to local recent memory
 
 ## API
 
 - `addMemory(entry)`
-- `getMemory(n = 10)`
+- `getMemory(query, n = 10)`
 - `clearMemory()`
 
 ## Used by
