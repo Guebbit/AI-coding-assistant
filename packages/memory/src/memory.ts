@@ -139,8 +139,15 @@ export async function getMemory(
       })
       .filter((value): value is string => value !== null);
 
-    const merged = [...recent, ...semantic];
-    return Array.from(new Set(merged)).slice(-cappedN);
+    const merged: string[] = [...recent];
+    const seen = new Set(merged);
+    for (const item of semantic) {
+      if (!seen.has(item)) {
+        merged.push(item);
+        seen.add(item);
+      }
+    }
+    return merged.slice(0, cappedN);
   } catch (err) {
     console.warn(`Qdrant memory search failed, using recent memory only: ${String(err)}`);
     return recent;
@@ -157,9 +164,7 @@ export async function clearMemory(): Promise<void> {
 
   try {
     await qdrant.deleteCollection(QDRANT_COLLECTION);
-    if (vectorSize) {
-      await ensureCollection(vectorSize);
-    }
+    vectorSize = null;
   } catch (err) {
     console.warn(`Failed to clear Qdrant memory collection: ${String(err)}`);
   }
