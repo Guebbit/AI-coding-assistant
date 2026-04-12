@@ -1,14 +1,39 @@
-# AI Coding Assistant
+# Manna — Personal AI Agent Platform
 
-Personal local-first agent system built with TypeScript, Node.js, and Ollama.
+Manna is a local-first, extensible AI agent platform built with TypeScript, Node.js, and Ollama.
 
-## What this project is (and is not)
+It exposes a REST API that runs a multi-step agentic loop with tools, enabling automation across coding, research, data handling, and creative workflows.
+Manna is frontend-agnostic: you can build and connect different clients (web, desktop, mobile, CLI, or voice) to the same backend.
 
-- **Open WebUI (`http://localhost:3000`)** is a generic chat interface for Ollama models.
-- **This project** is an API (`http://localhost:3001`) that runs an **agentic loop** with tools.
+## What this project is
 
-If you only use Open WebUI, you are chatting with models directly.
-If you call this project's `/run` endpoint, the model can reason over multiple steps and use tools.
+Manna is an API (`http://localhost:3001`) that executes tasks through an agent loop:
+
+1. Understand the task
+2. Choose the right tool
+3. Execute
+4. Iterate until completion (or max steps)
+
+By calling Manna's `/run` endpoint, the model can reason over multiple steps and use specialized tools to complete complex goals.
+
+## Current capabilities
+
+- 💻 **Coding**: file operations, shell execution, project scaffolding, autocomplete support
+- 🔎 **Research**: web fetching, PDF extraction, semantic search
+- 🖼️ **Vision**: image classification and description
+- 🎙️ **Audio**: speech-to-text transcription
+- 🗄️ **Data**: MySQL read-only querying
+- 🧠 **Memory**: short-term ring buffer + semantic recall via Qdrant
+- 🧩 **Extensible**: easy to add new tools and domains
+
+## Roadmap direction
+
+Manna is designed as a core intelligence backend with multiple future frontends and domain assistants.
+Planned expansions include:
+
+- specialized frontends (web, desktop, CLI, voice)
+- an art workflow assistant (sketch and inking support)
+- a home assistant interface (voice + automation orchestration)
 
 ## Architecture
 
@@ -23,7 +48,7 @@ ai-assistant/
 │   ├── memory/       ← In-memory short-term memory
 │   └── tools/        ← Tool interface + built-in tools
 ├── infra/
-│   └── podman/       ← Ollama + Open WebUI compose stack
+│   └── podman/       ← Ollama compose stack
 └── data/             ← Runtime data (gitignored)
 ```
 
@@ -35,17 +60,16 @@ ai-assistant/
 npm install
 ```
 
-### 2) Start Ollama + Open WebUI
+### 2) Start Ollama
 
 ```bash
 cd infra/podman
 cp .env.example .env
-# fill LINUX_USERNAME and WEBUI_SECRET_KEY
+# fill LINUX_USERNAME
 
 docker compose --env-file .env up -d
 ```
 
-- Open WebUI: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
 
 ### 3) Start this project API
@@ -148,11 +172,9 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 
 ### Infra compose variables
 
-`infra/podman/.env` is only for the compose stack (Ollama/Open WebUI/model-loader), mainly:
+`infra/podman/.env` is only for the compose stack (Ollama + model-loader), mainly:
 
 - `LINUX_USERNAME`
-- `WEBUI_SECRET_KEY`
-- `ENABLE_SIGNUP`
 
 So yes: currently only compose-specific vars are defined there.
 App/API vars are separate and can be exported in your shell or managed with your preferred env workflow.
