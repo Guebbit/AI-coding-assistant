@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { generate } from "../../llm/ollama";
+import { generate } from "../llm/ollama";
 import type { Tool } from "./types";
 
 const DEFAULT_VISION_MODEL = process.env.TOOL_VISION_MODEL ?? "llava-llama3";

@@ -1,4 +1,4 @@
-import { generate } from "../../llm/ollama";
+import { generate } from "../llm/ollama";
 
 export type ModelProfile = "fast" | "reasoning" | "code" | "default";
 

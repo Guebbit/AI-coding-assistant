@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { getLogger } from "../logger/logger";
+import type { MemoryEntry } from "./types";
 
 /**
  * Hybrid short-term memory:
@@ -221,4 +222,114 @@ export async function clearMemory(): Promise<void> {
   }
 
   log.info("memory_cleared", { durationMs: Date.now() - startedAt });
+}
+
+/**
+ * Add a structured `MemoryEntry` to memory.
+ *
+ * Follows Mastra's pattern of storing typed entries with role and metadata.
+ * The `content` field is used as the text stored in Qdrant; all fields are
+ * persisted as Qdrant payload so you can filter by role / metadata later.
+ *
+ * Falls back gracefully to the plain `addMemory` path if any extra fields
+ * cause issues.
+ *
+ * @param entry - Structured memory entry (role, content, metadata, etc.)
+ */
+export async function addStructuredMemory(
+  entry: Omit<MemoryEntry, "id" | "timestamp">,
+): Promise<void> {
+  const startedAt = Date.now();
+  const id = randomUUID();
+  const timestamp = new Date();
+  const fullEntry: MemoryEntry = { id, timestamp, ...entry };
+
+  addToRecentMemory(fullEntry.content);
+
+  if (!qdrantEnabled) {
+    logMemoryAddedLocalOnly(startedAt);
+    return;
+  }
+
+  try {
+    const vector = await getEmbedding(fullEntry.content);
+    vectorSize = vector.length;
+    await ensureCollection(vector.length);
+
+    await qdrant.upsert(QDRANT_COLLECTION, {
+      wait: true,
+      points: [
+        {
+          id,
+          vector,
+          payload: {
+            text: fullEntry.content,
+            role: fullEntry.role,
+            createdAt: timestamp.toISOString(),
+            ...(fullEntry.metadata ?? {}),
+          },
+        },
+      ],
+    });
+  } catch (err) {
+    qdrantEnabled = false;
+    log.warn("memory_qdrant_disabled", {
+      error: String(err),
+      message: "Falling back to in-memory only",
+    });
+    logMemoryAddedLocalOnly(startedAt);
+    return;
+  }
+
+  log.info("memory_structured_added", {
+    id,
+    role: fullEntry.role,
+    recentCount: recentMemory.length,
+    vectorSize,
+    durationMs: Date.now() - startedAt,
+  });
+}
+
+/**
+ * Trim a list of memory entries to fit within a character budget.
+ *
+ * Adopting Mastra's context window optimization pattern — instead of blindly
+ * sending all memory to the LLM, keep only what fits in `maxChars` while
+ * preferring the *most recent* entries (last items in the array).
+ *
+ * ## Usage
+ * ```typescript
+ * const memory = await getMemory(task);
+ * const trimmed = optimizeContextWindow(memory, 4000);
+ * ```
+ *
+ * @param entries  - Memory strings (oldest first, newest last).
+ * @param maxChars - Maximum total character budget (default: 8 000).
+ * @returns        - A subset of entries that fits within the budget.
+ */
+export function optimizeContextWindow(
+  entries: string[],
+  maxChars = 8_000,
+): string[] {
+  if (entries.length === 0) return [];
+
+  const result: string[] = [];
+  let total = 0;
+
+  // Walk from newest to oldest, filling the budget
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (total + entry.length > maxChars) break;
+    result.unshift(entry);
+    total += entry.length;
+  }
+
+  log.info("memory_context_optimized", {
+    inputCount: entries.length,
+    outputCount: result.length,
+    totalChars: total,
+    maxChars,
+  });
+
+  return result;
 }

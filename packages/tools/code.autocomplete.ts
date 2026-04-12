@@ -1,4 +1,4 @@
-import { generate } from "../../llm/ollama";
+import { generate } from "../llm/ollama";
 import type { Tool } from "./types";
 
 const DEFAULT_IDE_MODEL = process.env.TOOL_IDE_MODEL ?? process.env.AGENT_MODEL_CODE ?? "qwen3-coder:14b";
