@@ -41,6 +41,7 @@
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.5.0",
+    "jiti": "^2.6.1",
     "prettier": "^3.8.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
