@@ -7,6 +7,11 @@ import {
   mysqlQueryTool,
   browserTool,
   scaffoldProjectTool,
+  imageClassifyTool,
+  semanticSearchTool,
+  speechToTextTool,
+  readPdfTool,
+  codeAutocompleteTool,
 } from "../../packages/tools/index";
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
@@ -18,7 +23,17 @@ on("*", (event) => {
   log.info("event_emitted", { eventType: event.type, payload: event.payload });
 });
 
-const readOnlyTools = [readFileTool, shellTool, mysqlQueryTool, browserTool];
+const readOnlyTools = [
+  readFileTool,
+  shellTool,
+  mysqlQueryTool,
+  browserTool,
+  imageClassifyTool,
+  semanticSearchTool,
+  speechToTextTool,
+  readPdfTool,
+  codeAutocompleteTool,
+];
 const writeTools = [writeFileTool, scaffoldProjectTool];
 const readOnlyAgent = new Agent(readOnlyTools);
 const writeEnabledAgent = new Agent([...readOnlyTools, ...writeTools]);

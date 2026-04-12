@@ -13,6 +13,14 @@ export interface GenerateOptions {
   model?: string;
   /** Whether to stream the response (default: false) */
   stream?: boolean;
+  /** Optional text suffix for infill/completion use-cases */
+  suffix?: string;
+  /** Optional system prompt override */
+  system?: string;
+  /** Optional response format (`json` or JSON schema object) */
+  format?: "json" | Record<string, unknown>;
+  /** Base64-encoded images for multimodal models */
+  images?: string[];
 }
 
 export interface GenerateResult {
@@ -46,12 +54,27 @@ export async function generateWithMetadata(
   prompt: string,
   options: GenerateOptions = {}
 ): Promise<GenerateResult> {
-  const { model = process.env.OLLAMA_MODEL ?? "llama3", stream = false } = options;
+  const {
+    model = process.env.OLLAMA_MODEL ?? "llama3",
+    stream = false,
+    suffix,
+    system,
+    format,
+    images,
+  } = options;
 
   const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model, prompt, stream }),
+    body: JSON.stringify({
+      model,
+      prompt,
+      stream,
+      suffix,
+      system,
+      format,
+      images,
+    }),
   });
 
   if (!res.ok) {

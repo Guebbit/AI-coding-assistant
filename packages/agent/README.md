@@ -10,6 +10,7 @@ Core reasoning loop used by the API.
   - recent memory entries
   - available tool descriptions
 - Calls the LLM (`packages/llm`)
+- Routes each step to a model profile (`fast`, `reasoning`, `code`, `default`)
 - Parses a strict JSON response with:
   - `thought`
   - `action`
@@ -25,6 +26,7 @@ Emits lifecycle events through `packages/events`:
 
 - `agent:start`
 - `agent:step`
+- `agent:model_routed`
 - `tool:result`
 - `tool:error`
 - `agent:done`
@@ -34,3 +36,4 @@ Emits lifecycle events through `packages/events`:
 ## Key file
 
 - `agent.ts`
+- `model-router.ts`

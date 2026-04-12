@@ -84,6 +84,11 @@ Tools are configured in `apps/api/index.ts` when creating the `Agent`.
 - `shell` — run allowlisted shell commands
 - `mysql_query` — run read-only `SELECT` queries
 - `browser_fetch` — fetch and summarize web page content
+- `image_classify` — classify/describe images with a vision model
+- `semantic_search` — rank files/text by semantic similarity
+- `speech_to_text` — transcribe audio using an OpenAI-compatible endpoint
+- `read_pdf` — extract text from PDFs
+- `code_autocomplete` — produce IDE-style completion suggestions
 - `write_file` — write files under generated projects root (**disabled by default**)
 - `scaffold_project` — copy a boilerplate into generated projects root (**disabled by default**)
 
@@ -100,11 +105,12 @@ Implemented in `packages/agent/agent.ts`.
 For each task:
 
 1. Build prompt (task + context + memory + tool descriptions)
-2. Ask LLM for strict JSON output: `thought`, `action`, `input`
-3. If `action !== "none"`, execute selected tool
-4. Append tool result to context
-5. Repeat up to max steps (currently 5)
-6. Stop when `action: "none"` or max steps reached
+2. Route the current step to a model profile (`fast`, `reasoning`, `code`, `default`)
+3. Ask selected model for strict JSON output: `thought`, `action`, `input`
+4. If `action !== "none"`, execute selected tool
+5. Append tool result to context
+6. Repeat up to max steps (currently 5)
+7. Stop when `action: "none"` or max steps reached
 
 Lifecycle events are emitted through `packages/events` and logged by the API.
 
@@ -117,6 +123,15 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 - `OLLAMA_BASE_URL` (default `http://localhost:11434`)
 - `OLLAMA_MODEL` (default `llama3`)
 - `OLLAMA_EMBED_MODEL` (default `nomic-embed-text`)
+- `AGENT_MODEL_ROUTER_MODE` (`rules` or `model`, default `rules`)
+- `AGENT_MODEL_ROUTER_MODEL` (router classifier model for `model` mode)
+- `AGENT_MODEL_FAST` (profile model)
+- `AGENT_MODEL_REASONING` (profile model)
+- `AGENT_MODEL_CODE` (profile model)
+- `AGENT_MODEL_DEFAULT` (fallback profile model)
+- `TOOL_VISION_MODEL` (default `llava-llama3`)
+- `TOOL_STT_MODEL` (default `whisper`)
+- `TOOL_IDE_MODEL` (default `qwen3-coder:14b`)
 - `PORT` (default `3001`)
 - `MYSQL_HOST` (default `localhost`)
 - `MYSQL_PORT` (default `3306`)

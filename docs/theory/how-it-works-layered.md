@@ -16,11 +16,12 @@ API wires up: Agent + LLM + Memory + Tools + Events
     ↓
 Agent loop:
   1. Build prompt (task + memory + tool list)
-  2. Ask LLM "what should I do?"
-  3. LLM picks a tool + input (or says "done")
-  4. Agent runs that tool
-  5. Events emit: "step done"
-  6. Repeat until: done or max 5 steps
+  2. Route this step to best model profile
+  3. Ask selected model "what should I do?"
+  4. LLM picks a tool + input (or says "done")
+  5. Agent runs that tool
+  6. Events emit: "step done"
+  7. Repeat until: done or max 5 steps
     ↓
 Return result to user
 ```
@@ -38,16 +39,18 @@ If this is enough, stop here.
 
 1. **Build prompt (task + memory + tool list)**
    - Deep dive: [/theory/prompt-context-memory](/theory/prompt-context-memory)
-2. **Ask LLM “what should I do?”**
+2. **Route the step to a model profile**
+   - Deep dive: [/model-selection](/model-selection)
+3. **Ask LLM “what should I do?”**
    - Deep dive: [/packages/llm](/packages/llm)
-3. **LLM picks tool + input (or done)**
+4. **LLM picks tool + input (or done)**
    - Decision contract: [/packages/agent](/packages/agent)
-4. **Agent runs that tool**
+5. **Agent runs that tool**
    - Agent runtime: [/packages/agent](/packages/agent)
    - Tool catalog: [/packages/tools/](/packages/tools/)
-5. **Events emit step progress**
+6. **Events emit step progress**
    - Event flow: [/theory/events-observability](/theory/events-observability)
-6. **Repeat until done or max 5 steps**
+7. **Repeat until done or max 5 steps**
    - Loop mental model: [/theory/agent-loop](/theory/agent-loop)
 
 ## Layer 3 — What each block is really doing
@@ -55,6 +58,7 @@ If this is enough, stop here.
 - **API** receives `task`, creates runtime dependencies, and calls the agent.
 - **Agent** runs a bounded loop (max 5 steps) to avoid runaway behavior.
 - **LLM** proposes the next action in strict JSON (`thought`, `action`, `input`).
+- **Model router** chooses a profile (`fast` / `reasoning` / `code` / `default`) per step.
 - **Tools** perform deterministic operations (read file, shell, SQL, browser fetch).
 - **Memory** brings short-term recency + semantic recall into prompt building.
 - **Events** provide observable lifecycle signals (`start`, `step`, `tool:*`, `done`).

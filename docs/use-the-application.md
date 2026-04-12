@@ -83,6 +83,7 @@ Optional env vars:
 ## 8) Common troubleshooting
 
 - Ollama not reachable: check `OLLAMA_BASE_URL` (default `http://localhost:11434`)
+- Router selects wrong profile: tune `AGENT_MODEL_ROUTER_MODE` and `AGENT_MODEL_*` env vars
 - Qdrant not reachable: check `QDRANT_URL` (default `http://localhost:6333`)
 - Empty/invalid request: ensure body includes non-empty `"task"`
 - MySQL tool fails: verify `MYSQL_*` env vars and DB availability

@@ -3,10 +3,11 @@
 Think of the system as a controlled reasoning loop:
 
 1. Build prompt from task + memory + context + tools
-2. Ask model for strict JSON decision
-3. Execute tool if needed
-4. Append result to context
-5. Repeat until done or step limit
+2. Route the step to a model profile
+3. Ask selected model for strict JSON decision
+4. Execute tool if needed
+5. Append result to context
+6. Repeat until done or step limit
 
 ## Why this works
 

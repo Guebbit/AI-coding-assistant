@@ -3,12 +3,14 @@ import { addMemory, getMemory } from "../memory/memory";
 import { emit } from "../events/bus";
 import type { Tool } from "../tools";
 import { getLogger } from "../logger/logger";
-
-interface AgentStep {
-  thought: string;
-  action: string;
-  input: Record<string, unknown>;
-}
+import { routeModel } from "./model-router";
+import { agentStepSchema } from "./schemas";
+import type { AgentStep } from "./schemas";
+import type {
+  Processor,
+  ProcessInputStepArgs,
+  ProcessOutputStepArgs,
+} from "../processors/types";
 
 // Maximum number of reasoning steps before giving up.
 const MAX_STEPS = Number.parseInt(process.env.AGENTS_MAX_STEPS ?? "5", 10);
@@ -18,18 +20,37 @@ const log = getLogger("agent");
  * Core agent loop.
  *
  * Each iteration:
- *  1. Build a prompt from the task, accumulated context, and memory.
- *  2. Call the LLM and parse its JSON response.
- *  3. Execute the chosen tool (or return if action === "none").
- *  4. Append the tool result to context and repeat.
+ *  1. Run processInputStep processors (middleware hooks).
+ *  2. Build a prompt from the task, accumulated context, and memory.
+ *  3. Call the LLM and parse its JSON response with Zod schema validation.
+ *  4. Run processOutputStep processors.
+ *  5. Execute the chosen tool (or return if action === "none").
+ *  6. Append the tool result to context and repeat.
  *
  * Design principles:
  *  - No magic — every decision is traceable via console logs and events.
  *  - Resilient — bad JSON and unknown tools are recovered rather than crashing.
  *  - Observable — every significant state change emits a typed event.
+ *  - Extensible — processors can intercept input/output at each step.
  */
 export class Agent {
+  private readonly processors: Processor[] = [];
+
   constructor(private readonly tools: Tool[]) {}
+
+  /**
+   * Register a processor whose hooks will be called at each agent step.
+   *
+   * Processors are invoked in registration order.  A processor may return a
+   * modified argument object to influence what the agent does next, or return
+   * `void` / `undefined` to leave the arguments unchanged.
+   *
+   * Follows Mastra's processor pattern for future compatibility.
+   */
+  addProcessor(processor: Processor): this {
+    this.processors.push(processor);
+    return this;
+  }
 
   async run(task: string): Promise<string> {
     const runStartedAt = Date.now();
@@ -52,24 +73,64 @@ export class Agent {
 
     for (let step = 0; step < MAX_STEPS; step++) {
       const stepStartedAt = Date.now();
-      const prompt = this.buildPrompt(task, context, memory);
+
+      // ── Run input processors ─────────────────────────────────────────────
+      let inputArgs: ProcessInputStepArgs = {
+        task,
+        context,
+        memory,
+        stepNumber: step,
+        tools: this.tools.map((t) => t.name),
+      };
+      for (const proc of this.processors) {
+        if (proc.processInputStep) {
+          const result = await proc.processInputStep(inputArgs);
+          if (result) inputArgs = result;
+        }
+      }
+
+      const prompt = this.buildPrompt(
+        inputArgs.task,
+        inputArgs.context,
+        inputArgs.memory,
+      );
       log.info("agent_step_started", {
         step,
-        contextLength: context.length,
+        contextLength: inputArgs.context.length,
         promptLength: prompt.length,
-        promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + "…" : prompt,
+        promptPreview:
+          prompt.length > 300 ? prompt.slice(0, 300) + "…" : prompt,
       });
 
       // ── Call the LLM ────────────────────────────────────────────────────────
       let response: string;
       try {
+        const route = await routeModel({
+          task: inputArgs.task,
+          context: inputArgs.context,
+          step,
+        });
+        emit({
+          type: "agent:model_routed",
+          payload: {
+            step,
+            profile: route.profile,
+            model: route.model,
+            reason: route.reason,
+          },
+        });
+
         const llmStartedAt = Date.now();
-        const llmResult = await generateWithMetadata(prompt);
+        const llmResult = await generateWithMetadata(prompt, {
+          model: route.model,
+        });
         response = llmResult.response;
         log.info("agent_llm_response_received", {
           step,
           responseLength: response.length,
           durationMs: Date.now() - llmStartedAt,
+          routedProfile: route.profile,
+          routedReason: route.reason,
           model: llmResult.model,
           done: llmResult.done,
           doneReason: llmResult.doneReason,
@@ -80,18 +141,18 @@ export class Agent {
           evalCount: llmResult.evalCount,
           evalDurationNs: llmResult.evalDurationNs,
         });
-      } catch (err) {
-        log.error("agent_llm_call_failed", { step, error: String(err) });
-        emit({ type: "agent:error", payload: { step, error: String(err) } });
-        throw err;
+      } catch (error) {
+        log.error("agent_llm_call_failed", { step, error: String(error) });
+        emit({ type: "agent:error", payload: { step, error: String(error) } });
+        throw error;
       }
 
-      // ── Parse the LLM response ──────────────────────────────────────────────
+      // ── Parse the LLM response with Zod schema validation ──────────────────
       let parsed: AgentStep;
       try {
         // Strip markdown code fences that some models add around JSON
         const cleaned = response.replace(/```(?:json)?\n?/g, "").trim();
-        parsed = JSON.parse(cleaned) as AgentStep;
+        parsed = agentStepSchema.parse(JSON.parse(cleaned));
       } catch {
         // Give the model a chance to self-correct on the next iteration
         context +=
@@ -111,6 +172,27 @@ export class Agent {
         thoughtLength: parsed.thought.length,
       });
       emit({ type: "agent:step", payload: { step, parsed } });
+
+      // ── Run output processors ────────────────────────────────────────────
+      let outputArgs: ProcessOutputStepArgs = {
+        stepNumber: step,
+        text: response,
+        thought: parsed.thought,
+        action: parsed.action,
+        toolInput: parsed.input,
+      };
+      for (const proc of this.processors) {
+        if (proc.processOutputStep) {
+          const result = await proc.processOutputStep(outputArgs);
+          if (result) outputArgs = result;
+        }
+      }
+      // Reflect any processor overrides back into parsed
+      parsed = {
+        thought: outputArgs.thought,
+        action: outputArgs.action,
+        input: outputArgs.toolInput,
+      };
 
       // ── Done — no tool action needed ────────────────────────────────────────
       if (parsed.action === "none") {
@@ -157,16 +239,16 @@ export class Agent {
           durationMs: Date.now() - toolStartedAt,
           resultSize,
         });
-      } catch (err) {
-        context += `\nTool "${parsed.action}" failed: ${String(err)}`;
+      } catch (error) {
+        context += `\nTool "${parsed.action}" failed: ${String(error)}`;
         log.warn("agent_tool_failed", {
           step,
           tool: parsed.action,
-          error: String(err),
+          error: String(error),
         });
         emit({
           type: "tool:error",
-          payload: { tool: parsed.action, error: String(err) },
+          payload: { tool: parsed.action, error: String(error) },
         });
         continue;
       }
@@ -191,12 +273,10 @@ export class Agent {
   private buildPrompt(
     task: string,
     context: string,
-    memory: string[]
+    memory: string[],
   ): string {
     const memoryBlock =
-      memory.length > 0
-        ? `Recent memory:\n${memory.join("\n")}\n\n`
-        : "";
+      memory.length > 0 ? `Recent memory:\n${memory.join("\n")}\n\n` : "";
 
     const contextBlock = context ? `Context so far:\n${context}\n\n` : "";
 

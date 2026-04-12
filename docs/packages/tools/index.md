@@ -18,28 +18,17 @@ Every tool provides:
 
 ## Included tools
 
-<details>
-<summary>Select a tool to inspect</summary>
-
-### `read_file`
-Read UTF-8 files under project root.
-
-### `shell`
-Run allowlisted shell commands with timeout.
-
-### `mysql_query`
-Execute read-only `SELECT` queries.
-
-### `browser_fetch`
-Fetch page title and visible text (Playwright).
-
-### `write_file`
-Write UTF-8 files under generated projects root (opt-in write mode only).
-
-### `scaffold_project`
-Copy a boilerplate template into generated projects root (opt-in write mode only).
-
-</details>
+- `read_file` — read UTF-8 files under project root
+- `shell` — run allowlisted shell commands with timeout
+- `mysql_query` — execute read-only `SELECT` queries
+- `browser_fetch` — fetch page title and visible text (Playwright)
+- `image_classify` — vision model image description/classification
+- `semantic_search` — embedding-based semantic ranking for text/files
+- `speech_to_text` — audio transcription via Ollama OpenAI-compatible endpoint
+- `read_pdf` — PDF text extraction
+- `code_autocomplete` — IDE-style code completion
+- `write_file` — write UTF-8 files under generated projects root (opt-in write mode only)
+- `scaffold_project` — copy a boilerplate template into generated projects root (opt-in write mode only)
 
 ## Security boundaries
 
@@ -58,3 +47,8 @@ Copy a boilerplate template into generated projects root (opt-in write mode only
 - [/packages/tools/browser-fetch](/packages/tools/browser-fetch)
 - [/packages/tools/write-file](/packages/tools/write-file)
 - [/packages/tools/scaffold-project](/packages/tools/scaffold-project)
+- [/packages/tools/image-classify](/packages/tools/image-classify)
+- [/packages/tools/semantic-search](/packages/tools/semantic-search)
+- [/packages/tools/speech-to-text](/packages/tools/speech-to-text)
+- [/packages/tools/read-pdf](/packages/tools/read-pdf)
+- [/packages/tools/code-autocomplete](/packages/tools/code-autocomplete)
