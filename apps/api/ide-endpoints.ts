@@ -122,7 +122,7 @@ function enforceRateLimit(endpointName: EndpointName, clientAddress: string): nu
 
   if (currentWindowRequests.length >= maxRequests) {
     const oldestRequest = currentWindowRequests[0];
-    const retryAfterMs = windowSize - (now - oldestRequest);
+    const retryAfterMs = Math.max(0, windowSize - (now - oldestRequest));
     rateLimitBuckets.set(endpointName, endpointBuckets);
     return Math.max(1, Math.ceil(retryAfterMs / 1000));
   }
@@ -164,8 +164,16 @@ function pruneAutocompleteCache(): void {
   }
 
   while (autocompleteCache.size > AUTOCOMPLETE_CACHE_MAX_ENTRIES) {
-    const evictionKey = autocompleteCache.keys().next().value;
-    if (evictionKey === undefined) {
+    let evictionKey: string | null = null;
+    let oldestExpiry = Number.POSITIVE_INFINITY;
+    for (const [cacheKey, cacheValue] of autocompleteCache.entries()) {
+      if (cacheValue.expiresAt < oldestExpiry) {
+        oldestExpiry = cacheValue.expiresAt;
+        evictionKey = cacheKey;
+      }
+    }
+
+    if (!evictionKey) {
       break;
     }
 
@@ -475,9 +483,9 @@ export function registerIdeRoutes(application: express.Express): void {
 
     const startedAt = Date.now();
     const prefix = parsed.data.prefix;
-    const suffix = parsed.data.suffix?.trim() ?? "";
+    const suffix = parsed.data.suffix;
     const language = parsed.data.language?.trim() ?? "plaintext";
-    const cacheKey = createAutocompleteCacheKey(prefix, suffix, language);
+    const cacheKey = createAutocompleteCacheKey(prefix, suffix ?? "", language);
     const now = Date.now();
     const cacheHit = autocompleteCache.get(cacheKey);
     if (cacheHit && cacheHit.expiresAt > now) {
@@ -503,7 +511,7 @@ export function registerIdeRoutes(application: express.Express): void {
         generate(prompt, {
           model: DEFAULT_AUTOCOMPLETE_MODEL,
           stream: false,
-          suffix: suffix || undefined,
+          suffix,
           options: {
             num_predict: AUTOCOMPLETE_MAX_TOKENS,
             temperature: 0.2,
