@@ -1,0 +1,145 @@
+/**
+ * Upload-based HTTP endpoints — process files sent via multipart form.
+ *
+ * These endpoints complement the agent-loop tools by accepting file
+ * uploads directly from the API instead of requiring files to exist
+ * on disk.  Each endpoint calls the corresponding tool with inline
+ * base64 data, so the underlying logic is shared.
+ *
+ * Endpoints:
+ * - `POST /upload/image-classify`  — classify/describe an uploaded image.
+ * - `POST /upload/speech-to-text`  — transcribe an uploaded audio file.
+ * - `POST /upload/read-pdf`        — extract text from an uploaded PDF.
+ *
+ * All endpoints use `multer` with in-memory storage and a 50 MB limit.
+ *
+ * @module apps/api/upload-endpoints
+ */
+
+import type express from "express";
+import multer from "multer";
+import { imageClassifyTool, speechToTextTool, readPdfTool } from "../../packages/tools/index";
+import { getLogger } from "../../packages/logger/logger";
+
+const log = getLogger("api-upload");
+
+/** Multer instance — files are kept in memory (Buffer) for direct processing. */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+});
+
+/**
+ * Register upload-based routes on the Express app.
+ *
+ * @param app - The Express application instance.
+ */
+export function registerUploadRoutes(app: express.Express): void {
+  /**
+   * POST /upload/image-classify — classify/describe an uploaded image.
+   *
+   * Expects `multipart/form-data` with:
+   * - `file` (required) — the image file.
+   * - `prompt` (optional) — custom vision prompt.
+   * - `model` (optional) — override the vision model name.
+   *
+   * Response: `{ model, response }` where `response` is the model's description.
+   */
+  app.post("/upload/image-classify", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
+        return;
+      }
+
+      log.info("upload_image_classify", {
+        filename: req.file.originalname,
+        size: req.file.size,
+      });
+
+      const result = await imageClassifyTool.execute({
+        data: req.file.buffer.toString("base64"),
+        prompt: req.body?.prompt,
+        model: req.body?.model,
+      });
+
+      res.json(result);
+    } catch (err) {
+      log.error("upload_image_classify_failed", { error: String(err) });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  /**
+   * POST /upload/speech-to-text — transcribe an uploaded audio file.
+   *
+   * Expects `multipart/form-data` with:
+   * - `file` (required) — the audio file.
+   * - `model` (optional) — override the STT model name.
+   * - `language` (optional) — ISO 639-1 language hint (e.g. `"en"`).
+   * - `prompt` (optional) — context/prompt for transcription.
+   *
+   * Response: `{ model, text }` where `text` is the transcribed content.
+   */
+  app.post("/upload/speech-to-text", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
+        return;
+      }
+
+      log.info("upload_speech_to_text", {
+        filename: req.file.originalname,
+        size: req.file.size,
+      });
+
+      const result = await speechToTextTool.execute({
+        data: req.file.buffer.toString("base64"),
+        filename: req.file.originalname,
+        model: req.body?.model,
+        language: req.body?.language,
+        prompt: req.body?.prompt,
+      });
+
+      res.json(result);
+    } catch (err) {
+      log.error("upload_speech_to_text_failed", { error: String(err) });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  /**
+   * POST /upload/read-pdf — extract text from an uploaded PDF.
+   *
+   * Expects `multipart/form-data` with:
+   * - `file` (required) — the PDF file.
+   *
+   * Response: `{ pageCount, text }` with the extracted content.
+   */
+  app.post("/upload/read-pdf", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
+        return;
+      }
+
+      log.info("upload_read_pdf", {
+        filename: req.file.originalname,
+        size: req.file.size,
+      });
+
+      const result = await readPdfTool.execute({
+        data: req.file.buffer.toString("base64"),
+      });
+
+      res.json(result);
+    } catch (err) {
+      log.error("upload_read_pdf_failed", { error: String(err) });
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  log.info("upload_routes_registered", {
+    routes: ["/upload/image-classify", "/upload/speech-to-text", "/upload/read-pdf"],
+  });
+}

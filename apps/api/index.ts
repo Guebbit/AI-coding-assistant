@@ -30,6 +30,7 @@ import {
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { registerIdeRoutes } from "./ide-endpoints";
+import { registerUploadRoutes } from "./upload-endpoints";
 
 const log = getLogger("api");
 
@@ -84,6 +85,9 @@ app.use(express.json());
 
 /* Register IDE-specific direct-LLM endpoints. */
 registerIdeRoutes(app);
+
+/* Register file-upload endpoints (image, audio, PDF). */
+registerUploadRoutes(app);
 
 /**
  * POST /run — submit a task to the agent reasoning loop.

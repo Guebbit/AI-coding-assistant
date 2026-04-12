@@ -2,9 +2,11 @@
  * Speech-to-text tool — transcribe audio files using Ollama's
  * OpenAI-compatible `/v1/audio/transcriptions` endpoint.
  *
- * The audio file is read from disk and sent as a multipart form
- * upload.  Uses the shared `resolveSafePath` helper to prevent
- * directory traversal.
+ * Accepts an audio file from disk (`path`) **or** as inline base64
+ * data (`data`).  Uses the shared `resolveSafePath` helper to prevent
+ * directory traversal when reading from disk.
+ *
+ * When both `path` and `data` are provided, `data` takes precedence.
  *
  * @module tools/speech.to.text
  */
@@ -23,37 +25,54 @@ const DEFAULT_STT_MODEL = process.env.TOOL_STT_MODEL ?? "whisper";
 /**
  * Tool instance for transcribing audio files.
  *
- * Input:
+ * Input (disk):
  * ```json
  * { "path": "audio/meeting.wav", "model": "whisper", "language": "en", "prompt": "context" }
+ * ```
+ *
+ * Input (inline base64):
+ * ```json
+ * { "data": "<base64>", "filename": "meeting.wav", "model": "whisper", "language": "en" }
  * ```
  */
 export const speechToTextTool: Tool = {
   name: "speech_to_text",
   description:
     "Transcribe an audio file using Ollama OpenAI-compatible transcription endpoint. " +
-    "Input: { path: string, model?: string, language?: string, prompt?: string }",
+    "Input: { path?: string, data?: string (base64), filename?: string, model?: string, language?: string, prompt?: string }. " +
+    "Provide either path (file on disk) or data (base64-encoded audio).",
 
   /**
-   * Read the audio file and send it to Ollama for transcription.
+   * Read the audio file (from disk or inline base64) and send it to Ollama for transcription.
    *
    * @param input          - Tool input object.
-   * @param input.path     - Path to the audio file (relative to project root).
+   * @param input.path     - Path to the audio file (relative to project root). Required unless `data` is provided.
+   * @param input.data     - Base64-encoded audio content. Takes precedence over `path`.
+   * @param input.filename - Original filename hint (used when `data` is provided; defaults to `"audio.wav"`).
    * @param input.model    - Optional override for the STT model name.
    * @param input.language - Optional language hint (ISO 639-1 code, e.g. `"en"`).
    * @param input.prompt   - Optional context/prompt to guide transcription.
    * @returns `{ model, path, text }` where `text` is the transcribed content.
-   * @throws {Error} When the path is missing, file is empty, or API fails.
+   * @throws {Error} When neither `path` nor `data` is provided, or the API fails.
    */
-  async execute({ path: audioPath, model, language, prompt }) {
-    if (typeof audioPath !== "string" || audioPath.trim() === "") {
-      throw new Error('"path" must be a non-empty string');
+  async execute({ path: audioPath, data, filename, model, language, prompt }) {
+    let audioData: Buffer;
+    let resolvedFilename: string;
+
+    if (typeof data === "string" && data.trim() !== "") {
+      audioData = Buffer.from(data, "base64");
+      resolvedFilename =
+        typeof filename === "string" && filename.trim() ? filename : "audio.wav";
+    } else if (typeof audioPath === "string" && audioPath.trim() !== "") {
+      const safePath = resolveSafePath(audioPath);
+      audioData = await fs.readFile(safePath);
+      resolvedFilename = path.basename(safePath);
+    } else {
+      throw new Error('Either "path" (file on disk) or "data" (base64 string) must be provided');
     }
 
-    const safePath = resolveSafePath(audioPath);
-    const data = await fs.readFile(safePath);
-    if (data.length === 0) {
-      throw new Error("Audio file is empty");
+    if (audioData.length === 0) {
+      throw new Error("Audio data is empty");
     }
 
     const usedModel = typeof model === "string" && model.trim() ? model : DEFAULT_STT_MODEL;
@@ -67,7 +86,7 @@ export const speechToTextTool: Tool = {
     if (typeof prompt === "string" && prompt.trim()) {
       form.append("prompt", prompt);
     }
-    form.append("file", new Blob([data]), path.basename(safePath));
+    form.append("file", new Blob([new Uint8Array(audioData)]), resolvedFilename);
 
     const res = await fetch(`${OLLAMA_BASE_URL}/v1/audio/transcriptions`, {
       method: "POST",
@@ -84,7 +103,7 @@ export const speechToTextTool: Tool = {
     const parsed = (await res.json()) as { text?: string };
     return {
       model: usedModel,
-      path: audioPath,
+      path: typeof audioPath === "string" ? audioPath : undefined,
       text: parsed.text ?? "",
     };
   },

@@ -8,6 +8,9 @@ Sends an audio file to a speech transcription model (Whisper) and returns the tr
 
 ## Input
 
+The tool accepts either a file path (disk) or inline base64 data (e.g. from an API upload). When both are provided, `data` takes precedence.
+
+**From disk:**
 ```json
 {
   "path": "relative/path/to/audio.wav",
@@ -17,9 +20,22 @@ Sends an audio file to a speech transcription model (Whisper) and returns the tr
 }
 ```
 
+**From upload (base64):**
+```json
+{
+  "data": "<base64-encoded audio>",
+  "filename": "meeting.wav",
+  "model": "optional",
+  "language": "optional",
+  "prompt": "optional"
+}
+```
+
 | Field | Required | Default | Notes |
 |---|---|---|---|
-| `path` | ✅ | — | Path to audio file, relative to project root |
+| `path` | one of `path` / `data` | — | Path to audio file, relative to project root |
+| `data` | one of `path` / `data` | — | Base64-encoded audio content (takes precedence over `path`) |
+| `filename` | ❌ | `"audio.wav"` | Original filename hint (used when `data` is provided) |
 | `model` | ❌ | `TOOL_STT_MODEL` or `whisper` | Override the transcription model |
 | `language` | ❌ | auto-detect | ISO language code e.g. `"en"`, `"it"`, `"fr"` |
 | `prompt` | ❌ | — | Optional context hint to improve accuracy (e.g. "technical discussion about TypeScript") |
@@ -40,9 +56,9 @@ The transcribed text as a plain string:
 ## How it works internally
 
 ```text
-Audio file on disk  (.wav / .mp3 / .m4a)
+Audio from disk OR base64 data from upload  (.wav / .mp3 / .m4a)
     |
-Tool reads file bytes
+Tool reads file bytes (or uses provided base64 directly)
     |
 POST /v1/audio/transcriptions  ->  Ollama (OpenAI-compatible endpoint)
   multipart/form-data: file + model + language + prompt
@@ -51,6 +67,8 @@ Whisper model transcribes the audio
     |
 Tool returns transcribed text to agent
 ```
+
+There is also a dedicated upload endpoint: `POST /upload/speech-to-text` (accepts `multipart/form-data`).
 
 ## Real-life use cases
 

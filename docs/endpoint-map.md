@@ -20,13 +20,14 @@ Manna API  (default port :3001)
 ├── POST /lint-conventions           — Direct: Lint + convention findings (deterministic + LLM)
 ├── POST /page-review                — Direct: Whole-file categorized review (single LLM call)
 │
+├── POST /upload/image-classify      — Upload: Image classification via multipart file upload
+├── POST /upload/speech-to-text      — Upload: Audio transcription via multipart file upload
+├── POST /upload/read-pdf            — Upload: PDF text extraction via multipart file upload
+│
 └── (future specialized endpoints — not yet implemented)
     ├── POST /docs-chat              — Fast documentation Q&A
     ├── POST /summarize-file         — Single-file summarization
-    ├── POST /query-database         — Structured SQL query + explanation
-    ├── POST /analyze-image          — Direct vision classification
-    ├── POST /transcribe             — Direct speech-to-text
-    └── POST /read-pdf               — PDF extraction + summary
+    └── POST /query-database         — Structured SQL query + explanation
 ```
 
 ---
@@ -356,6 +357,94 @@ curl -X POST http://localhost:3001/page-review \
 
 ---
 
+## Upload endpoints
+
+File: `apps/api/upload-endpoints.ts`
+Registered in `apps/api/index.ts` via `registerUploadRoutes(app)`.
+
+These endpoints accept files via `multipart/form-data` upload — no need for files to be on disk. They call the corresponding tool with inline base64 data. Max upload size: **50 MB**.
+
+### `POST /upload/image-classify`
+
+Classify or describe an uploaded image using a vision model.
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `file` | file | **yes** | — | The image file to classify |
+| `prompt` | string | no | `"Describe this image…"` | Custom vision prompt |
+| `model` | string | no | `TOOL_VISION_MODEL` | Override the vision model |
+
+**Response shape:**
+
+```json
+{
+  "model": "llava-llama3",
+  "response": "The image shows a cat sitting on a windowsill..."
+}
+```
+
+**curl example:**
+
+```bash
+curl -X POST http://localhost:3001/upload/image-classify \
+  -F 'file=@photo.jpg' \
+  -F 'prompt=What breed of cat is this?'
+```
+
+### `POST /upload/speech-to-text`
+
+Transcribe an uploaded audio file.
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `file` | file | **yes** | — | The audio file to transcribe |
+| `model` | string | no | `TOOL_STT_MODEL` | Override the STT model |
+| `language` | string | no | — | ISO 639-1 language hint (e.g. `"en"`) |
+| `prompt` | string | no | — | Context/prompt for transcription |
+
+**Response shape:**
+
+```json
+{
+  "model": "whisper",
+  "text": "Hello, this is a transcription of the audio..."
+}
+```
+
+**curl example:**
+
+```bash
+curl -X POST http://localhost:3001/upload/speech-to-text \
+  -F 'file=@recording.wav' \
+  -F 'language=en'
+```
+
+### `POST /upload/read-pdf`
+
+Extract text from an uploaded PDF.
+
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `file` | file | **yes** | — | The PDF file to parse |
+
+**Response shape:**
+
+```json
+{
+  "pageCount": 5,
+  "text": "Extracted text content from the PDF..."
+}
+```
+
+**curl example:**
+
+```bash
+curl -X POST http://localhost:3001/upload/read-pdf \
+  -F 'file=@document.pdf'
+```
+
+---
+
 ## Why specialized endpoints?
 
 `POST /run` is powerful but heavyweight:
@@ -400,9 +489,6 @@ The following endpoints are **planned / proposed** — they are not implemented 
 | `POST /docs-chat` | Question about Manna documentation → fast answer | Single LLM call with docs pre-loaded as context; uses `AGENT_MODEL_FAST` for sub-second responses |
 | `POST /summarize-file` | File path → structured summary | Wraps `read_file` tool + single LLM summarization call |
 | `POST /query-database` | Natural language → SQL → results + explanation | Wraps `mysql_query` tool; returns `{ sql, rows, explanation }` |
-| `POST /analyze-image` | Image path + optional prompt → description | Wraps `image_classify` tool; uses `TOOL_VISION_MODEL` |
-| `POST /transcribe` | Audio file path → transcript text | Wraps `speech_to_text` tool; uses `TOOL_STT_MODEL` |
-| `POST /read-pdf` | PDF path → extracted text + summary | Wraps `read_pdf` tool; returns `{ text, pages, summary }` |
 
 This list will grow as use cases become frequent enough to justify a dedicated endpoint. The pattern is intentionally extensible.
 
@@ -414,7 +500,7 @@ Follow these steps to add a new direct endpoint (the same pattern used by `/auto
 
 1. **Define the contract** — write a Zod schema for the request body and a TypeScript interface for the response. Think carefully about what the caller needs to send and what they need back.
 
-2. **Add the route** — implement the handler in `apps/api/ide-endpoints.ts` (for IDE/tool-facing endpoints) or a new file for a different domain. Use the existing handlers as a template: `withTimeout`, `enforceRateLimit`, Zod validation.
+2. **Add the route** — implement the handler in `apps/api/ide-endpoints.ts` (for IDE/tool-facing endpoints), `apps/api/upload-endpoints.ts` (for file-upload endpoints), or a new file for a different domain. Use the existing handlers as a template: `withTimeout`, `enforceRateLimit`, Zod validation (for JSON endpoints), or `multer` middleware (for upload endpoints).
 
 3. **Register the route** — call the registration function from `apps/api/index.ts`. Follow the `registerIdeRoutes(app)` pattern.
 

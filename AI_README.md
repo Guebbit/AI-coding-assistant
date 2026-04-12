@@ -170,10 +170,10 @@ Tools registered per request in `apps/api/index.ts`:
 | `shell` | `shell.ts` | no | Allowlist-enforced; rejects unsafe commands |
 | `mysql_query` | `mysql.query.ts` | no | SELECT-only; rejects non-SELECT SQL |
 | `browser_fetch` | `browser.ts` | no | Playwright Chromium; truncates content to 5000 chars |
-| `image_classify` | `image.classify.ts` | no | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`) |
+| `image_classify` | `image.classify.ts` | no | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`); accepts `path` (disk) or `data` (base64) |
 | `semantic_search` | `semantic.search.ts` | no | Embeds query via Ollama; scores files via cosine similarity |
-| `speech_to_text` | `speech.to.text.ts` | no | Calls `TOOL_STT_MODEL` (default `whisper`) |
-| `read_pdf` | `pdf.read.ts` | no | Returns `{ text, pages }` |
+| `speech_to_text` | `speech.to.text.ts` | no | Calls `TOOL_STT_MODEL` (default `whisper`); accepts `path` (disk) or `data` (base64) |
+| `read_pdf` | `pdf.read.ts` | no | Returns `{ text, pages }`; accepts `path` (disk) or `data` (base64) |
 | `code_autocomplete` | `code.autocomplete.ts` | no | IDE-style completion via `TOOL_IDE_MODEL` (default `starcoder2`) |
 | `scaffold_project` | `project.scaffold.ts` | **yes** | Copies boilerplate from `BOILERPLATE_ROOT` |
 
@@ -274,6 +274,23 @@ These are **not** agent-loop routes. They respond with a single LLM call.
 
 ---
 
+## Upload endpoints
+
+File: `apps/api/upload-endpoints.ts`
+Registered in `apps/api/index.ts` via `registerUploadRoutes(app)`.
+
+These are **not** agent-loop routes. They accept `multipart/form-data` file uploads and call the corresponding tool with inline base64 data.
+
+| Endpoint | Form fields | Purpose |
+|---|---|---|
+| `POST /upload/image-classify` | `file` (required), `prompt?`, `model?` | Classify/describe an uploaded image via `TOOL_VISION_MODEL` |
+| `POST /upload/speech-to-text` | `file` (required), `model?`, `language?`, `prompt?` | Transcribe an uploaded audio file via `TOOL_STT_MODEL` |
+| `POST /upload/read-pdf` | `file` (required) | Extract text from an uploaded PDF |
+
+Max upload size: 50 MB. Uses `multer` with in-memory storage.
+
+---
+
 ## Key environment variables
 
 | Variable | Default | Effect |
@@ -310,7 +327,8 @@ These are **not** agent-loop routes. They respond with a single LLM call.
 ├── apps/
 │   └── api/
 │       ├── index.ts          — Express entry; wires all packages; POST /run, GET /health
-│       └── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
+│       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
+│       └── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
 ├── packages/
 │   ├── agent/
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS

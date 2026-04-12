@@ -8,6 +8,9 @@ Sends an image to a **vision model** (multimodal LLM) via Ollama and gets back a
 
 ## Input
 
+The tool accepts either a file path (disk) or inline base64 data (e.g. from an API upload). When both are provided, `data` takes precedence.
+
+**From disk:**
 ```json
 {
   "path": "relative/path/to/image.png",
@@ -16,9 +19,19 @@ Sends an image to a **vision model** (multimodal LLM) via Ollama and gets back a
 }
 ```
 
+**From upload (base64):**
+```json
+{
+  "data": "<base64-encoded image>",
+  "prompt": "optional question or instruction",
+  "model": "optional model override"
+}
+```
+
 | Field | Required | Default | Notes |
 |---|---|---|---|
-| `path` | ✅ | — | Path to image file, relative to project root |
+| `path` | one of `path` / `data` | — | Path to image file, relative to project root |
+| `data` | one of `path` / `data` | — | Base64-encoded image content (takes precedence over `path`) |
 | `prompt` | ❌ | `"Describe this image."` | What to ask the vision model |
 | `model` | ❌ | `TOOL_VISION_MODEL` or `llava-llama3` | Override the vision model for this call |
 
@@ -52,9 +65,9 @@ These defaults are tuned for factual precision — the vision model is asked to 
 ## How the tool works internally
 
 ```text
-Image file on disk
+Image from disk OR base64 data from upload
     ↓
-Tool reads file bytes and encodes them as Base64
+Tool encodes file bytes as Base64 (or uses provided base64 directly)
     ↓
 POST /api/generate  →  Ollama
   { model: "llava-llama3", prompt: "...", images: ["<base64>"] }
@@ -65,6 +78,8 @@ Model returns text description
     ↓
 Tool returns description to agent
 ```
+
+There is also a dedicated upload endpoint: `POST /upload/image-classify` (accepts `multipart/form-data`).
 
 ## Real-life use cases
 
