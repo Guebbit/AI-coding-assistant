@@ -46,18 +46,19 @@ If you want "specialist personalities" (planner/coder/reviewer), you need explic
 
 Use this as a quick starting matrix:
 
-- **General assistant:** `llama3.1:8b` or `qwen3:4b`
-- **Coding-heavy tasks:** `deepseek-coder-v2:16b` or `qwen3-coder:14b`
-- **Reasoning/math-heavy tasks:** `deepseek-r1`
-- **Very low VRAM / fastest tests:** `phi3`, `phi4-mini`, `dolphin-phi`
-- **Vision (image + text):** `llava-llama3`
+- **General assistant (main):** `qwen3:32b`
+- **Coding-heavy tasks (main):** `qwen2.5-coder:32b`
+- **Reasoning/math-heavy tasks (main):** `deepseek-r1:32b`
+- **Fast utility tasks:** `phi4-mini`
+- **Vision (image + text):** `llava:13b`
+- **IDE assistant (later, WebStorm):** `starcoder2`
 
 Rule of thumb:
 
-1. start with 4B–8B
-2. increase size only if quality is not enough
-3. prefer coder models for repo work
-4. prefer reasoning models for logic/math-heavy prompts
+1. use `deepseek-r1:32b` for primary reasoning
+2. use `qwen3:32b` for general assistant quality
+3. use `qwen2.5-coder:32b` for core coding tasks
+4. keep `phi4-mini` for fast low-latency utility calls
 
 ## Local runtime constraints (important)
 

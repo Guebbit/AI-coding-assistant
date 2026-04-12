@@ -1,97 +1,83 @@
-# Ollama Models — Quick Selection Guide
+# Ollama Models — RTX 4090 Optimized List
 
-This page lists the local models expected for this project (from your mounted Ollama volume, e.g. `- /home/${LINUX_USERNAME}/.ollama:/root/.ollama:z,rw`).
+This page lists the local models expected for this project from your mounted Ollama volume (for example `- /home/${LINUX_USERNAME}/.ollama:/root/.ollama:z,rw`).
 
-> Parameter count is not a direct quality score. Pick by task, VRAM, and response speed.
+## Removed from the project list
 
-## Quick recommendations
+- `deepseek-coder-v2:16b`
+- `llama2-uncensored:7b`
+- `phi3:3.8b`
+- `phi4-mini:3.8b` (legacy tag; current pull command in this docs is `ollama pull phi4-mini`)
+- `qwen3-4b-balanced`
+- `qwen3-4b-drunk`
+- `qwen3-4b-serious`
+- `qwen3-coder-30b-safe:latest`
+- `qwencoder-30b-safe:latest`
 
-If you want one model to start with:
+## Added / upgraded models
 
-- **General assistant:** `llama3.1:8b` or `qwen3:4b`
-- **Coding:** `deepseek-coder-v2:16b` or `qwen3-coder:14b`
-- **Reasoning/math:** `deepseek-r1`
-- **Very low VRAM / fast tests:** `phi3` / `phi4-mini` / `dolphin-phi`
-- **Vision (image + text):** `llava-llama3`
-- **Less filtered behavior (experimental):** `dolphin-llama3`, `llama2-uncensored`, `dolphin-phi`
+### Reasoning (main)
+```bash
+ollama pull deepseek-r1:32b
+```
 
-## Model catalog
+### General assistant (main)
+```bash
+ollama pull qwen3:32b
+```
 
-### `llama3.1`
-- **Variants:** 8B, 70B
-- **Best for:** balanced day-to-day chat and assistant tasks
-- **Notes:** strong default choice if you do not have a special need
+### Coding (main upgrade)
+```bash
+ollama pull qwen2.5-coder:32b
+```
 
-### `mixtral`
-- **Variants:** 8x7B (MoE), other MoE variants
-- **Best for:** analysis, multilingual tasks, broader reasoning
-- **Notes:** good quality/efficiency balance in many setups
+### Vision (upgrade)
+```bash
+ollama pull llava:13b
+```
 
-### `qwen3`
-- **Variants:** 4B and larger variants
-- **Best for:** lightweight general assistant
-- **Notes:** fast and practical for limited hardware
+### Embeddings (required for memory/search)
+```bash
+ollama pull nomic-embed-text
+```
 
-### `deepseek-r1`
-- **Variants:** ~7B, 14B, 32B+
-- **Best for:** logic-heavy prompts, math, structured reasoning
-- **Notes:** useful when step-by-step reasoning quality matters
+### Fast utility model (optional but useful)
+```bash
+ollama pull phi4-mini
+```
 
-### `deepseek-coder-v2`
-- **Variants:** 1.3B, 6.7B, 16B, 33B
-- **Best for:** coding, refactors, debugging, repository work
-- **Notes:** reliable coding specialist across many languages
+### IDE assistant (future WebStorm usage)
+```bash
+ollama pull starcoder2
+```
 
-### `qwen3-coder`
-- **Variants:** 7B, 14B, 30B
-- **Best for:** advanced coding and agent/tool workflows
-- **Notes:** strong for planning + implementation prompts
+## Final optimized setup
 
-### `phi3`
-- **Variants:** Mini (~3.8B), Small, Medium
-- **Best for:** lightweight assistant and basic coding
-- **Notes:** good speed/quality ratio on smaller GPUs
+### Thinking / reasoning
+- `deepseek-r1:32b` ⭐ main brain
+- `mixtral:8x7b` fallback
 
-### `phi4-mini`
-- **Variants:** mini class (~3.8B family)
-- **Best for:** fast responses, edge-like environments
-- **Notes:** compact and efficient
+### General assistant
+- `qwen3:32b` ⭐
+- `llama3.1:8b` fast chat
 
-### `dolphin-phi`
-- **Variants:** ~2.7B class
-- **Best for:** very small/faster uncensored experiments
-- **Notes:** ultra-light, relaxed alignment
+### Coding
+- `qwen2.5-coder:32b` ⭐
+- `qwen3-coder:30b` secondary
+- `qwencoder-30b-safe` optional redundancy
+- `starcoder2` reserved for WebStorm IDE assistant workflows
 
-### `dolphin-llama3`
-- **Variants:** 8B, 70B
-- **Best for:** expressive chat, roleplay, creative generation
-- **Notes:** uncensored fine-tune of Llama family
+### Vision
+- `llava:13b` ⭐
 
-### `llama2-uncensored`
-- **Variants:** 7B, 13B, 70B
-- **Best for:** open-ended and less restricted testing
-- **Notes:** primarily experimental usage
+### Search / memory
+- `nomic-embed-text` ⭐
 
-### `llava-llama3`
-- **Variants:** 8B class
-- **Best for:** image captioning, visual Q&A, multimodal tasks
-- **Notes:** requires image+text workflow
+### Fast tools
+- `phi4-mini`
 
-## Family overview
-
-- **Llama family:** `llama3.1`, `dolphin-llama3`, `llama2-uncensored`
-- **Phi family:** `phi3`, `phi4-mini`, `dolphin-phi`
-- **Coding-focused:** `deepseek-coder-v2`, `qwen3-coder`
-- **Reasoning-focused:** `deepseek-r1`
-- **Multimodal:** `llava-llama3`
-
-## Practical selection rules
-
-1. Start small (4B–8B) and confirm speed on your machine.
-2. Move to larger variants only if quality is insufficient.
-3. For coding, prefer coder-tuned models over general models.
-4. For strict reasoning/math, test `deepseek-r1` first.
-5. For privacy-sensitive docs, use local RAG with the model that fits your VRAM.
+### Heavy “brain tank”
+- `dolphin-llama3:70b` (optional if slow inference is acceptable)
 
 Reference libraries:
 - https://ollama.com/library
