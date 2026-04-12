@@ -69,12 +69,15 @@ curl -X POST http://localhost:3001/run \
 
 Tools are configured in `apps/api/index.ts` when creating the `Agent`.
 
-Current enabled tools:
+<details>
+<summary>Current enabled tools (click to expand)</summary>
 
-- `read_file`
-- `shell`
-- `mysql_query`
-- `browser_fetch`
+- `read_file` — read files inside project root
+- `shell` — run allowlisted shell commands
+- `mysql_query` — run read-only `SELECT` queries
+- `browser_fetch` — fetch and summarize web page content
+
+</details>
 
 `browser_fetch` is enabled by default.
 Chromium is installed automatically during `npm install` via `postinstall`.

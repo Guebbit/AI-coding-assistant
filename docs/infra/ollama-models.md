@@ -1,83 +1,57 @@
-# Ollama Models — RTX 4090 Optimized List
+# Ollama Models — Current Local List
 
-This page lists the local models expected for this project from your mounted Ollama volume (for example `- /home/${LINUX_USERNAME}/.ollama:/root/.ollama:z,rw`).
+This page reflects the current locally installed models for this project.
 
-## Removed from the project list
+## Installed models (current)
 
-- `deepseek-coder-v2:16b`
-- `llama2-uncensored:7b`
-- `phi3:3.8b`
-- `phi4-mini:3.8b` (legacy tag; current pull command in this docs is `ollama pull phi4-mini`)
-- `qwen3-4b-balanced`
-- `qwen3-4b-drunk`
-- `qwen3-4b-serious`
-- `qwen3-coder-30b-safe:latest`
-- `qwencoder-30b-safe:latest`
+| Model | Size |
+|---|---|
+| `starcoder2:15b` | 9.1 GB |
+| `llava:13b` | 8.0 GB |
+| `qwen3:32b` | 20 GB |
+| `deepseek-r1:32b` | 19 GB |
+| `qwen2.5-coder:32b` | 19 GB |
+| `phi4-mini:latest` | 2.5 GB |
+| `nomic-embed-text:latest` | 274 MB |
+| `phi4-reasoning:14b` | 11 GB |
+| `dolphin-llama3:70b` | 39 GB |
+| `mixtral:8x7b` | 26 GB |
+| `dolphin-phi:2.7b` | 1.6 GB |
+| `llava-llama3:8b` | 5.5 GB |
+| `llama3.1:8b` | 4.9 GB |
+| `qwen3-coder:30b` | 18 GB |
+| `deepseek-r1:14b` | 9.0 GB |
+| `qwen3:4b` | 2.5 GB |
 
-## Added / upgraded models
+## Role-based picks (recommended)
 
-### Reasoning (main)
+- **General assistant (main):** `qwen3:32b`
+- **Coding-heavy tasks (main):** `qwen2.5-coder:32b`
+- **Reasoning-heavy tasks (main):** `deepseek-r1:32b`
+- **Fast/low-latency utility:** `phi4-mini:latest` or `qwen3:4b`
+- **Vision:** `llava:13b`
+- **Embeddings (memory/search):** `nomic-embed-text:latest`
+
+## Pull commands (if you need to restore)
+
 ```bash
-ollama pull deepseek-r1:32b
-```
-
-### General assistant (main)
-```bash
-ollama pull qwen3:32b
-```
-
-### Coding (main upgrade)
-```bash
-ollama pull qwen2.5-coder:32b
-```
-
-### Vision (upgrade)
-```bash
+ollama pull starcoder2:15b
 ollama pull llava:13b
+ollama pull qwen3:32b
+ollama pull deepseek-r1:32b
+ollama pull qwen2.5-coder:32b
+ollama pull phi4-mini:latest
+ollama pull nomic-embed-text:latest
+ollama pull phi4-reasoning:14b
+ollama pull dolphin-llama3:70b
+ollama pull mixtral:8x7b
+ollama pull dolphin-phi:2.7b
+ollama pull llava-llama3:8b
+ollama pull llama3.1:8b
+ollama pull qwen3-coder:30b
+ollama pull deepseek-r1:14b
+ollama pull qwen3:4b
 ```
-
-### Embeddings (required for memory/search)
-```bash
-ollama pull nomic-embed-text
-```
-
-### Fast utility model (optional but useful)
-```bash
-ollama pull phi4-mini
-```
-
-### IDE assistant (future WebStorm usage)
-```bash
-ollama pull starcoder2
-```
-
-## Final optimized setup
-
-### Thinking / reasoning
-- `deepseek-r1:32b` ⭐ main brain
-- `mixtral:8x7b` fallback
-
-### General assistant
-- `qwen3:32b` ⭐
-- `llama3.1:8b` fast chat
-
-### Coding
-- `qwen2.5-coder:32b` ⭐
-- `qwen3-coder:30b` secondary
-- `qwencoder-30b-safe` optional redundancy
-- `starcoder2` reserved for WebStorm IDE assistant workflows
-
-### Vision
-- `llava:13b` ⭐
-
-### Search / memory
-- `nomic-embed-text` ⭐
-
-### Fast tools
-- `phi4-mini`
-
-### Heavy “brain tank”
-- `dolphin-llama3:70b` (optional if slow inference is acceptable)
 
 Reference libraries:
 - https://ollama.com/library

@@ -18,10 +18,22 @@ Every tool provides:
 
 ## Included tools
 
-- `read_file` — read UTF-8 files under project root
-- `shell` — run allowlisted shell commands with timeout
-- `mysql_query` — execute read-only `SELECT` queries
-- `browser_fetch` — fetch page title and visible text (Playwright)
+<details>
+<summary>Select a tool to inspect</summary>
+
+### `read_file`
+Read UTF-8 files under project root.
+
+### `shell`
+Run allowlisted shell commands with timeout.
+
+### `mysql_query`
+Execute read-only `SELECT` queries.
+
+### `browser_fetch`
+Fetch page title and visible text (Playwright).
+
+</details>
 
 ## Security boundaries
 
