@@ -5,6 +5,16 @@ import type { Tool } from "./types";
 
 const DEFAULT_VISION_MODEL = process.env.TOOL_VISION_MODEL ?? "llava-llama3";
 
+function envFloat(value: string | undefined, fallback: number): number {
+  const parsed = parseFloat(value ?? String(fallback));
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function envInt(value: string | undefined, fallback: number): number {
+  const parsed = parseInt(value ?? String(fallback), 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 function resolveSafePath(filePath: string): string {
   const resolved = path.resolve(process.cwd(), filePath);
   const root = path.resolve(process.cwd());
@@ -38,6 +48,13 @@ export const imageClassifyTool: Tool = {
       model: usedModel,
       stream: false,
       images: [base64Image],
+      options: {
+        temperature: envFloat(process.env.TOOL_VISION_TEMPERATURE, 0.2),
+        top_p: envFloat(process.env.TOOL_VISION_TOP_P, 0.8),
+        top_k: envInt(process.env.TOOL_VISION_TOP_K, 20),
+        num_ctx: envInt(process.env.TOOL_VISION_NUM_CTX, 4096),
+        repeat_penalty: envFloat(process.env.TOOL_VISION_REPEAT_PENALTY, 1.3),
+      },
     });
 
     return {

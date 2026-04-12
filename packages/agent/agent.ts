@@ -125,6 +125,7 @@ export class Agent {
         const llmStartedAt = Date.now();
         const llmResult = await generateWithMetadata(prompt, {
           model: route.model,
+          options: route.options,
         });
         response = llmResult.response;
         log.info("agent_llm_response_received", {

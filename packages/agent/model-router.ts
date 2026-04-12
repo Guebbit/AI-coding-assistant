@@ -6,6 +6,7 @@ export interface ModelRouteDecision {
   profile: ModelProfile;
   model: string;
   reason: string;
+  options?: Record<string, unknown>;
 }
 
 interface RouteInput {
@@ -23,6 +24,16 @@ const CODE_MODEL = process.env.AGENT_MODEL_CODE ?? DEFAULT_MODEL;
 const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? "phi4-mini:latest";
 const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? "rules").toLowerCase();
 
+function envFloat(value: string | undefined, fallback: number): number {
+  const parsed = parseFloat(value ?? String(fallback));
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function envInt(value: string | undefined, fallback: number): number {
+  const parsed = parseInt(value ?? String(fallback), 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 function resolveModel(profile: ModelProfile): string {
   switch (profile) {
     case "fast":
@@ -33,6 +44,44 @@ function resolveModel(profile: ModelProfile): string {
       return CODE_MODEL;
     default:
       return DEFAULT_MODEL;
+  }
+}
+
+function resolveOptions(profile: ModelProfile): Record<string, unknown> {
+  const prefix = `AGENT_MODEL_${profile.toUpperCase()}`;
+  switch (profile) {
+    case "fast":
+      return {
+        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.3),
+        top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.85),
+        top_k: envInt(process.env[`${prefix}_TOP_K`], 30),
+        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 4096),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.2),
+      };
+    case "reasoning":
+      return {
+        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.2),
+        top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.8),
+        top_k: envInt(process.env[`${prefix}_TOP_K`], 20),
+        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.3),
+      };
+    case "code":
+      return {
+        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.2),
+        top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.8),
+        top_k: envInt(process.env[`${prefix}_TOP_K`], 20),
+        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.3),
+      };
+    default:
+      return {
+        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.3),
+        top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.85),
+        top_k: envInt(process.env[`${prefix}_TOP_K`], 30),
+        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.2),
+      };
   }
 }
 
@@ -66,6 +115,7 @@ function routeWithRules(input: RouteInput): ModelRouteDecision {
       profile: "code",
       model: resolveModel("code"),
       reason: "keyword_match:code",
+      options: resolveOptions("code"),
     };
   }
 
@@ -93,6 +143,7 @@ function routeWithRules(input: RouteInput): ModelRouteDecision {
       profile: "reasoning",
       model: resolveModel("reasoning"),
       reason: "heuristic:reasoning_or_long_task",
+      options: resolveOptions("reasoning"),
     };
   }
 
@@ -100,6 +151,7 @@ function routeWithRules(input: RouteInput): ModelRouteDecision {
     profile: "fast",
     model: resolveModel("fast"),
     reason: "default_fast",
+    options: resolveOptions("fast"),
   };
 }
 
@@ -141,6 +193,7 @@ async function routeWithModel(input: RouteInput): Promise<ModelRouteDecision> {
     profile,
     model: resolveModel(profile),
     reason: parsed.reason?.slice(0, 240) ?? "router_model_decision",
+    options: resolveOptions(profile),
   };
 }
 
@@ -150,6 +203,7 @@ export async function routeModel(input: RouteInput): Promise<ModelRouteDecision>
       profile: input.forcedProfile,
       model: resolveModel(input.forcedProfile),
       reason: "forced_by_caller",
+      options: resolveOptions(input.forcedProfile),
     };
   }
 
@@ -164,6 +218,7 @@ export async function routeModel(input: RouteInput): Promise<ModelRouteDecision>
       profile: "default",
       model: resolveModel("default"),
       reason: "router_model_failed_fallback_default",
+      options: resolveOptions("default"),
     };
   }
 }

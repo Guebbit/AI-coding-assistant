@@ -36,6 +36,19 @@ The shark's distinctive dorsal fin is clearly visible above the waterline."
 - Model: reads `TOOL_VISION_MODEL` env var, falls back to `llava-llama3`
 - Path is resolved against the project root — traversal outside that boundary is rejected
 
+## Model and runtime option env vars
+
+| Variable | Default | Description |
+|---|---|---|
+| `TOOL_VISION_MODEL` | `llava-llama3` | Vision model used for classification |
+| `TOOL_VISION_TEMPERATURE` | `0.2` | Sampling temperature — lower = more precise |
+| `TOOL_VISION_TOP_P` | `0.8` | Nucleus sampling probability |
+| `TOOL_VISION_TOP_K` | `20` | Top-K token candidates |
+| `TOOL_VISION_NUM_CTX` | `4096` | Context window size (tokens) |
+| `TOOL_VISION_REPEAT_PENALTY` | `1.3` | Repetition penalty |
+
+These defaults are tuned for factual precision — the vision model is asked to describe what it actually sees, not to be creative.
+
 ## How the tool works internally
 
 ```text

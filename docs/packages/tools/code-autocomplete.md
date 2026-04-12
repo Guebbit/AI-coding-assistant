@@ -56,6 +56,19 @@ Returns completion string
 3. `AGENT_MODEL_CODE` env var
 4. `starcoder2` (hardcoded fallback)
 
+## Runtime option env vars
+
+| Variable | Default | Description |
+|---|---|---|
+| `TOOL_IDE_MODEL` | `starcoder2` | Code completion model |
+| `TOOL_IDE_TEMPERATURE` | `0.1` | Sampling temperature — very low for deterministic completions |
+| `TOOL_IDE_TOP_P` | `0.7` | Nucleus sampling probability |
+| `TOOL_IDE_TOP_K` | `10` | Top-K token candidates — narrow for code precision |
+| `TOOL_IDE_NUM_CTX` | `8192` | Context window size (tokens) — large to accommodate full file context |
+| `TOOL_IDE_REPEAT_PENALTY` | `1.2` | Repetition penalty |
+
+These defaults are tuned for precise, cursor-time code completion: very low temperature and narrow sampling ensure the model picks the most likely correct token rather than exploring alternatives.
+
 ## Real-life use cases
 
 ### Use case 1 -- Complete a function signature
