@@ -3,6 +3,7 @@
 The API app wires small focused packages:
 
 - `agent` — the decision loop
+- `model-router` — per-step model profile selection inside the agent
 - `llm` — Ollama HTTP wrapper
 - `memory` — short-term context storage
 - `events` — in-process pub/sub notifications

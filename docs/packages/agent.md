@@ -2,7 +2,7 @@
 
 ## What
 
-Makes decisions in a loop.
+Makes decisions in a loop and routes each step to the most appropriate model profile.
 
 ## Role
 
@@ -15,6 +15,7 @@ Up to **5 steps** per task.
 ## Uses
 
 - LLM (`packages/llm`)
+- Model router (`packages/agent/src/model-router.ts`)
 - Memory (`packages/memory`)
 - Tools (`packages/tools`)
 - Events (`packages/events`)
@@ -36,3 +37,4 @@ Up to **5 steps** per task.
 ## Where in code
 
 - `packages/agent/agent.ts`
+- `packages/agent/src/model-router.ts`
