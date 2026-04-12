@@ -9,7 +9,7 @@ Write UTF-8 file content for generated projects.
 ```json
 {
   "path": "my-app/src/index.ts",
-  "content": "console.log('hello')\n",
+  "content": "console.log(\"hello\")\\n",
   "mode": "create"
 }
 ```

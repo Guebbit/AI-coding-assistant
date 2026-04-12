@@ -55,7 +55,16 @@ export const writeFileTool: Tool = {
     } else if (writeMode === "overwrite") {
       await fs.writeFile(resolvedPath, content, "utf-8");
     } else {
-      await fs.writeFile(resolvedPath, content, { encoding: "utf-8", flag: "wx" });
+      try {
+        await fs.writeFile(resolvedPath, content, { encoding: "utf-8", flag: "wx" });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+          throw new Error(
+            `File already exists at "${filePath}". Use mode "overwrite" to replace it.`
+          );
+        }
+        throw error;
+      }
     }
 
     return {
