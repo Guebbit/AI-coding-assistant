@@ -15,6 +15,7 @@ import {
 } from "../../packages/tools/index";
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
+import { registerIdeRoutes } from "./ide-endpoints";
 
 const log = getLogger("api");
 
@@ -45,6 +46,7 @@ function createAgent(allowWrite: boolean): Agent {
 // ── HTTP server ────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
+registerIdeRoutes(app);
 
 /**
  * POST /run

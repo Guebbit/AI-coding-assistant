@@ -17,7 +17,7 @@ Generates IDE-style code continuation suggestions from prefix/suffix context.
 
 ## Defaults
 
-- model: `TOOL_IDE_MODEL`, then `AGENT_MODEL_CODE`, then `qwen3-coder:14b`
+- model: `TOOL_IDE_MODEL`, then `AGENT_MODEL_CODE`, then `starcoder2`
 
 ## Notes
 

@@ -21,6 +21,8 @@ export interface GenerateOptions {
   format?: "json" | Record<string, unknown>;
   /** Base64-encoded images for multimodal models */
   images?: string[];
+  /** Provider-specific generation options forwarded to Ollama */
+  options?: Record<string, unknown>;
 }
 
 export interface GenerateResult {
@@ -61,6 +63,7 @@ export async function generateWithMetadata(
     system,
     format,
     images,
+    options: providerOptions,
   } = options;
 
   const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
@@ -74,6 +77,7 @@ export async function generateWithMetadata(
       system,
       format,
       images,
+      options: providerOptions,
     }),
   });
 

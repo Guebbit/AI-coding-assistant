@@ -131,7 +131,7 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 - `AGENT_MODEL_DEFAULT` (fallback profile model)
 - `TOOL_VISION_MODEL` (default `llava-llama3`)
 - `TOOL_STT_MODEL` (default `whisper`)
-- `TOOL_IDE_MODEL` (default `qwen3-coder:14b`)
+- `TOOL_IDE_MODEL` (default `starcoder2`)
 - `PORT` (default `3001`)
 - `MYSQL_HOST` (default `localhost`)
 - `MYSQL_PORT` (default `3306`)
@@ -199,6 +199,22 @@ You can either:
 npm run typecheck
 npm run build
 npm run dev
+```
+
+## IDE-focused direct endpoints
+
+These endpoints are separate from `/run` and do not use the agent loop:
+
+- `POST /autocomplete` — low-latency cursor-time completion (`prefix` + optional `suffix`)
+- `POST /lint-conventions` — deterministic findings first (TypeScript + conventions), then optional LLM enrichment
+- `POST /page-review` — full current file/page review with categorized suggestions
+
+Example:
+
+```bash
+curl -X POST http://localhost:3001/autocomplete \
+  -H "Content-Type: application/json" \
+  -d '{"prefix":"function add(a, b) {","suffix":"}","language":"javascript"}'
 ```
 
 ## Package docs
