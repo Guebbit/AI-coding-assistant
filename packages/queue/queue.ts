@@ -111,7 +111,7 @@ export class JobQueue {
     const id = randomUUID();
     const job: Job = {
       id,
-      task,
+      task: task.trim(),
       options,
       status: "queued",
       createdAt: new Date().toISOString(),
@@ -228,9 +228,8 @@ export class JobQueue {
       const id = this.pending.shift()!;
       const job = this.jobs.get(id);
       if (!job || job.status !== "queued") {
-        // Job was cancelled while waiting — skip it and try the next one.
-        this.tick();
-        return;
+        // Job was cancelled while waiting — skip it and continue the loop.
+        continue;
       }
       void this.processJob(job).then(() => this.tick());
     }

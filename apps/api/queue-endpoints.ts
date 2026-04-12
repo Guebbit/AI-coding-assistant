@@ -64,7 +64,7 @@ export function registerQueueRoutes(app: Express, queue: JobQueue): void {
       return;
     }
     const { task, ...options } = parsed.data;
-    const job = queue.submit(task.trim(), options);
+    const job = queue.submit(task, options);
     log.info("queue_submit", { jobId: job.id, mode: options.mode });
     res.status(202).json({
       jobId: job.id,
@@ -94,10 +94,7 @@ export function registerQueueRoutes(app: Express, queue: JobQueue): void {
       return;
     }
     const { tasks, ...options } = parsed.data;
-    const jobs = queue.submitBatch(
-      tasks.map((t) => t.trim()),
-      options,
-    );
+    const jobs = queue.submitBatch(tasks, options);
     log.info("queue_batch_submit", { count: jobs.length, mode: options.mode });
     res.status(202).json({
       jobs: jobs.map((j) => ({
