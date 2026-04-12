@@ -478,3 +478,45 @@ After any of the above triggers, the AI must:
 - Verify that no cross-references in this file are stale (env var names, file paths, tool names).
 - Confirm that the **Invariants and safety constraints** section still accurately reflects the code.
 - Ensure the **Structured output contract** section matches the current Zod schema in `packages/agent/schemas.ts`.
+
+---
+
+## Coding Style
+
+When writing code in this repository, the AI **must** follow these conventions:
+
+1. **Apply SOLID principles and Uncle Bob (Robert C. Martin) teachings:**
+   - **Single Responsibility** — each module, class, and function does one thing.
+   - **Open/Closed** — extend behaviour without modifying existing code.
+   - **Liskov Substitution** — subtypes must be substitutable for their base types.
+   - **Interface Segregation** — prefer small, focused interfaces over large catch-all ones.
+   - **Dependency Inversion** — depend on abstractions, not concretions.
+   - Keep functions short and focused. Prefer pure functions. Avoid deep nesting.
+   - Extract shared logic into dedicated modules (e.g. `packages/shared/`).
+
+2. **Add comprehensive comments** (this overrides the typical Clean Code stance on minimal comments):
+   - Every **exported function** must have a JSDoc block explaining what it does, its parameters, and its return value.
+   - Every **exported interface / type** must have a JSDoc block describing its purpose and the meaning of each field.
+   - Every **module / file** should start with a JSDoc `@module` block summarising the file's responsibility.
+   - Internal (non-exported) functions should have at least a one-liner JSDoc if non-trivial.
+   - Use `@param`, `@returns`, `@throws`, `@template` tags where applicable.
+   - Inline comments within function bodies are welcome for complex or non-obvious logic.
+
+3. **Shared utilities:**
+   - Environment variable parsing helpers (`envFloat`, `envInt`) live in `packages/shared/env.ts`.
+   - Path safety helpers (`resolveSafePath`, `resolveInsideRoot`) live in `packages/shared/path-safety.ts`.
+   - Do **not** duplicate these helpers in individual tool files — import from `packages/shared/`.
+
+---
+
+## Directory map
+
+Updated entry for `packages/shared/`:
+
+```
+packages/
+  └── shared/
+      ├── env.ts          — envFloat(); envInt(); environment variable parsing
+      ├── path-safety.ts  — resolveSafePath(); resolveInsideRoot(); directory traversal prevention
+      └── index.ts        — re-exports all shared utilities
+```
