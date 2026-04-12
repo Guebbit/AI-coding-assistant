@@ -1,7 +1,7 @@
 import { generate } from "../llm/ollama";
 import type { Tool } from "./types";
 
-const DEFAULT_IDE_MODEL = process.env.TOOL_IDE_MODEL ?? process.env.AGENT_MODEL_CODE ?? "qwen3-coder:14b";
+const DEFAULT_IDE_MODEL = process.env.TOOL_IDE_MODEL ?? process.env.AGENT_MODEL_CODE ?? "starcoder2";
 
 export const codeAutocompleteTool: Tool = {
   name: "code_autocomplete",

@@ -39,6 +39,32 @@ npm run dev
 
 Default API URL: `http://localhost:3001`
 
+## 3.5) Use dedicated IDE endpoints (separate from `/run`)
+
+These endpoints are independent and can be wired to different WebStorm UX surfaces:
+
+- `POST /autocomplete` for inline suggestions at cursor position
+- `POST /lint-conventions` for lint + conventions findings
+- `POST /page-review` for whole-file/page categorized review
+
+```bash
+curl -X POST http://localhost:3001/autocomplete \
+  -H "Content-Type: application/json" \
+  -d '{"prefix":"const answer = ","language":"typescript"}'
+```
+
+```bash
+curl -X POST http://localhost:3001/lint-conventions \
+  -H "Content-Type: application/json" \
+  -d '{"content":"var x = 1\\nconsole.log(x)","language":"javascript"}'
+```
+
+```bash
+curl -X POST http://localhost:3001/page-review \
+  -H "Content-Type: application/json" \
+  -d '{"content":"export function add(a:number,b:number){return a+b}","language":"typescript"}'
+```
+
 ## 4) Run your first task
 
 ```bash
