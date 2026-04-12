@@ -63,6 +63,18 @@ const AUTOCOMPLETE_CACHE_MAX_ENTRIES = Number.parseInt(
   process.env.AUTOCOMPLETE_CACHE_MAX_ENTRIES ?? "500",
   10,
 );
+const AUTOCOMPLETE_MAX_TOKENS = Number.parseInt(
+  process.env.AUTOCOMPLETE_MAX_TOKENS ?? "128",
+  10,
+);
+const LINT_CONVENTIONS_MAX_TOKENS = Number.parseInt(
+  process.env.LINT_CONVENTIONS_MAX_TOKENS ?? "600",
+  10,
+);
+const PAGE_REVIEW_MAX_TOKENS = Number.parseInt(
+  process.env.PAGE_REVIEW_MAX_TOKENS ?? "1200",
+  10,
+);
 
 const autocompleteSchema = z.object({
   prefix: z.string().min(1),
@@ -144,6 +156,13 @@ function createAutocompleteCacheKey(prefix: string, suffix: string, language: st
 }
 
 function pruneAutocompleteCache(): void {
+  const now = Date.now();
+  for (const [cacheKey, cacheValue] of autocompleteCache.entries()) {
+    if (cacheValue.expiresAt <= now) {
+      autocompleteCache.delete(cacheKey);
+    }
+  }
+
   while (autocompleteCache.size > AUTOCOMPLETE_CACHE_MAX_ENTRIES) {
     const evictionKey = autocompleteCache.keys().next().value;
     if (evictionKey === undefined) {
@@ -190,15 +209,28 @@ function inferLanguage(
   return "plaintext";
 }
 
-function getTypeScriptFindings(content: string, filePath: string): Finding[] {
+function getTypeScriptFindings(
+  content: string,
+  filePath: string,
+  language: string,
+): Finding[] {
+  const compilerOptions: ts.CompilerOptions = isTypeScriptLike(language)
+    ? {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.CommonJS,
+        strict: true,
+      }
+    : {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.CommonJS,
+        allowJs: true,
+        checkJs: false,
+      };
+
   const transpileResult = ts.transpileModule(content, {
     fileName: filePath,
     reportDiagnostics: true,
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.CommonJS,
-      strict: true,
-    },
+    compilerOptions,
   });
 
   const diagnostics = transpileResult.diagnostics ?? [];
@@ -473,7 +505,7 @@ export function registerIdeRoutes(application: express.Express): void {
           stream: false,
           suffix: suffix || undefined,
           options: {
-            num_predict: 128,
+            num_predict: AUTOCOMPLETE_MAX_TOKENS,
             temperature: 0.2,
             top_p: 0.95,
           },
@@ -531,7 +563,7 @@ export function registerIdeRoutes(application: express.Express): void {
     const language = inferLanguage(parsed.data.language, filePath);
     const deterministicFindings = [
       ...(isTypeScriptLike(language) || isJavaScriptLike(language)
-        ? getTypeScriptFindings(parsed.data.content, filePath)
+        ? getTypeScriptFindings(parsed.data.content, filePath, language)
         : []),
       ...getConventionFindings(parsed.data.content, language),
     ];
@@ -557,7 +589,7 @@ export function registerIdeRoutes(application: express.Express): void {
             stream: false,
             format: "json",
             options: {
-              num_predict: 600,
+              num_predict: LINT_CONVENTIONS_MAX_TOKENS,
               temperature: 0.15,
             },
           }),
@@ -643,7 +675,7 @@ export function registerIdeRoutes(application: express.Express): void {
           stream: false,
           format: "json",
           options: {
-            num_predict: 1200,
+            num_predict: PAGE_REVIEW_MAX_TOKENS,
             temperature: 0.2,
           },
         }),
