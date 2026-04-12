@@ -39,8 +39,8 @@ const endpointMaxRequests: Record<EndpointName, number> = {
 
 const endpointTimeoutMs: Record<EndpointName, number> = {
   autocomplete: Number.parseInt(process.env.AUTOCOMPLETE_TIMEOUT_MS ?? "2500", 10),
-  "lint-conventions": Number.parseInt(process.env.LINT_CONVENTIONS_TIMEOUT_MS ?? "10_000", 10),
-  "page-review": Number.parseInt(process.env.PAGE_REVIEW_TIMEOUT_MS ?? "20_000", 10),
+  "lint-conventions": Number.parseInt(process.env.LINT_CONVENTIONS_TIMEOUT_MS ?? "10000", 10),
+  "page-review": Number.parseInt(process.env.PAGE_REVIEW_TIMEOUT_MS ?? "20000", 10),
 };
 
 const rateLimitBuckets = new Map<EndpointName, Map<string, number[]>>();
