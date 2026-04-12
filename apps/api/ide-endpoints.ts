@@ -936,3 +936,18 @@ export function registerIdeRoutes(application: express.Express): void {
     }
   });
 }
+
+// TODO: Persona-based chat endpoint with topic guardrailing
+// Add a new direct endpoint (e.g. POST /chat/store-clerk or a generic POST /chat/:persona)
+// that bypasses the agent loop (direct generate() call, like the endpoints above) and:
+//   - Uses a crafted system prompt to simulate a specific persona (e.g. a food-store clerk).
+//   - Enforces topic boundaries: politely refuses off-topic questions
+//     ("I'm sorry, I'm just a clerk here — I can only help with food-related questions!").
+//   - Option A (simple): single model + single call — system prompt enforces both role and guardrail.
+//   - Option B (robust): two-step guard — phi4-mini (AGENT_MODEL_ROUTER_MODEL) classifies
+//     on-topic/off-topic first; main model (llama3.1:8b-instruct-q8_0, AGENT_MODEL_FAST)
+//     responds in character only when on-topic.
+//   - Request body: { message: string, storeContext?: string, conversationHistory?: {role, content}[] }
+//     storeContext can inject a product catalog, daily specials, store hours, etc.
+//   - Reuse existing rate-limiting and timeout infrastructure from this file.
+// Good fit for small businesses wanting a domain-specific chatbot at zero ongoing cost (local Ollama).
