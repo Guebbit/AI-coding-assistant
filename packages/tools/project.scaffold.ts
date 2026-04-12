@@ -58,9 +58,14 @@ export const scaffoldProjectTool: Tool = {
     const allowOverwrite = overwrite === true;
     const metadataFilename =
       typeof metadataFile === "string" && metadataFile.trim() !== ""
-        ? metadataFile
+        ? metadataFile.trim()
         : "template.json";
-    if (path.basename(metadataFilename) !== metadataFilename || metadataFilename === "..") {
+    if (
+      metadataFilename.includes("/") ||
+      metadataFilename.includes("\\") ||
+      path.basename(metadataFilename) !== metadataFilename ||
+      metadataFilename === ".."
+    ) {
       throw new Error("metadataFile must be a plain filename without path separators");
     }
 
@@ -82,16 +87,7 @@ export const scaffoldProjectTool: Tool = {
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
     await fs.cp(templatePath, targetPath, { recursive: true });
 
-    const metadataPath = resolveInsideRoot(
-      BOILERPLATE_ROOT,
-      path.join(template, metadataFilename)
-    );
-    if (
-      !metadataPath.startsWith(templatePath + path.sep) &&
-      metadataPath !== templatePath
-    ) {
-      throw new Error("metadataFile must be inside the selected template directory");
-    }
+    const metadataPath = resolveInsideRoot(templatePath, metadataFilename);
     let metadata: unknown = null;
     if (await exists(metadataPath)) {
       const raw = await fs.readFile(metadataPath, "utf-8");
