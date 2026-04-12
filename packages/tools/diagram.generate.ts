@@ -77,6 +77,10 @@ export const generateDiagramTool = createTool({
       await generate(prompt, { model: DIAGRAM_MODEL })
     ).trim();
 
+    if (!mermaidCode) {
+      throw new Error("LLM returned empty response; could not generate Mermaid markup");
+    }
+
     // 2. Write the .mmd file
     await fs.mkdir(OUTPUT_DIR, { recursive: true });
     const timestamp = Date.now();
@@ -86,15 +90,23 @@ export const generateDiagramTool = createTool({
     await fs.writeFile(mmdPath, mermaidCode, "utf-8");
 
     // 3. Render with mmdc (mermaid-cli)
-    await execFileAsync("npx", [
-      "mmdc",
-      "-i",
-      mmdPath,
-      "-o",
-      outPath,
-      "-b",
-      "transparent",
-    ]);
+    try {
+      await execFileAsync("npx", [
+        "mmdc",
+        "-i",
+        mmdPath,
+        "-o",
+        outPath,
+        "-b",
+        "transparent",
+      ]);
+    } catch (err) {
+      throw new Error(
+        `mermaid-cli (mmdc) failed to render diagram. ` +
+          `Format: ${format}, source file: ${mmdPath}. ` +
+          `Underlying error: ${String(err)}`,
+      );
+    }
 
     return {
       mermaidSource: mermaidCode,
