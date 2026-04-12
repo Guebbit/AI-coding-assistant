@@ -66,6 +66,30 @@ Expected tool: `browser_fetch`
 
 Requires Playwright Chromium install and browser tool enabled in API.
 
+## Scenario 5.1 — Vision classification
+
+Prompt:
+
+`Classify the image at data/examples/shark.jpg and describe what it most likely shows.`
+
+Expected tool: `image_classify`
+
+## Scenario 5.2 — Speech transcription
+
+Prompt:
+
+`Transcribe audio file data/examples/meeting.wav`
+
+Expected tool: `speech_to_text`
+
+## Scenario 5.3 — PDF reading
+
+Prompt:
+
+`Read data/examples/spec.pdf and summarize the top 5 key points.`
+
+Expected tool: `read_pdf`
+
 ## Scenario 6 — Tool boundary check
 
 Prompt:

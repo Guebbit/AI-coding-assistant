@@ -20,6 +20,7 @@ Use `"*"` to subscribe to all event types.
 
 - `agent:start`
 - `agent:step`
+- `agent:model_routed`
 - `tool:result`
 - `tool:error`
 - `agent:done`

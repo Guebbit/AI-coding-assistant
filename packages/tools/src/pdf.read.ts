@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import pdf from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import type { Tool } from "./types";
 
 function resolveSafePath(filePath: string): string {
@@ -23,11 +23,13 @@ export const readPdfTool: Tool = {
 
     const safePath = resolveSafePath(pdfPath);
     const buffer = await fs.readFile(safePath);
-    const parsed = await pdf(buffer);
+    const parser = new PDFParse({ data: buffer });
+    const parsed = await parser.getText();
+    await parser.destroy();
 
     return {
       path: pdfPath,
-      pageCount: parsed.numpages,
+      pageCount: parsed.total,
       text: parsed.text.trim(),
     };
   },

@@ -22,6 +22,11 @@ Every tool provides:
 - `shell` — run allowlisted shell commands with timeout
 - `mysql_query` — execute read-only `SELECT` queries
 - `browser_fetch` — fetch page title and visible text (Playwright)
+- `image_classify` — vision model image description/classification
+- `semantic_search` — embedding-based semantic ranking for text/files
+- `speech_to_text` — audio transcription via Ollama OpenAI-compatible endpoint
+- `read_pdf` — PDF text extraction
+- `code_autocomplete` — IDE-style code completion
 
 ## Security boundaries
 
@@ -36,3 +41,8 @@ Every tool provides:
 - [/packages/tools/shell](/packages/tools/shell)
 - [/packages/tools/mysql-query](/packages/tools/mysql-query)
 - [/packages/tools/browser-fetch](/packages/tools/browser-fetch)
+- [/packages/tools/image-classify](/packages/tools/image-classify)
+- [/packages/tools/semantic-search](/packages/tools/semantic-search)
+- [/packages/tools/speech-to-text](/packages/tools/speech-to-text)
+- [/packages/tools/read-pdf](/packages/tools/read-pdf)
+- [/packages/tools/code-autocomplete](/packages/tools/code-autocomplete)

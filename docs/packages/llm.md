@@ -20,6 +20,10 @@ Options:
 
 - `model` (default `OLLAMA_MODEL` or `llama3`)
 - `stream` (default `false`)
+- `suffix` (optional, code-infill/completion)
+- `system` (optional system prompt override)
+- `format` (`json` or JSON schema)
+- `images` (optional base64 images for multimodal models)
 
 ## Environment variables
 

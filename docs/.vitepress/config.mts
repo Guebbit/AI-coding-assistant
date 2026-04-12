@@ -7,24 +7,33 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },
-      { text: "Use the App", link: "/use-the-application" },
-      { text: "Model Selection", link: "/model-selection" },
-      { text: "Packages", link: "/packages/" },
-      { text: "Theory", link: "/theory/agent-loop" },
+      { text: "Getting Started", link: "/use-the-application" },
+      { text: "Architecture", link: "/theory/how-it-works-layered" },
+      { text: "Modeling", link: "/model-selection" },
+      { text: "Package Reference", link: "/packages/" },
       { text: "Scenarios", link: "/scenarios" },
     ],
     sidebar: [
       {
-        text: "Start Here",
+        text: "Getting Started",
         items: [
           { text: "Home", link: "/" },
           { text: "Use the Application", link: "/use-the-application" },
-          { text: "Model Selection", link: "/model-selection" },
           { text: "Scenarios & Tests", link: "/scenarios" },
         ],
       },
       {
-        text: "Packages",
+        text: "Architecture",
+        items: [
+          { text: "How It Works (Layered)", link: "/theory/how-it-works-layered" },
+          { text: "Agent Loop Mental Model", link: "/theory/agent-loop" },
+          { text: "Prompt, Context, Memory", link: "/theory/prompt-context-memory" },
+          { text: "Event-Driven Observability", link: "/theory/events-observability" },
+          { text: "Model Selection & Routing", link: "/model-selection" },
+        ],
+      },
+      {
+        text: "Package Reference",
         items: [
           { text: "Overview", link: "/packages/" },
           { text: "agent — The Brain", link: "/packages/agent" },
@@ -36,15 +45,11 @@ export default defineConfig({
           { text: "tools/shell", link: "/packages/tools/shell" },
           { text: "tools/mysql_query", link: "/packages/tools/mysql-query" },
           { text: "tools/browser_fetch", link: "/packages/tools/browser-fetch" },
-        ],
-      },
-      {
-        text: "Theory",
-        items: [
-          { text: "How It Works (Layered)", link: "/theory/how-it-works-layered" },
-          { text: "Agent Loop Mental Model", link: "/theory/agent-loop" },
-          { text: "Prompt, Context, Memory", link: "/theory/prompt-context-memory" },
-          { text: "Event-Driven Observability", link: "/theory/events-observability" },
+          { text: "tools/image_classify", link: "/packages/tools/image-classify" },
+          { text: "tools/semantic_search", link: "/packages/tools/semantic-search" },
+          { text: "tools/speech_to_text", link: "/packages/tools/speech-to-text" },
+          { text: "tools/read_pdf", link: "/packages/tools/read-pdf" },
+          { text: "tools/code_autocomplete", link: "/packages/tools/code-autocomplete" },
         ],
       },
     ],
