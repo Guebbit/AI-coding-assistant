@@ -12,13 +12,15 @@ interface RouteInput {
   task: string;
   context: string;
   step: number;
+  /** When set, skip all routing logic and use this profile directly. */
+  forcedProfile?: ModelProfile;
 }
 
 const DEFAULT_MODEL = process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? "llama3";
 const FAST_MODEL = process.env.AGENT_MODEL_FAST ?? DEFAULT_MODEL;
 const REASONING_MODEL = process.env.AGENT_MODEL_REASONING ?? DEFAULT_MODEL;
 const CODE_MODEL = process.env.AGENT_MODEL_CODE ?? DEFAULT_MODEL;
-const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? FAST_MODEL;
+const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? "phi4-mini:latest";
 const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? "rules").toLowerCase();
 
 function resolveModel(profile: ModelProfile): string {
@@ -143,6 +145,14 @@ async function routeWithModel(input: RouteInput): Promise<ModelRouteDecision> {
 }
 
 export async function routeModel(input: RouteInput): Promise<ModelRouteDecision> {
+  if (input.forcedProfile) {
+    return {
+      profile: input.forcedProfile,
+      model: resolveModel(input.forcedProfile),
+      reason: "forced_by_caller",
+    };
+  }
+
   if (ROUTER_MODE !== "model") {
     return routeWithRules(input);
   }

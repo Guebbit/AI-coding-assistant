@@ -1,5 +1,6 @@
 import express from "express";
 import { Agent } from "../../packages/agent/agent";
+import type { ModelProfile } from "../../packages/agent/model-router";
 import {
   readFileTool,
   writeFileTool,
@@ -39,6 +40,8 @@ const writeTools = [writeFileTool, scaffoldProjectTool];
 const readOnlyAgent = new Agent(readOnlyTools);
 const writeEnabledAgent = new Agent([...readOnlyTools, ...writeTools]);
 
+const VALID_PROFILES = new Set<ModelProfile>(["fast", "reasoning", "code", "default"]);
+
 function createAgent(allowWrite: boolean): Agent {
   return allowWrite ? writeEnabledAgent : readOnlyAgent;
 }
@@ -53,12 +56,19 @@ registerIdeRoutes(app);
  *
  * Body:    {
  *   "task": "describe what you want the agent to do",
- *   "allowWrite": false // optional; when true enables write/scaffold tools
+ *   "allowWrite": false,   // optional; when true enables write/scaffold tools
+ *   "profile": "fast"      // optional; one of fast|reasoning|code|default.
+ *                          //   When provided, skips automatic model routing and
+ *                          //   uses the specified profile for every step.
  * }
  * Response: { "result": "agent's final answer" }
  */
 app.post("/run", async (req, res) => {
-  const { task, allowWrite } = req.body as { task?: string; allowWrite?: boolean };
+  const { task, allowWrite, profile } = req.body as {
+    task?: string;
+    allowWrite?: boolean;
+    profile?: string;
+  };
 
   if (!task || typeof task !== "string" || task.trim() === "") {
     res
@@ -67,12 +77,22 @@ app.post("/run", async (req, res) => {
     return;
   }
 
+  if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
+    res.status(400).json({
+      error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
+    });
+    return;
+  }
+
   try {
-    log.info("run_request_received", { task });
+    log.info("run_request_received", { task, profile: profile ?? null });
     const writeEnabled = allowWrite === true;
     const agent = createAgent(writeEnabled);
-    const result = await agent.run(task.trim());
-    log.info("run_request_completed", { taskLength: task.length, writeEnabled });
+    const result = await agent.run(
+      task.trim(),
+      profile ? { profile: profile as ModelProfile } : undefined,
+    );
+    log.info("run_request_completed", { taskLength: task.length, writeEnabled, profile: profile ?? null });
     res.json({ result });
   } catch (err) {
     log.error("run_request_failed", { error: String(err) });

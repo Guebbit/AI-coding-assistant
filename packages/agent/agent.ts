@@ -4,6 +4,7 @@ import { emit } from "../events/bus";
 import type { Tool } from "../tools";
 import { getLogger } from "../logger/logger";
 import { routeModel } from "./model-router";
+import type { ModelProfile } from "./model-router";
 import { agentStepSchema } from "./schemas";
 import type { AgentStep } from "./schemas";
 import type {
@@ -52,7 +53,7 @@ export class Agent {
     return this;
   }
 
-  async run(task: string): Promise<string> {
+  async run(task: string, options?: { profile?: ModelProfile }): Promise<string> {
     const runStartedAt = Date.now();
     let context = "";
     log.info("agent_run_started", {
@@ -109,6 +110,7 @@ export class Agent {
           task: inputArgs.task,
           context: inputArgs.context,
           step,
+          forcedProfile: options?.profile,
         });
         emit({
           type: "agent:model_routed",
