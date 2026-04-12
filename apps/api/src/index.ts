@@ -5,6 +5,11 @@ import {
   shellTool,
   mysqlQueryTool,
   browserTool,
+  imageClassifyTool,
+  semanticSearchTool,
+  speechToTextTool,
+  readPdfTool,
+  codeAutocompleteTool,
 } from "../../../packages/tools/src/index";
 import { on } from "../../../packages/events/src/bus";
 import { getLogger } from "../../../packages/logger/src/logger";
@@ -18,7 +23,17 @@ on("*", (event) => {
 
 // ── Initialise agent with available tools ──────────────────────────────────
 // Add / remove tools here as you expand the system.
-const agent = new Agent([readFileTool, shellTool, mysqlQueryTool, browserTool]);
+const agent = new Agent([
+  readFileTool,
+  shellTool,
+  mysqlQueryTool,
+  browserTool,
+  imageClassifyTool,
+  semanticSearchTool,
+  speechToTextTool,
+  readPdfTool,
+  codeAutocompleteTool,
+]);
 
 // ── HTTP server ────────────────────────────────────────────────────────────
 const app = express();

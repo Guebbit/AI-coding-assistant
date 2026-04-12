@@ -3,6 +3,7 @@ import { addMemory, getMemory } from "../../memory/src/memory";
 import { emit } from "../../events/src/bus";
 import type { Tool } from "../../tools/src";
 import { getLogger } from "../../logger/src/logger";
+import { routeModel } from "./model-router";
 
 interface AgentStep {
   thought: string;
@@ -63,13 +64,26 @@ export class Agent {
       // ── Call the LLM ────────────────────────────────────────────────────────
       let response: string;
       try {
+        const route = await routeModel({ task, context, step });
+        emit({
+          type: "agent:model_routed",
+          payload: {
+            step,
+            profile: route.profile,
+            model: route.model,
+            reason: route.reason,
+          },
+        });
+
         const llmStartedAt = Date.now();
-        const llmResult = await generateWithMetadata(prompt);
+        const llmResult = await generateWithMetadata(prompt, { model: route.model });
         response = llmResult.response;
         log.info("agent_llm_response_received", {
           step,
           responseLength: response.length,
           durationMs: Date.now() - llmStartedAt,
+          routedProfile: route.profile,
+          routedReason: route.reason,
           model: llmResult.model,
           done: llmResult.done,
           doneReason: llmResult.doneReason,
