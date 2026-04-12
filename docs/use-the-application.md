@@ -65,6 +65,38 @@ curl -X POST http://localhost:3001/page-review \
   -d '{"content":"export function add(a:number,b:number){return a+b}","language":"typescript"}'
 ```
 
+## 3.6) Use sketch processing endpoints (separate from `/run`)
+
+These endpoints accept image uploads (multipart form data) and use a vision model to process
+sketches and drawings:
+
+- `POST /ink` — send a sketch, receive a detailed inking description
+- `POST /ink-and-color` — send any image; the endpoint auto-detects whether it is a rough
+  sketch or an inked drawing and returns a description of how to ink (when applicable) and
+  colorize it
+
+```bash
+# Ink a sketch (returns a JSON description of how to ink it)
+curl -X POST http://localhost:3001/ink \
+  -F "image=@/path/to/my-sketch.png"
+```
+
+```bash
+# Auto-detect + ink-and-color
+curl -X POST http://localhost:3001/ink-and-color \
+  -F "image=@/path/to/my-drawing.png"
+```
+
+```bash
+# Skip auto-detection — tell the endpoint the image is already inked
+curl -X POST http://localhost:3001/ink-and-color \
+  -F "image=@/path/to/my-drawing.png" \
+  -F "sketchState=inked"
+```
+
+Accepted file types: PNG, JPG, WEBP, GIF (max 10 MB).
+Optional `model` form field overrides the vision model (default: `llava-llama3` / `TOOL_VISION_MODEL` env).
+
 ## 4) Run your first task
 
 ```bash

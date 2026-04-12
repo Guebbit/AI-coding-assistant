@@ -8,6 +8,8 @@ import {
   browserTool,
   scaffoldProjectTool,
   imageClassifyTool,
+  imageInkTool,
+  imageColorizeTool,
   semanticSearchTool,
   speechToTextTool,
   readPdfTool,
@@ -16,6 +18,7 @@ import {
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { registerIdeRoutes } from "./ide-endpoints";
+import { registerSketchRoutes } from "./sketch-endpoints";
 
 const log = getLogger("api");
 
@@ -30,6 +33,8 @@ const readOnlyTools = [
   mysqlQueryTool,
   browserTool,
   imageClassifyTool,
+  imageInkTool,
+  imageColorizeTool,
   semanticSearchTool,
   speechToTextTool,
   readPdfTool,
@@ -47,6 +52,7 @@ function createAgent(allowWrite: boolean): Agent {
 const app = express();
 app.use(express.json());
 registerIdeRoutes(app);
+registerSketchRoutes(app);
 
 /**
  * POST /run

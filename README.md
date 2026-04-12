@@ -217,6 +217,39 @@ curl -X POST http://localhost:3001/autocomplete \
   -d '{"prefix":"function add(a, b) {","suffix":"}","language":"javascript"}'
 ```
 
+## Sketch processing endpoints
+
+These endpoints accept image file uploads (multipart form data) and process them using a vision model:
+
+- `POST /ink` — accept a sketch image and receive a detailed inking description
+- `POST /ink-and-color` — accept any image; auto-detects whether it is a sketch or inked drawing, then describes how to ink (if needed) and colorize it
+
+```bash
+# Ink a sketch
+curl -X POST http://localhost:3001/ink \
+  -F "image=@/path/to/sketch.png"
+
+# Auto-detect and ink+colorize (or just colorize if already inked)
+curl -X POST http://localhost:3001/ink-and-color \
+  -F "image=@/path/to/drawing.png"
+
+# Skip auto-detection by providing the state explicitly
+curl -X POST http://localhost:3001/ink-and-color \
+  -F "image=@/path/to/drawing.png" \
+  -F "sketchState=inked"
+```
+
+> **Model note:** Both endpoints use `llava-llama3` by default (controlled by the `TOOL_VISION_MODEL` env var).
+> This model can *understand* and *describe* images in detail.
+> For fully automated pixel-level inking and colorization (i.e. generating a new image as output),
+> a dedicated image-generation model would be needed.
+> The best open-source option compatible with Ollama's ecosystem is
+> **[Stable Diffusion](https://ollama.com/library/stable-diffusion)** with an img2img pipeline,
+> or a fine-tuned variant such as **[waifu-diffusion](https://huggingface.co/hakurei/waifu-diffusion)**
+> for anime/illustration-style colorization.
+> Pull it via `ollama pull stable-diffusion` once Ollama's image-generation support is stable,
+> then set `TOOL_VISION_MODEL=stable-diffusion`.
+
 ## Package docs
 
 See:
