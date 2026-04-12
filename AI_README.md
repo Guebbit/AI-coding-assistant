@@ -270,6 +270,8 @@ These are **not** agent-loop routes. They respond with a single LLM call.
 | `POST /lint-conventions` | `{ code, language? }` | Deterministic TS/style findings + optional LLM enrichment |
 | `POST /page-review` | `{ code, language?, filename? }` | Categorised review suggestions for a full file |
 
+> Human-readable reference with full schemas, rate limits, timeouts, curl examples, and a future-endpoint roadmap: `docs/endpoint-map.md`.
+
 ---
 
 ## Key environment variables
@@ -356,6 +358,7 @@ These are **not** agent-loop routes. They respond with a single LLM call.
 │   ├── generated-projects/   — output of write_file / scaffold_project
 │   └── qdrant/               — Qdrant storage volume
 └── docs/                     — VitePress documentation site
+    └── endpoint-map.md       — Full API endpoint taxonomy and map (human-readable)
 ```
 
 ---
