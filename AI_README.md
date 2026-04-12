@@ -119,7 +119,7 @@ Tools registered per request in `apps/api/index.ts`:
 | `write_file` | `fs.write.ts` | **yes** | Writes under `PROJECT_OUTPUT_ROOT` |
 | `shell` | `shell.ts` | no | Allowlist-enforced; rejects unsafe commands |
 | `mysql_query` | `mysql.query.ts` | no | SELECT-only; rejects non-SELECT SQL |
-| `browser_fetch` | `browser.ts` | no | Playwright Chromium; truncates content to 5 000 chars |
+| `browser_fetch` | `browser.ts` | no | Playwright Chromium; truncates content to 5000 chars |
 | `image_classify` | `image.classify.ts` | no | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`) |
 | `semantic_search` | `semantic.search.ts` | no | Embeds query via Ollama; scores files via cosine similarity |
 | `speech_to_text` | `speech.to.text.ts` | no | Calls `TOOL_STT_MODEL` (default `whisper`) |
