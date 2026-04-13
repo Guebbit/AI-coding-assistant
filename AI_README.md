@@ -80,55 +80,71 @@ Two operational surfaces:
 
 ```mermaid
 flowchart TD
-    POST["HTTP POST /run { task, allowWrite?, profile? }"]
+    POST["HTTP POST /run { task, allowWrite?, profile?, resumeContext? }"]
     POST --> API["apps/api/index.ts"]
     API --> Validate["validates profile against fast|reasoning|code|default"]
     API --> Select["selects Agent instance (readOnly or writeEnabled)"]
-    API --> Run["agent.run(task, { profile? })"]
+    API --> Run["agent.run(task, { profile?, resumeContext? })"]
 
     Run --> GetMem["getMemory(task) ← packages/memory/memory.ts"]
     Run --> EmitStart["emit('agent:start')"]
+    Run --> InjectResume["inject resumeContext into context (if provided)"]
 
     subgraph LOOP["LOOP (max MAX_STEPS, default 5)"]
-        ProcInput["processInputStep processors"]
+        CtxCheck{"context > BUDGET_MAX_CONTEXT_CHARS?"}
+        CtxCheck -->|Yes| CtxOverflow["generate condensed summary\nemit('agent:context_overflow')\nwriteDiagnosticLog(context_overflow)"]
+        CtxOverflow --> ReturnOverflow["return { status:'context_overflow', condensedContext }"]
+
+        ProcInput["processInputStep processors\n(incl. verification gate — checks last tool result)"]
         BuildPrompt["buildPrompt(task, context, memory)"]
-        RouteModel["routeModel(task, context, step, forcedProfile?)"]
+        RouteModel["routeModel(task, context, step, contextLength, cumulativeDurationMs, forcedProfile?)"]
         RouteModel --> Forced{"forcedProfile set?"}
         Forced -->|Yes| ReturnImm["return it immediately (no LLM cost)"]
-        Forced -->|No| Mode{"router mode?"}
+        Forced -->|No| BudgetCtx{"contextLength > 70% ceiling?"}
+        BudgetCtx -->|Yes| UpgradeReasoning["upgrade to reasoning profile"]
+        BudgetCtx -->|No| BudgetDur{"cumulativeDurationMs > 80% ceiling?"}
+        BudgetDur -->|Yes| DowngradeFast["downgrade to fast profile"]
+        BudgetDur -->|No| Mode{"router mode?"}
         Mode -->|rules| Keywords["keyword + heuristic match"]
         Mode -->|model| RouterLLM["calls ROUTER_MODEL with JSON prompt"]
 
         Generate["generateWithMetadata(prompt, { model })"]
         Parse["parse response → agentStepSchema (Zod)"]
-        Parse -->|"parse failure"| Correct["append correction to context, continue"]
+        Parse -->|"parse failure"| Correct["append correction to context\nrecord invalid_json in timeline"]
         Correct --> ProcInput
         ProcOutput["processOutputStep processors"]
 
         ActionCheck{"action?"}
         ActionCheck -->|"'none'"| AddMem["addMemory(...)"]
-        AddMem --> EmitDone["emit('agent:done')"]
-        EmitDone --> ReturnAnswer["return thought ← final answer"]
+        AddMem --> DiagCheck{"any errors in run?"}
+        DiagCheck -->|Yes| WriteDiagSuccess["writeDiagnosticLog(success+recovery)"]
+        DiagCheck -->|No| EmitDone["emit('agent:done')"]
+        WriteDiagSuccess --> EmitDone
+        EmitDone --> ReturnAnswer["return { status:'completed', result: thought }"]
 
-        ActionCheck -->|"unknown"| AppendErr["append error to context, continue"]
+        ActionCheck -->|"unknown"| AppendErr["append error to context\nrecord unknown_tool in timeline"]
         AppendErr --> ProcInput
 
         ActionCheck -->|"tool name"| ToolExec["tool.execute(input)"]
-        ToolExec -->|success| ToolOk["append result to context, emit('tool:result')"]
-        ToolExec -->|failure| ToolFail["append error to context, emit('tool:error')"]
+        ToolExec -->|success| ToolOk["append result to context\nemit('tool:result')\nrecord success in timeline"]
+        ToolExec -->|failure| ToolFail["append error to context\nemit('tool:error')\nrecord failed in timeline"]
         ToolOk --> ProcInput
         ToolFail --> ProcInput
 
+        CtxCheck -->|No| ProcInput
         ProcInput --> BuildPrompt --> RouteModel
         ReturnImm --> Generate
+        UpgradeReasoning --> Generate
+        DowngradeFast --> Generate
         Keywords --> Generate
         RouterLLM --> Generate
         Generate --> Parse --> ProcOutput --> ActionCheck
     end
 
+    InjectResume --> LOOP
     EmitStart --> LOOP
     GetMem --> LOOP
-    LOOP -->|"loop exhausted"| MaxSteps["emit('agent:max_steps'), return fallback string"]
+    LOOP -->|"loop exhausted"| MaxSteps["generate LLM failure summary\naddMemory(failure)\nwriteDiagnosticLog(max_steps_exhausted)\nemit('agent:max_steps')\nreturn { status:'max_steps', result: summary }"]
 ```
 
 ---
@@ -244,8 +260,10 @@ Canonical event types emitted during a run:
 | `agent:done` | action === "none", final answer ready |
 | `agent:max_steps` | loop exhausted without "none" |
 | `agent:error` | LLM call threw |
+| `agent:context_overflow` | accumulated context exceeded `AGENT_BUDGET_MAX_CONTEXT_CHARS` |
 | `tool:result` | tool executed successfully |
 | `tool:error` | tool threw |
+| `tool:verification_failed` | verification gate detected a suspicious tool result |
 
 The API subscribes to `"*"` and logs all events via `winston`.
 
@@ -265,6 +283,20 @@ interface Processor {
 ```
 
 Processors run **in registration order**. A processor may return a modified args object to influence the agent, or return `void` to leave it unchanged.
+
+### Built-in processor: Verification Gate
+
+File: `packages/processors/verification.ts`
+
+Enabled via `AGENT_VERIFICATION_ENABLED=true` (default `false`).
+
+Hooks into `processInputStep`. At the start of each step (after step 0), it:
+1. Extracts the most recent tool result from the accumulated context string.
+2. Calls a fast LLM (`AGENT_VERIFICATION_MODEL`, defaults to `AGENT_MODEL_FAST`) with a brief prompt asking whether the result looks correct.
+3. If `valid === false`: appends the issue to context so the agent can self-correct, and emits `tool:verification_failed`.
+4. If `valid === true`: passes through silently.
+
+Registered automatically in `apps/api/agents.ts` for both agent instances. When `AGENT_VERIFICATION_ENABLED=false`, every call is a synchronous no-op.
 
 ---
 
@@ -364,6 +396,13 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 | `AGENT_MODEL_CODE` | `OLLAMA_MODEL` | Model for code tasks |
 | `AGENT_MODEL_DEFAULT` | `OLLAMA_MODEL` | Final fallback profile |
 | `AGENTS_MAX_STEPS` | `5` | Maximum loop iterations per run |
+| `AGENT_VERIFICATION_ENABLED` | `false` | `true` enables the post-tool verification gate |
+| `AGENT_VERIFICATION_MODEL` | `AGENT_MODEL_FAST` | Model used for verification LLM calls |
+| `AGENT_BUDGET_MAX_DURATION_MS` | `60000` | Max cumulative step duration (ms) before routing downgrades to `fast` |
+| `AGENT_BUDGET_MAX_CONTEXT_CHARS` | `50000` | Max context size (chars) before routing upgrades to `reasoning`; overflow pause triggers at ceiling |
+| `DIAGNOSTIC_LOG_DIR` | `data/diagnostics` | Directory for Markdown diagnostic files |
+| `DIAGNOSTIC_LOG_ENABLED` | `true` | `false` disables all diagnostic file writes |
+| `DIAGNOSTIC_LOG_MAX_FILES` | `100` | Max diagnostic files to keep; oldest deleted when exceeded |
 | `TOOL_VISION_MODEL` | `llava-llama3` | Vision model for `image_classify` |
 | `TOOL_STT_MODEL` | `whisper` | Speech-to-text model |
 | `TOOL_IDE_MODEL` | `starcoder2` | Completion model for IDE endpoints |
@@ -395,8 +434,8 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 │       └── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
 ├── packages/
 │   ├── agent/
-│   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS
-│   │   ├── model-router.ts   — routeModel(); profile resolution; rules vs model mode
+│   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; AgentRunResult type
+│   │   ├── model-router.ts   — routeModel(); profile resolution; rules vs model mode; budget ceiling overrides
 │   │   └── schemas.ts        — agentStepSchema (Zod); AgentStep type
 │   ├── events/
 │   │   └── bus.ts            — emit(); on(); synchronous typed event bus
@@ -424,7 +463,12 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 │   ├── processors/
 │   │   ├── types.ts          — Processor interface; ProcessInputStepArgs; ProcessOutputStepArgs
 │   │   ├── processor-builder.ts — helper
+│   │   ├── verification.ts   — createVerificationProcessor(); post-tool result validation gate
 │   │   └── index.ts
+│   ├── diagnostics/
+│   │   ├── types.ts          — DiagnosticEntry; DiagnosticTimelineEntry; DiagnosticError; DiagnosticOutcome
+│   │   ├── writer.ts         — writeDiagnosticLog(); Markdown file renderer; file-count cleanup
+│   │   └── index.ts          — re-exports
 │   ├── evals/
 │   │   ├── types.ts          — eval harness types
 │   │   ├── scorer-builder.ts
@@ -439,6 +483,7 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 ├── data/                     — runtime data; gitignored
 │   ├── boilerplates/         — template sources for scaffold_project
 │   ├── diagrams/             — output of generate_diagram (SVG/PNG + .mmd sources)
+│   ├── diagnostics/          — Markdown diagnostic logs (one file per incident); see DIAGNOSTIC_LOG_DIR
 │   ├── generated-projects/   — output of write_file / scaffold_project
 │   └── qdrant/               — Qdrant storage volume
 └── docs/                     — VitePress documentation site
@@ -456,6 +501,9 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 - LLM response parsing: invalid JSON or schema mismatch causes a self-correction prompt to be appended to context; it does not crash the loop.
 - Unknown tool names: the agent appends an error listing valid tools and retries; no crash.
 - Qdrant unavailability: silently degraded to ring-buffer-only memory; no crash.
+- **Context overflow**: when context exceeds `AGENT_BUDGET_MAX_CONTEXT_CHARS`, the agent pauses and returns `{ status: "context_overflow" }` instead of silently truncating or continuing. The caller must explicitly choose to continue (via `resumeContext`) or rephrase.
+- **Diagnostic writes**: `writeDiagnosticLog` errors are logged and swallowed — a failed diagnostic write never crashes the agent.
+- **Verification errors**: a failed verification LLM call is treated as `valid: true` (pass-through) — verification never blocks the agent.
 
 ---
 
@@ -479,6 +527,11 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 | Intercept/modify steps | Implement `Processor` in `packages/processors/`, register via `agent.addProcessor()` |
 | Change memory strategy | `packages/memory/memory.ts` |
 | Add an eval scorer | `packages/evals/scorers/` |
+| Enable verification gate | Set `AGENT_VERIFICATION_ENABLED=true`; optionally set `AGENT_VERIFICATION_MODEL` |
+| Adjust budget ceilings | Set `AGENT_BUDGET_MAX_CONTEXT_CHARS` (chars) and/or `AGENT_BUDGET_MAX_DURATION_MS` (ms) |
+| Read diagnostic logs | Browse `data/diagnostics/` (or `DIAGNOSTIC_LOG_DIR`); each file is a self-contained Markdown report |
+| Disable diagnostic logging | Set `DIAGNOSTIC_LOG_ENABLED=false` |
+| Limit diagnostic file count | Set `DIAGNOSTIC_LOG_MAX_FILES` (default 100) |
 
 ---
 

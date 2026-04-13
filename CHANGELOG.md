@@ -10,6 +10,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Verification Gate processor** (`packages/processors/verification.ts`) — after each tool execution, a fast LLM call checks whether the tool result looks correct before the agent continues. Opt-in via `AGENT_VERIFICATION_ENABLED=true`. Model controlled by `AGENT_VERIFICATION_MODEL`. Emits new event `tool:verification_failed` when an issue is detected.
+- **Self-debugging on `max_steps`** — when the agent exhausts its step budget, it now: (1) generates a structured LLM summary of what was tried and where it got stuck, (2) persists it via `addMemory()` for future runs, (3) writes a human-readable Markdown diagnostic file to `data/diagnostics/`, and (4) returns the summary to the caller instead of a hardcoded string.
+- **Diagnostic logs package** (`packages/diagnostics/`) — `writeDiagnosticLog()` writes timestamped Markdown files to `DIAGNOSTIC_LOG_DIR` (default `data/diagnostics`). Each file includes a full run timeline, error list, AI commentary, and a collapsible raw context block. Enabled by default; disable with `DIAGNOSTIC_LOG_ENABLED=false`. Old files are auto-deleted when count exceeds `DIAGNOSTIC_LOG_MAX_FILES` (default 100).
+- **Diagnostic logs for successful runs with recoveries** — if the agent completed successfully but encountered tool errors, invalid JSON, or unknown-tool events along the way, a lower-severity diagnostic file is also written so the operator can review partial failures.
+- **Budget-ceiling model routing** — `routeWithRules` now checks `contextLength` and `cumulativeDurationMs` before keyword matching: (1) context ≥ 70 % of `AGENT_BUDGET_MAX_CONTEXT_CHARS` upgrades to the `reasoning` profile (larger `num_ctx`); (2) cumulative duration ≥ 80 % of `AGENT_BUDGET_MAX_DURATION_MS` downgrades to `fast` to finish quickly. Both env vars have sensible defaults (50 000 chars / 60 s).
+- **Context overflow pause** — when accumulated context exceeds `AGENT_BUDGET_MAX_CONTEXT_CHARS`, the agent generates a condensed summary and returns a structured `context_overflow` response instead of continuing silently. The caller can resume by posting the same task with `resumeContext` set to `condensedContext`. Emits new event `agent:context_overflow`.
+- **`POST /run` now returns a structured `AgentRunResult`** — response now includes `status` (`completed` | `max_steps` | `context_overflow`), `result`, and optional `condensedContext`, `originalTask`, `suggestion` fields.
+- **`resumeContext` field in `POST /run` request body** — injects a condensed context string as the agent's starting context, enabling resume-from-pause workflows.
+- **New environment variables**: `AGENT_VERIFICATION_ENABLED`, `AGENT_VERIFICATION_MODEL`, `DIAGNOSTIC_LOG_DIR`, `DIAGNOSTIC_LOG_ENABLED`, `DIAGNOSTIC_LOG_MAX_FILES`, `AGENT_BUDGET_MAX_DURATION_MS`, `AGENT_BUDGET_MAX_CONTEXT_CHARS`.
+- **New events**: `tool:verification_failed`, `agent:context_overflow`.
+
+### Changed
+- `Agent.run()` return type changed from `Promise<string>` to `Promise<AgentRunResult>` — callers must now access `.result` for the text content and check `.status` for the run outcome.
+- `packages/agent/model-router.ts` `RouteInput` now accepts optional `contextLength` and `cumulativeDurationMs` fields for runtime-state-aware routing.
+- `apps/api/index.ts` `/run` response shape updated — clients reading `{ result }` should now read `{ status, result, ... }`.
+
+### Fixed
+- `tsconfig.json` — added `"ignoreDeprecations": "5.0"` to suppress pre-existing `moduleResolution=node` deprecation warning (TypeScript 5.9).
+
+### Visual documentation overhaul
 - **Visual documentation overhaul** — Mermaid diagrams added to every documentation page for ADHD-friendly visual navigation
 - **TL;DR callout boxes** — every doc page now opens with a one-liner summary in a highlighted `::: tip` box
 - **VitePress Mermaid support** — `vitepress-plugin-mermaid` and `mermaid` added as dev dependencies

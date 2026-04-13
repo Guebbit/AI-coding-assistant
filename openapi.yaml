@@ -61,9 +61,16 @@ paths:
       summary: Submit a task to the agent reasoning loop
       description: |
         Triggers the full agentic loop: model routing → tool selection → execution → repeat
-        (up to `MAX_STEPS`, default 5). Returns the agent's final answer as a string.
+        (up to `MAX_STEPS`, default 5). Returns a structured result with a `status` field.
 
-        This is the right endpoint whenever no specialised endpoint covers the use case.
+        **Status values:**
+        - `completed` — normal completion; `result` holds the final answer.
+        - `max_steps` — loop exhausted; `result` holds an LLM-generated failure summary.
+        - `context_overflow` — context exceeded the budget ceiling; `condensedContext` is
+          provided to continue the run in a follow-up request.
+
+        To resume after a `context_overflow`, POST again with the same `task` and set
+        `resumeContext` to the `condensedContext` value from the overflow response.
       operationId: postRun
       requestBody:
         required: true
@@ -86,9 +93,14 @@ paths:
                 value:
                   task: "Create a new file at data/hello.txt with the content 'hello'"
                   allowWrite: true
+              withResume:
+                summary: Resume after context_overflow
+                value:
+                  task: "Analyse all TypeScript files in src/"
+                  resumeContext: "<condensedContext from previous context_overflow response>"
       responses:
         "200":
-          description: Agent completed successfully
+          description: Agent run completed (check `status` field for outcome)
           content:
             application/json:
               schema:
@@ -625,13 +637,45 @@ components:
           description: |
             Force a specific model profile, bypassing automatic routing.
             If omitted, the router selects a profile based on the task text.
+        resumeContext:
+          type: string
+          description: |
+            Condensed context string from a previous `context_overflow` response.
+            When provided, the agent resumes from this context instead of starting fresh.
 
     RunResponse:
       type: object
+      required: [status, result]
       properties:
+        status:
+          type: string
+          enum: [completed, max_steps, context_overflow]
+          description: |
+            How the agent run ended.
+            - `completed` — the agent finished the task successfully.
+            - `max_steps` — the agent exhausted its step budget; `result` contains an AI-generated failure summary.
+            - `context_overflow` — context exceeded the size ceiling; see `condensedContext` to resume.
         result:
           type: string
-          description: The agent's final answer as a plain string.
+          description: |
+            The primary text output of the run.
+            For `completed`: the agent's final answer.
+            For `max_steps`: an LLM-generated failure summary with suggestions.
+            For `context_overflow`: a condensed summary of findings so far.
+        condensedContext:
+          type: string
+          description: |
+            A condensed version of the accumulated context, present only when
+            `status === "context_overflow"`. Pass this as `resumeContext` in a
+            subsequent `/run` request to continue from where the agent paused.
+        originalTask:
+          type: string
+          description: The original task string. Present when `status !== "completed"`.
+        suggestion:
+          type: string
+          description: |
+            LLM-generated suggestion for the operator (e.g., "break the task into smaller sub-tasks").
+            Present when `status !== "completed"`.
 
     # ── IDE schemas ───────────────────────────────────────────────────────────
 
