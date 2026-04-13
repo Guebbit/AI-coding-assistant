@@ -1,5 +1,9 @@
 # Endpoint Map
 
+::: tip TL;DR
+`/run` = full agent loop for open-ended tasks. `/autocomplete`, `/lint-conventions`, `/page-review` = fast single-LLM-call endpoints. `/upload/*` = file uploads. `/v1/*` = OpenAI compatibility.
+:::
+
 This page is the authoritative human-readable reference for every HTTP endpoint exposed by the Manna API server.
 
 ---
@@ -43,6 +47,21 @@ Manna API  (default port :3001)
 | **Specialized** (`/autocomplete`, etc.) | Single LLM call or deterministic logic; no loop, no tool selection overhead | High-frequency, latency-sensitive operations with a predictable input/output contract |
 
 The rule of thumb is: **when a use case is frequent enough and has a well-defined input/output contract, it gets its own endpoint.** Specialized endpoints are faster, easier to integrate, and give frontend surfaces a reliable schema to depend on.
+
+### Request routing overview
+
+```mermaid
+flowchart TD
+    Client[Client Request]
+    Client --> Generic["/run — Full Agent Loop"]
+    Client --> Specialized["/autocomplete, /lint, /review"]
+    Client --> Upload["/upload/* — File Upload"]
+    Client --> OpenAI["/v1/* — OpenAI Compat"]
+    Generic --> AgentLoop["Model routing → Tool selection → Multi-step → Answer"]
+    Specialized --> SingleLLM["Single LLM call → Structured response"]
+    Upload --> ToolDirect["Tool with base64 data → Result"]
+    OpenAI --> AgentLoop
+```
 
 ---
 
