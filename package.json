@@ -1,6 +1,6 @@
 {
   "name": "ai-assistant",
-  "version": "1.0.0",
+  "version": "0.15.0-alpha",
   "private": true,
   "description": "Manna — Personal AI Agent Platform, local-first and extensible (TypeScript + Ollama)",
   "engines": {
