@@ -52,9 +52,10 @@ registerOpenAiRoutes(app);
  * Request body:
  * ```json
  * {
- *   "task":       "describe what you want the agent to do",
- *   "allowWrite": false,
- *   "profile":    "fast"
+ *   "task":          "describe what you want the agent to do",
+ *   "allowWrite":    false,
+ *   "profile":       "fast",
+ *   "resumeContext": "<condensed context from a previous context_overflow response>"
  * }
  * ```
  *
@@ -63,14 +64,27 @@ registerOpenAiRoutes(app);
  *   and `scaffold_project` tools.
  * - `profile` (optional) — force a model profile (`fast`, `reasoning`,
  *   `code`, or `default`), bypassing automatic routing.
+ * - `resumeContext` (optional) — condensed context string from a previous
+ *   `context_overflow` response.  When provided, the agent resumes from
+ *   this context instead of starting fresh.
  *
- * Response: `{ "result": "agent's final answer" }`
+ * Response:
+ * ```json
+ * {
+ *   "status": "completed" | "max_steps" | "context_overflow",
+ *   "result": "agent's final answer or summary",
+ *   "condensedContext": "...",   // present when status === "context_overflow"
+ *   "originalTask": "...",       // present when status !== "completed"
+ *   "suggestion": "..."          // present when status !== "completed"
+ * }
+ * ```
  */
 app.post("/run", async (req, res) => {
-  const { task, allowWrite, profile } = req.body as {
+  const { task, allowWrite, profile, resumeContext } = req.body as {
     task?: string;
     allowWrite?: boolean;
     profile?: string;
+    resumeContext?: string;
   };
 
   if (!task || typeof task !== "string" || task.trim() === "") {
@@ -91,12 +105,18 @@ app.post("/run", async (req, res) => {
     log.info("run_request_received", { task, profile: profile ?? null });
     const writeEnabled = allowWrite === true;
     const agent = createAgent(writeEnabled);
-    const result = await agent.run(
-      task.trim(),
-      profile ? { profile: profile as ModelProfile } : undefined,
-    );
-    log.info("run_request_completed", { taskLength: task.length, writeEnabled, profile: profile ?? null });
-    res.json({ result });
+    const runOptions = {
+      ...(profile ? { profile: profile as ModelProfile } : {}),
+      ...(resumeContext ? { resumeContext } : {}),
+    };
+    const runResult = await agent.run(task.trim(), runOptions);
+    log.info("run_request_completed", {
+      taskLength: task.length,
+      writeEnabled,
+      profile: profile ?? null,
+      status: runResult.status,
+    });
+    res.json(runResult);
   } catch (err) {
     log.error("run_request_failed", { error: String(err) });
     res.status(500).json({ error: String(err) });

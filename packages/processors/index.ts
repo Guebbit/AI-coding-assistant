@@ -22,3 +22,4 @@ export type {
 } from "./types";
 
 export { createProcessor } from "./processor-builder";
+export { createVerificationProcessor } from "./verification";

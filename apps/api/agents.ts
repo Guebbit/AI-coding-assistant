@@ -25,6 +25,7 @@ import {
   codeAutocompleteTool,
   generateDiagramTool,
 } from "../../packages/tools/index";
+import { createVerificationProcessor } from "../../packages/processors/verification";
 
 /* ── Tool sets ───────────────────────────────────────────────────────── */
 
@@ -47,11 +48,16 @@ const writeTools = [writeFileTool, scaffoldProjectTool];
 
 /* ── Agent instances (shared across requests) ────────────────────────── */
 
+/** Verification processor — validates tool results after each step. */
+const verificationProcessor = createVerificationProcessor();
+
 /** Agent with read-only tool access (default). */
-export const readOnlyAgent = new Agent(readOnlyTools);
+export const readOnlyAgent = new Agent(readOnlyTools).addProcessor(verificationProcessor);
 
 /** Agent with both read and write tool access. */
-export const writeEnabledAgent = new Agent([...readOnlyTools, ...writeTools]);
+export const writeEnabledAgent = new Agent([...readOnlyTools, ...writeTools]).addProcessor(
+  verificationProcessor,
+);
 
 /** Recognised model profile names for request validation. */
 export const VALID_PROFILES = new Set<ModelProfile>(["fast", "reasoning", "code", "default"]);

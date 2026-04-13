@@ -19,6 +19,22 @@
 import { generate } from "../llm/ollama";
 import { envFloat, envInt } from "../shared";
 
+/* ── Budget ceiling configuration ────────────────────────────────────── */
+
+/**
+ * Maximum cumulative step duration (in ms) before the router downgrades to
+ * the `fast` profile to preserve the remaining time budget.
+ * Configurable via `AGENT_BUDGET_MAX_DURATION_MS`.
+ */
+const BUDGET_MAX_DURATION_MS = envInt(process.env.AGENT_BUDGET_MAX_DURATION_MS, 60_000);
+
+/**
+ * Maximum context size (in characters) before the router upgrades to the
+ * `reasoning` profile (which uses a larger `num_ctx` window).
+ * Configurable via `AGENT_BUDGET_MAX_CONTEXT_CHARS`.
+ */
+const BUDGET_MAX_CONTEXT_CHARS = envInt(process.env.AGENT_BUDGET_MAX_CONTEXT_CHARS, 50_000);
+
 /* ── Public types ────────────────────────────────────────────────────── */
 
 /** Supported model profiles — each maps to a distinct Ollama model. */
@@ -56,6 +72,21 @@ interface RouteInput {
 
   /** Current zero-based step index in the agent loop. */
   step: number;
+
+  /**
+   * Character count of the accumulated context string.
+   * Used by budget-ceiling routing to upgrade to a larger `num_ctx` model.
+   * When omitted, budget-ceiling checks are skipped.
+   */
+  contextLength?: number;
+
+  /**
+   * Total wall-clock time spent in all previous steps (milliseconds).
+   * Used by budget-ceiling routing to downgrade to a faster model when
+   * the time budget is running low.
+   * When omitted, budget-ceiling checks are skipped.
+   */
+  cumulativeDurationMs?: number;
 
   /**
    * When set, skip all routing logic and use this profile directly.
@@ -158,14 +189,48 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
 /**
  * Select a model profile using simple keyword matching on the task + context.
  *
- * The heuristic checks for code-related keywords first, then reasoning
- * signals, and defaults to the `fast` profile when nothing matches.
+ * Budget-ceiling overrides run first (before any keyword scan):
+ *  1. If `contextLength > BUDGET_MAX_CONTEXT_CHARS × 0.7` → upgrade to `reasoning`
+ *     (larger `num_ctx` window handles the bloated context).
+ *  2. If `cumulativeDurationMs > BUDGET_MAX_DURATION_MS × 0.8` → downgrade to `fast`
+ *     (preserve remaining time budget by using the cheapest model).
+ *
+ * After overrides, the heuristic checks for code-related keywords first, then
+ * reasoning signals, and defaults to the `fast` profile when nothing matches.
  * This is cheap (no LLM call) and deterministic.
  *
- * @param input - The current routing input (task, context, step).
- * @returns A `ModelRouteDecision` based on keyword heuristics.
+ * @param input - The current routing input (task, context, step, optional budget fields).
+ * @returns A `ModelRouteDecision` based on budget overrides and keyword heuristics.
  */
 function routeWithRules(input: RouteInput): ModelRouteDecision {
+  /* ── Budget-ceiling overrides (run before keyword matching) ─────────── */
+
+  /* Context bloat override — upgrade to reasoning for larger num_ctx. */
+  if (
+    input.contextLength !== undefined &&
+    input.contextLength > BUDGET_MAX_CONTEXT_CHARS * 0.7
+  ) {
+    return {
+      profile: "reasoning",
+      model: resolveModel("reasoning"),
+      reason: "budget_override:context_length",
+      options: resolveOptions("reasoning"),
+    };
+  }
+
+  /* Time budget override — downgrade to fast to finish quickly. */
+  if (
+    input.cumulativeDurationMs !== undefined &&
+    input.cumulativeDurationMs > BUDGET_MAX_DURATION_MS * 0.8
+  ) {
+    return {
+      profile: "fast",
+      model: resolveModel("fast"),
+      reason: "budget_override:duration",
+      options: resolveOptions("fast"),
+    };
+  }
+
   const text = `${input.task}\n${input.context}`.toLowerCase();
 
   /* Keywords that indicate the task is code-centric. */

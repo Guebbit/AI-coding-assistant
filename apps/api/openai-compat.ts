@@ -352,12 +352,14 @@ export function registerOpenAiRoutes(application: express.Express): void {
 
     try {
       const agent = createAgent(writeEnabled);
-      const result = await agent.run(task, profile ? { profile } : undefined);
+      const runResult = await agent.run(task, profile ? { profile } : undefined);
+      const resultText = runResult.result;
 
       log.info("openai_chat_completion_done", {
         completionId,
         model,
-        resultLength: result.length,
+        status: runResult.status,
+        resultLength: resultText.length,
       });
 
       if (stream) {
@@ -379,7 +381,7 @@ export function registerOpenAiRoutes(application: express.Express): void {
           choices: [
             {
               index: 0,
-              delta: { role: "assistant", content: result },
+              delta: { role: "assistant", content: resultText },
               finish_reason: null,
             },
           ],
@@ -407,7 +409,7 @@ export function registerOpenAiRoutes(application: express.Express): void {
         choices: [
           {
             index: 0,
-            message: { role: "assistant", content: result },
+            message: { role: "assistant", content: resultText },
             finish_reason: "stop",
           },
         ],
