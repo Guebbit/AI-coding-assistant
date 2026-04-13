@@ -241,6 +241,10 @@ export class Agent {
         const overflowPrompt =
           `The following accumulated context from an ongoing task has become too large.\n` +
           `Task: ${task}\n\n` +
+          /* We take a trailing character window rather than trying to find a sentence
+           * boundary: the summarisation LLM is designed to handle partial sentences,
+           * and the complexity of finding a clean boundary outweighs the benefit for
+           * this use case. */
           `Context:\n${context.slice(-OVERFLOW_SUMMARY_CONTEXT_WINDOW)}\n\n` +
           `Please provide a concise summary (max 2000 characters) of the key findings, ` +
           `decisions made, and current state. This summary will replace the full context.`;
@@ -599,6 +603,8 @@ export class Agent {
       `An AI agent attempted the following task but exhausted its step limit (${MAX_STEPS} steps) ` +
       `without completing it.\n\n` +
       `Task: ${task}\n\n` +
+      /* Character-based truncation rather than sentence boundary detection for simplicity;
+       * the summarisation LLM handles partial input gracefully. */
       `Accumulated context (what was tried):\n${context.slice(-MAX_STEPS_SUMMARY_CONTEXT_WINDOW)}\n\n` +
       `Please provide:\n` +
       `1. A brief summary of what was attempted.\n` +

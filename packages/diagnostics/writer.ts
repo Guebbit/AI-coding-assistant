@@ -25,7 +25,7 @@
  */
 
 import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
 import { envInt } from "../shared";
 import { getLogger } from "../logger/logger";
 import type { DiagnosticEntry } from "./types";
@@ -83,6 +83,10 @@ function toSlug(text: string, maxLength = 40): string {
  * Format an ISO 8601 timestamp string into a filename-safe prefix.
  *
  * Converts `"2024-07-15T14:30:05.123Z"` to `"2024-07-15T14-30-05"`.
+ *
+ * Callers must ensure `iso` is a valid ISO 8601 string (at least 19 chars).
+ * In this module `entry.timestamp` is always set to `new Date().toISOString()`,
+ * which always produces a valid string with length ≥ 24.
  *
  * @param iso - An ISO 8601 timestamp string.
  * @returns A filesystem-safe date-time string (colons replaced with hyphens).
@@ -202,17 +206,21 @@ async function enforceFileLimit(dir: string, maxFiles: number): Promise<void> {
 
     const excess = mdFiles.slice(0, mdFiles.length - maxFiles);
     for (const file of excess) {
-      /* Use basename() to guarantee we work with a plain filename component
-       * (no directory separators), then join it with the resolved directory.
-       * This eliminates any path-traversal risk regardless of OS or how
-       * the directory was configured. */
+      /* Use basename() to strip any accidental path separators, then
+       * resolve + validate that the final path is within `dir`.
+       * This prevents traversal even if a future platform quirk produces
+       * unexpected filenames from readdir. */
       const safeFilename = basename(file);
-      if (!safeFilename.endsWith(".md")) {
-        /* Double-check after basename extraction — skip if somehow altered. */
+      if (!safeFilename || !safeFilename.endsWith(".md")) {
         continue;
       }
-      const filePath = join(dir, safeFilename);
-      await unlink(filePath).catch((e) => {
+      const resolvedPath = resolve(join(dir, safeFilename));
+      const resolvedDir = resolve(dir);
+      if (!resolvedPath.startsWith(resolvedDir + sep)) {
+        log.warn("diagnostic_cleanup_path_outside_dir", { file: safeFilename });
+        continue;
+      }
+      await unlink(resolvedPath).catch((e) => {
         log.warn("diagnostic_cleanup_failed", { file: safeFilename, error: String(e) });
       });
     }
