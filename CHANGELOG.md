@@ -11,6 +11,13 @@ All notable changes to the Manna AI Agent Platform are documented in this file.
 - **TL;DR callout boxes** — every doc page now opens with a one-liner summary in a highlighted `::: tip` box
 - **VitePress Mermaid support** — `vitepress-plugin-mermaid` and `mermaid` added as dev dependencies
 - **CHANGELOG.md** — this file, tracking all notable changes going forward
+- **`docs/library-ingestion.md`** — deep developer documentation for multi-library ingestion and semantic search: two-pass pipeline, data model, search implementation, API usage, hardware requirements, and edge cases
+- **`docs/theory/RAG.md`** — theory page on Retrieval-Augmented Generation: what it is, ingestion/query pipelines, architectures, RAG vs fine-tuning comparison, failure modes
+- **`docs/theory/VECTOR_DATABASES.md`** — theory page on vector databases: HNSW/IVF/flat indices, how Qdrant works, practical scaling realities (personal vs. production), embedding model comparison
+- **`openapi.yaml`** — OpenAPI 3.1 specification including library endpoints: `GET /library`, `POST /library/{libraryId}/import`, `POST /library/{libraryId}/search`, `GET /library/{libraryId}/export`
+- **Developer process rule in `AI_README.md`** — every route addition/modification/removal must update `openapi.yaml` and describe the change in `CHANGELOG.md`
+- **Mermaid diagram rule in `AI_README.md`** — coding style now mandates Mermaid diagrams for all pipelines, architectures, and multi-step processes in documentation
+- **Mermaid diagrams added** to `docs/theory/RAG.md`, `docs/theory/VECTOR_DATABASES.md`, and `docs/library-ingestion.md` — all ASCII-only diagrams replaced with Mermaid equivalents
 
 ### Fixed
 - Dead link in `model-selection.md` pointing to `../infra/modelfile-example.md` (now uses VitePress clean URL)

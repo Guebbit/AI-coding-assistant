@@ -509,6 +509,16 @@ This section defines the **mandatory documentation and configuration actions** t
 1. Add a row to the **IDE direct endpoints** table (or create a new section if it is an agent-loop endpoint).
 2. Update the **Execution graph** if the endpoint enters the agent loop.
 3. Note any new env vars required; add them to the **Key Environment Variables** table.
+4. **Update `openapi.yaml`** — add the new path, its request/response schemas, and any new reusable components. Validate that the file remains valid OpenAPI 3.1.
+5. **Update `CHANGELOG.md`** — add a line under `[Unreleased] > Added` (or `Changed` / `Removed` as appropriate) describing the new endpoint, its purpose, and its request/response shape.
+
+---
+
+### Trigger: An existing HTTP endpoint is modified or removed
+
+1. Update the relevant sections in this file (endpoint tables, execution graph if applicable).
+2. **Update `openapi.yaml`** — modify or remove the corresponding path entry and any schemas that are no longer valid.
+3. **Update `CHANGELOG.md`** — describe what changed and why under the appropriate section (`Changed` or `Removed`).
 
 ---
 
@@ -568,6 +578,14 @@ When writing code in this repository, the AI **must** follow these conventions:
    - Environment variable parsing helpers (`envFloat`, `envInt`) live in `packages/shared/env.ts`.
    - Path safety helpers (`resolveSafePath`, `resolveInsideRoot`) live in `packages/shared/path-safety.ts`.
    - Do **not** duplicate these helpers in individual tool files — import from `packages/shared/`.
+
+4. **Use Mermaid diagrams for visual representations:**
+   - When writing or updating documentation (in `docs/`, `AI_README.md`, or `CHANGELOG.md`), include **Mermaid diagrams** (```` ```mermaid ````) for any flow, architecture, sequence, or relationship that benefits from a visual representation.
+   - Prefer `flowchart TD` (top-down) or `flowchart LR` (left-right) for pipelines and data flows.
+   - Use `sequenceDiagram` for request/response interaction flows.
+   - Use `classDiagram` or `erDiagram` for data models or entity relationships.
+   - ASCII box-and-arrow diagrams (```` ```text ````) are acceptable as a **compact supplement** when inline with explanatory text, but **every documentation page that describes a pipeline, architecture, or multi-step process must include at least one Mermaid diagram**.
+   - VitePress renders Mermaid natively via `vitepress-plugin-mermaid` (already configured in `docs/.vitepress/config.mts`).
 
 ---
 

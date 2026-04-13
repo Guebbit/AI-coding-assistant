@@ -1,0 +1,937 @@
+openapi: "3.1.0"
+
+info:
+  title: Manna AI Agent API
+  version: "1.0.0"
+  description: |
+    Local-first agentic AI platform. Exposes the agent reasoning loop, IDE-specific
+    direct-LLM endpoints, file-upload helpers, OpenAI-compatible endpoints,
+    and a multi-library PDF ingestion and semantic search system.
+
+    **Base URL (default):** `http://localhost:3001`
+
+servers:
+  - url: http://localhost:3001
+    description: Local development server
+
+tags:
+  - name: core
+    description: Core agent loop and health check
+  - name: ide
+    description: IDE-specific direct-LLM endpoints (bypass the agent loop)
+  - name: upload
+    description: File-upload helpers (image, audio, PDF)
+  - name: openai-compat
+    description: OpenAI-compatible endpoints for Open WebUI integration (temporary)
+  - name: library
+    description: |
+      Multi-library PDF ingestion and semantic search.
+      Each library is an independent collection of PDFs (e.g. a magazine back-issue archive).
+      Articles are indexed by LLM-generated summaries and embeddings for instant semantic retrieval.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+
+paths:
+
+  # ── Core ──────────────────────────────────────────────────────────────────
+
+  /health:
+    get:
+      tags: [core]
+      summary: Health check
+      description: Returns `{ "status": "ok" }` without calling any LLM. Use for liveness probes.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /run:
+    post:
+      tags: [core]
+      summary: Submit a task to the agent reasoning loop
+      description: |
+        Triggers the full agentic loop: model routing → tool selection → execution → repeat
+        (up to `MAX_STEPS`, default 5). Returns the agent's final answer as a string.
+
+        This is the right endpoint whenever no specialised endpoint covers the use case.
+      operationId: postRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+            examples:
+              basic:
+                summary: Simple read task
+                value:
+                  task: "What npm scripts are available in this project?"
+              withProfile:
+                summary: Force reasoning profile
+                value:
+                  task: "Explain the trade-offs of the current memory strategy"
+                  profile: reasoning
+              withWrite:
+                summary: Enable write tools
+                value:
+                  task: "Create a new file at data/hello.txt with the content 'hello'"
+                  allowWrite: true
+      responses:
+        "200":
+          description: Agent completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── IDE endpoints ─────────────────────────────────────────────────────────
+
+  /autocomplete:
+    post:
+      tags: [ide]
+      summary: Cursor-time code completion
+      description: |
+        Single LLM call (no agent loop). Returns one or more code completion suggestions
+        for the given cursor position. Uses `TOOL_IDE_MODEL` (default `starcoder2`).
+
+        Intended for IDE integration. Responses are cached for identical prefix/suffix pairs.
+      operationId: postAutocomplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutocompleteRequest"
+      responses:
+        "200":
+          description: Completion result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutocompleteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /lint-conventions:
+    post:
+      tags: [ide]
+      summary: Deterministic lint + LLM convention findings
+      description: |
+        Runs deterministic TypeScript/style checks and optionally enriches findings
+        with LLM explanations. Returns a structured list of findings with severity,
+        rule name, line numbers, and suggested fixes.
+      operationId: postLintConventions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LintRequest"
+      responses:
+        "200":
+          description: Lint findings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LintResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /page-review:
+    post:
+      tags: [ide]
+      summary: Whole-file categorised engineering review
+      description: |
+        Single LLM call that analyses a full source file and returns categorised
+        review suggestions (correctness, maintainability, performance, security).
+      operationId: postPageReview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PageReviewRequest"
+      responses:
+        "200":
+          description: Review result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PageReviewResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Upload endpoints ───────────────────────────────────────────────────────
+
+  /upload/image-classify:
+    post:
+      tags: [upload]
+      summary: Classify or describe an uploaded image
+      description: |
+        Accepts a multipart file upload and classifies/describes the image using
+        `TOOL_VISION_MODEL` (default `llava:13b`). Max file size: 50 MB.
+      operationId: uploadImageClassify
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, etc.)
+                prompt:
+                  type: string
+                  description: Optional prompt to guide the classification
+                model:
+                  type: string
+                  description: Override the vision model (Ollama model name)
+      responses:
+        "200":
+          description: Classification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    description: Model's description of the image
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /upload/speech-to-text:
+    post:
+      tags: [upload]
+      summary: Transcribe an uploaded audio file
+      description: |
+        Accepts a multipart audio upload and returns a transcript using
+        `TOOL_STT_MODEL` (default `whisper`). Max file size: 50 MB.
+      operationId: uploadSpeechToText
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file (MP3, WAV, M4A, etc.)
+                model:
+                  type: string
+                  description: Override the STT model
+                language:
+                  type: string
+                  description: BCP-47 language code (e.g. "en", "fr")
+                prompt:
+                  type: string
+                  description: Optional context prompt to improve transcription accuracy
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: Transcribed text
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /upload/read-pdf:
+    post:
+      tags: [upload]
+      summary: Extract text from an uploaded PDF
+      description: |
+        Accepts a multipart PDF upload and returns the extracted text plus page count.
+        Max file size: 50 MB.
+      operationId: uploadReadPdf
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file
+      responses:
+        "200":
+          description: Extracted PDF content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: Full extracted text
+                  pages:
+                    type: integer
+                    description: Total number of pages in the PDF
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── OpenAI-compatible (temporary) ─────────────────────────────────────────
+
+  /v1/models:
+    get:
+      tags: [openai-compat]
+      summary: List available Manna model profiles (OpenAI format)
+      description: |
+        Returns Manna profiles in OpenAI model-list format. Intended for Open WebUI
+        and other OpenAI-compatible clients. **This endpoint is temporary** and will
+        be removed when the custom Manna frontend ships.
+      operationId: getV1Models
+      responses:
+        "200":
+          description: OpenAI-format model list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+
+  /v1/chat/completions:
+    post:
+      tags: [openai-compat]
+      summary: OpenAI-compatible chat completions (routes through agent loop)
+      description: |
+        Translates an OpenAI chat request into a Manna `agent.run()` call and returns
+        the result in OpenAI response format. Supports streaming (SSE).
+
+        **This endpoint is temporary** and will be removed when the custom Manna frontend ships.
+      operationId: postV1ChatCompletions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, messages]
+              properties:
+                model:
+                  type: string
+                  enum: [manna, manna-agent, manna-fast, manna-reasoning, manna-code]
+                messages:
+                  type: array
+                  items:
+                    type: object
+                stream:
+                  type: boolean
+                  default: false
+                allowWrite:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Chat completion result (OpenAI format)
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limit exceeded
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Library endpoints ──────────────────────────────────────────────────────
+
+  /library:
+    get:
+      tags: [library]
+      summary: List all libraries
+      description: |
+        Returns all registered libraries with their configuration metadata and
+        ingestion status (article count, last import timestamp).
+      operationId: listLibraries
+      responses:
+        "200":
+          description: List of libraries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LibraryInfo"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /library/{libraryId}/import:
+    post:
+      tags: [library]
+      summary: Import PDFs into a library using the two-pass ingestion pipeline
+      description: |
+        Ingests one or more PDF files (or an entire folder) into the specified library.
+        Runs the two-pass pipeline:
+
+        1. **Pass 1 — Structure discovery**: the LLM reads the table-of-contents pages
+           of each PDF to extract article titles and page ranges.
+        2. **Pass 2 — Content extraction**: for each article, the LLM summarises the
+           text and generates topic tags; the summary is embedded and stored in Qdrant.
+
+        Accepts **either** `pdfs` (array of specific files) **or** `folder` (directory path).
+        If both are provided, `pdfs` takes precedence.
+
+        This is a long-running operation. For large archives (hundreds of PDFs), it may
+        take minutes to hours. The endpoint returns only after all PDFs are processed.
+        Failed PDFs are reported in the `errors` array without aborting the batch.
+
+        See the Library Ingestion documentation for full architecture details.
+      operationId: importLibrary
+      parameters:
+        - $ref: "#/components/parameters/libraryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportRequest"
+            examples:
+              specificPdfs:
+                summary: Import specific PDF files (incremental update)
+                value:
+                  pdfs:
+                    - path: /storage/sa/2026/04.pdf
+                      year: 2026
+                      month: April
+                    - path: /storage/sa/2026/05.pdf
+                      year: 2026
+                      month: May
+              folder:
+                summary: Import entire folder (start from scratch)
+                value:
+                  folder: /storage/sa
+      responses:
+        "200":
+          description: Import completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /library/{libraryId}/search:
+    post:
+      tags: [library]
+      summary: Semantic article search within a specific library
+      description: |
+        Embeds the query using `OLLAMA_EMBED_MODEL` (default `nomic-embed-text`) and
+        performs ANN cosine similarity search over the library's article embedding index
+        in Qdrant.
+
+        Returns a ranked list of articles with metadata, PDF path, and similarity score.
+        The caller can use the returned `pdfPath` and `startPage` to open the exact
+        article in the PDF viewer.
+
+        Optional `filters` allow narrowing results by publication year and/or month.
+        Optional `topK` controls how many articles are returned (default: 5).
+
+        See the Library Ingestion documentation for full architecture details.
+      operationId: searchLibrary
+      parameters:
+        - $ref: "#/components/parameters/libraryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+            examples:
+              basic:
+                summary: Simple semantic search
+                value:
+                  query: "ocean acidification and coral bleaching"
+              withFilters:
+                summary: Filter by year
+                value:
+                  query: "AI and machine learning breakthroughs"
+                  topK: 10
+                  filters:
+                    year: 2025
+              withMonthFilter:
+                summary: Filter by month and year
+                value:
+                  query: "CRISPR gene editing ethics"
+                  topK: 3
+                  filters:
+                    year: 2026
+                    month: March
+      responses:
+        "200":
+          description: Ranked list of matching articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankedArticle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /library/{libraryId}/export:
+    get:
+      tags: [library]
+      summary: Export all article metadata as JSON
+      description: |
+        Returns the full article metadata index for the library as a JSON array.
+        Intended for human review, manual editing, or backup.
+
+        The exported JSON can be inspected to verify ingestion quality (summaries,
+        topic tags, page numbers) and re-imported after manual corrections.
+
+        Embedding vectors are excluded from the export to keep the response
+        size manageable. Re-embedding is required if the index is rebuilt from scratch.
+      operationId: exportLibrary
+      parameters:
+        - $ref: "#/components/parameters/libraryId"
+      responses:
+        "200":
+          description: Full article index (without embedding vectors)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArticleExport"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+components:
+
+  parameters:
+    libraryId:
+      name: libraryId
+      in: path
+      required: true
+      description: |
+        Unique identifier of the library (lowercase alphanumeric and hyphens).
+        Example: `scientific-american`, `nature-journal`, `my-ebook-library`.
+      schema:
+        type: string
+        pattern: "^[a-z0-9-]+$"
+        example: scientific-american
+
+  responses:
+    BadRequest:
+      description: Invalid request body or parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: The requested library or resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error (LLM failure, Qdrant unavailable, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable error message.
+          example: "Library 'scientific-american' not found"
+
+    # ── Core schemas ─────────────────────────────────────────────────────────
+
+    RunRequest:
+      type: object
+      required: [task]
+      properties:
+        task:
+          type: string
+          description: Natural-language description of what the agent should do.
+          example: "What npm scripts are available in this project?"
+        allowWrite:
+          type: boolean
+          default: false
+          description: |
+            When `true`, unlocks the `write_file` and `scaffold_project` tools.
+            Default `false`.
+        profile:
+          type: string
+          enum: [fast, reasoning, code, default]
+          description: |
+            Force a specific model profile, bypassing automatic routing.
+            If omitted, the router selects a profile based on the task text.
+
+    RunResponse:
+      type: object
+      properties:
+        result:
+          type: string
+          description: The agent's final answer as a plain string.
+
+    # ── IDE schemas ───────────────────────────────────────────────────────────
+
+    AutocompleteRequest:
+      type: object
+      required: [prefix]
+      properties:
+        prefix:
+          type: string
+          description: Code text before the cursor.
+        suffix:
+          type: string
+          description: Code text after the cursor (FIM context).
+        language:
+          type: string
+          description: Programming language identifier (e.g. "typescript", "python").
+
+    AutocompleteResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        completion:
+          type: string
+          description: Suggested code to insert at the cursor.
+        cached:
+          type: boolean
+          description: Whether the result was served from cache.
+        latencyMs:
+          type: integer
+
+    LintRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Source code to lint.
+        language:
+          type: string
+          description: Programming language identifier.
+
+    LintResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        language:
+          type: string
+        filePath:
+          type: string
+        summary:
+          type: object
+          properties:
+            errors:
+              type: integer
+            warnings:
+              type: integer
+            infos:
+              type: integer
+            deterministicCount:
+              type: integer
+            llmCount:
+              type: integer
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: [error, warning, info]
+              rule:
+                type: string
+              line:
+                type: integer
+              message:
+                type: string
+              suggestion:
+                type: string
+        llmModelUsed:
+          type: string
+        latencyMs:
+          type: integer
+
+    PageReviewRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Full source file content to review.
+        language:
+          type: string
+        filename:
+          type: string
+        projectContext:
+          type: string
+          description: Optional sentence describing the project for context.
+
+    PageReviewResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        findings:
+          type: array
+          items:
+            type: object
+        latencyMs:
+          type: integer
+
+    # ── Library schemas ───────────────────────────────────────────────────────
+
+    LibraryInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Library identifier.
+          example: scientific-american
+        name:
+          type: string
+          description: Human-readable display name.
+          example: Scientific American
+        articleCount:
+          type: integer
+          description: Number of articles currently indexed.
+          example: 1247
+        lastImport:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the most recent import run.
+          example: "2026-04-01T12:00:00Z"
+
+    PdfEntry:
+      type: object
+      required: [path]
+      properties:
+        path:
+          type: string
+          description: Absolute path to the PDF file on disk.
+          example: /storage/sa/2026/04.pdf
+        year:
+          type: integer
+          description: |
+            Publication year. If omitted, the pipeline attempts to infer it
+            from the file path (e.g. .../2026/04.pdf -> 2026).
+          example: 2026
+        month:
+          type: string
+          description: |
+            Publication month as a full English name. If omitted, the pipeline
+            attempts to infer it from the file path.
+          example: April
+
+    ImportRequest:
+      type: object
+      description: |
+        Provide either `pdfs` for incremental updates (specific files) or
+        `folder` for a full batch import. If both are provided, `pdfs` takes precedence.
+      properties:
+        pdfs:
+          type: array
+          description: Array of specific PDF files to import.
+          items:
+            $ref: "#/components/schemas/PdfEntry"
+        folder:
+          type: string
+          description: |
+            Absolute path to a folder containing PDF files (scanned recursively).
+            All PDFs found under this path will be ingested.
+          example: /storage/sa
+
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: integer
+          description: Number of articles successfully imported.
+          example: 47
+        skipped:
+          type: integer
+          description: Number of PDFs skipped due to errors.
+          example: 0
+        errors:
+          type: array
+          description: Error messages for any PDFs that failed to process.
+          items:
+            type: string
+          example: []
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          description: Natural-language search query. Will be embedded using the configured embedding model.
+          example: "ocean acidification and coral bleaching"
+        topK:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 50
+          description: Number of top-ranked articles to return.
+          example: 5
+        filters:
+          type: object
+          description: Optional metadata filters applied before or during the ANN search.
+          properties:
+            year:
+              type: integer
+              description: Restrict results to a specific publication year.
+              example: 2025
+            month:
+              type: string
+              description: Restrict results to a specific publication month (full English name).
+              example: March
+
+    RankedArticle:
+      type: object
+      properties:
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Cosine similarity score between the query embedding and the article embedding.
+          example: 0.91
+        id:
+          type: string
+          description: Unique article identifier.
+        title:
+          type: string
+          description: Article headline.
+          example: "The Oceans' Tipping Point"
+        summary:
+          type: string
+          description: LLM-generated 2-4 sentence summary.
+          example: "Examines how rising CO2 is dissolving coral structures at an accelerating pace."
+        topics:
+          type: array
+          items:
+            type: string
+          description: LLM-generated topic tags.
+          example: ["ocean", "climate", "CO2", "coral"]
+        year:
+          type: integer
+          example: 2026
+        month:
+          type: string
+          example: March
+        startPage:
+          type: integer
+          description: First printed page number of the article.
+          example: 42
+        endPage:
+          type: integer
+          description: Last printed page number of the article (may be absent for single-page items).
+          example: 51
+        pdfPath:
+          type: string
+          description: Absolute path to the PDF on disk. Use with `startPage` to open directly.
+          example: /storage/sa/2026/03.pdf
+        pdfPageOffset:
+          type: integer
+          description: |
+            Offset between the printed page number and the 0-based PDF page index.
+            Use when cover pages or ads shift the internal page count.
+          example: 0
+
+    ArticleExport:
+      description: |
+        Article metadata as returned by the export endpoint. Identical to RankedArticle
+        but without the similarity `score` field and without the embedding vector.
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        year:
+          type: integer
+        month:
+          type: string
+        startPage:
+          type: integer
+        endPage:
+          type: integer
+        pdfPath:
+          type: string
+        pdfPageOffset:
+          type: integer
