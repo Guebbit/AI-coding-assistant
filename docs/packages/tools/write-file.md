@@ -31,34 +31,34 @@ Without `allowWrite: true`, both `write_file` and `scaffold_project` are not reg
 
 ```json
 {
-  "path": "my-app/src/index.ts",
-  "content": "console.log(\"hello\")\n",
-  "mode": "create"
+    "path": "my-app/src/index.ts",
+    "content": "console.log(\"hello\")\n",
+    "mode": "create"
 }
 ```
 
-| Field | Required | Default | Notes |
-|---|---|---|---|
-| `path` | ✅ | — | Relative path inside `PROJECT_OUTPUT_ROOT` |
-| `content` | ✅ | — | UTF-8 text to write |
-| `mode` | ❌ | `"create"` | `create` / `overwrite` / `append` |
+| Field     | Required | Default    | Notes                                      |
+| --------- | -------- | ---------- | ------------------------------------------ |
+| `path`    | ✅       | —          | Relative path inside `PROJECT_OUTPUT_ROOT` |
+| `content` | ✅       | —          | UTF-8 text to write                        |
+| `mode`    | ❌       | `"create"` | `create` / `overwrite` / `append`          |
 
 ### Modes explained
 
-| Mode | Behaviour |
-|---|---|
-| `create` | Creates the file. **Fails if file already exists.** |
-| `overwrite` | Creates or replaces the file completely. |
-| `append` | Adds `content` to the end of the existing file (or creates it). |
+| Mode        | Behaviour                                                       |
+| ----------- | --------------------------------------------------------------- |
+| `create`    | Creates the file. **Fails if file already exists.**             |
+| `overwrite` | Creates or replaces the file completely.                        |
+| `append`    | Adds `content` to the end of the existing file (or creates it). |
 
 ## Output
 
 ```json
 {
-  "path": "data/generated-projects/my-app/src/index.ts",
-  "mode": "create",
-  "bytesWritten": 22,
-  "outputRoot": "data/generated-projects"
+    "path": "data/generated-projects/my-app/src/index.ts",
+    "mode": "create",
+    "bytesWritten": 22,
+    "outputRoot": "data/generated-projects"
 }
 ```
 
@@ -90,10 +90,11 @@ flowchart TD
 ### Use case 1 -- Create a project README
 
 **Request:**
+
 ```json
 {
-  "task": "Create a README.md for a project called my-api with a description and quick start section",
-  "allowWrite": true
+    "task": "Create a README.md for a project called my-api with a description and quick start section",
+    "allowWrite": true
 }
 ```
 
@@ -104,10 +105,11 @@ Agent writes `data/generated-projects/my-api/README.md` with the content.
 ### Use case 2 -- Generate a config file
 
 **Request:**
+
 ```json
 {
-  "task": "Create a tsconfig.json for my-api project with strict mode enabled",
-  "allowWrite": true
+    "task": "Create a tsconfig.json for my-api project with strict mode enabled",
+    "allowWrite": true
 }
 ```
 
@@ -118,10 +120,11 @@ Agent writes a complete `tsconfig.json` to `data/generated-projects/my-api/tscon
 ### Use case 3 -- Append notes to an existing file
 
 **Request:**
+
 ```json
 {
-  "task": "Add a 'Troubleshooting' section to the README in my-api",
-  "allowWrite": true
+    "task": "Add a 'Troubleshooting' section to the README in my-api",
+    "allowWrite": true
 }
 ```
 
@@ -132,14 +135,16 @@ Agent uses `mode: "append"` to add the section without overwriting the existing 
 ### Use case 4 -- Multi-step file generation
 
 **Request:**
+
 ```json
 {
-  "task": "Create a minimal Express TypeScript app called my-server with index.ts, package.json, and tsconfig.json",
-  "allowWrite": true
+    "task": "Create a minimal Express TypeScript app called my-server with index.ts, package.json, and tsconfig.json",
+    "allowWrite": true
 }
 ```
 
 **Steps:**
+
 ```
 Step 1: write_file  ->  my-server/package.json
 Step 2: write_file  ->  my-server/tsconfig.json
@@ -151,8 +156,8 @@ Step 4: action: "none"  ->  Done
 
 ## Good test prompts
 
-| What you type (with allowWrite: true) | What the agent creates |
-|---|---|
+| What you type (with allowWrite: true)                    | What the agent creates                         |
+| -------------------------------------------------------- | ---------------------------------------------- |
 | `Create a hello-world/index.js that logs "Hello World".` | `data/generated-projects/hello-world/index.js` |
-| `Write a .gitignore for a Node.js project in my-app/.` | `data/generated-projects/my-app/.gitignore` |
-| `Append a CHANGELOG section to my-app/README.md.` | Appends to existing file |
+| `Write a .gitignore for a Node.js project in my-app/.`   | `data/generated-projects/my-app/.gitignore`    |
+| `Append a CHANGELOG section to my-app/README.md.`        | Appends to existing file                       |

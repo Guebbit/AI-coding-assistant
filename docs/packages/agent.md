@@ -57,40 +57,46 @@ flowchart TD
 ## Input/Output contract
 
 ### Input
+
 A task string from the API:
+
 ```
 "Read package.json and tell me all npm scripts."
 ```
 
 ### Each LLM step must return strict JSON:
+
 ```json
 {
-  "thought": "I should read package.json to find the scripts.",
-  "action":  "read_file",
-  "input":   { "path": "package.json" }
+    "thought": "I should read package.json to find the scripts.",
+    "action": "read_file",
+    "input": { "path": "package.json" }
 }
 ```
+
 Or when done:
+
 ```json
 {
-  "thought": "I have all the information to answer.",
-  "action":  "none",
-  "input":   {}
+    "thought": "I have all the information to answer.",
+    "action": "none",
+    "input": {}
 }
 ```
 
 ### Output
+
 A final answer string returned to the API caller.
 
 ---
 
 ## Stop conditions
 
-| Condition | What happens |
-|---|---|
-| `action: "none"` | Task is done -- return the `thought` as the answer |
+| Condition             | What happens                                               |
+| --------------------- | ---------------------------------------------------------- |
+| `action: "none"`      | Task is done -- return the `thought` as the answer         |
 | Max steps reached (5) | Return: `"Max steps reached without a conclusive answer."` |
-| Unrecoverable error | Emit `agent:error`, return error message |
+| Unrecoverable error   | Emit `agent:error`, return error message                   |
 
 ---
 

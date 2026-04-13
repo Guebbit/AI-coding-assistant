@@ -15,24 +15,24 @@
  * run (on `agent:done` or `agent:max_steps`) via `writeDiagnosticLog`.
  */
 export interface IDiagnosticEntry {
-  /** ISO 8601 timestamp of when the event was recorded. */
-  timestamp: string;
+    /** ISO 8601 timestamp of when the event was recorded. */
+    timestamp: string;
 
-  /** Zero-based step index from the agent loop when this entry was created. */
-  step: number;
+    /** Zero-based step index from the agent loop when this entry was created. */
+    step: number;
 
-  /** Severity level — mirrors common log levels. */
-  severity: "info" | "warn" | "error";
+    /** Severity level — mirrors common log levels. */
+    severity: 'info' | 'warn' | 'error';
 
-  /**
-   * Logical grouping for the entry.
-   * Well-known categories: `'tool'`, `'json'`, `'budget'`, `'routing'`.
-   */
-  category: string;
+    /**
+     * Logical grouping for the entry.
+     * Well-known categories: `'tool'`, `'json'`, `'budget'`, `'routing'`.
+     */
+    category: string;
 
-  /** Human-readable description of what happened. */
-  message: string;
+    /** Human-readable description of what happened. */
+    message: string;
 
-  /** Optional structured data to attach to the entry (e.g. error details). */
-  metadata?: Record<string, unknown>;
+    /** Optional structured data to attach to the entry (e.g. error details). */
+    metadata?: Record<string, unknown>;
 }

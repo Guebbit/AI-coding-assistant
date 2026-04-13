@@ -13,6 +13,7 @@ This documentation is now organized into **5 clear tracks**:
 5. **Package Reference** → [/packages/](/packages/)
 
 **New — Library & RAG:**
+
 - [Library Ingestion & Search](/library-ingestion) — multi-PDF ingestion, semantic search, two-pass pipeline
 - [RAG Theory](/theory/RAG) — what RAG is, architectures, when to use
 - [Vector Databases](/theory/VECTOR_DATABASES) — Qdrant, HNSW, practical scaling

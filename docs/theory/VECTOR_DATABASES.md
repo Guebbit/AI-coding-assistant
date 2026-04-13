@@ -24,21 +24,22 @@ flowchart TD
     cat -.semantic similarity.- dog
 ```
 
-The database must answer: *"which stored vectors are closest to my query vector?"* — a task called **Approximate Nearest Neighbour (ANN) search**.
+The database must answer: _"which stored vectors are closest to my query vector?"_ — a task called **Approximate Nearest Neighbour (ANN) search**.
 
 ---
 
 ## How Vector DBs Differ from SQL / NoSQL
 
-| Feature | SQL (relational) | NoSQL (document / key-value) | Vector DB |
-|---|---|---|---|
-| **Query type** | Exact match, range, joins | Exact match, full-text | Nearest-neighbour (semantic similarity) |
-| **Index structure** | B-tree, hash | Hash / inverted index | ANN index (HNSW, IVF, …) |
-| **Filtering** | `WHERE col = val` | JSON path match | Post-filter on metadata attached to vectors |
-| **Best for** | Structured data, transactions | Flexible schema, high write throughput | Semantic search, embeddings, RAG |
-| **Scaling axis** | Rows × columns | Documents | Vectors × dimensions |
+| Feature             | SQL (relational)              | NoSQL (document / key-value)           | Vector DB                                   |
+| ------------------- | ----------------------------- | -------------------------------------- | ------------------------------------------- |
+| **Query type**      | Exact match, range, joins     | Exact match, full-text                 | Nearest-neighbour (semantic similarity)     |
+| **Index structure** | B-tree, hash                  | Hash / inverted index                  | ANN index (HNSW, IVF, …)                    |
+| **Filtering**       | `WHERE col = val`             | JSON path match                        | Post-filter on metadata attached to vectors |
+| **Best for**        | Structured data, transactions | Flexible schema, high write throughput | Semantic search, embeddings, RAG            |
+| **Scaling axis**    | Rows × columns                | Documents                              | Vectors × dimensions                        |
 
 **None of these replaces the others.** Production RAG systems typically use:
+
 - A **relational DB** for structured metadata (titles, dates, authors)
 - A **vector DB** for embedding similarity search
 - Optionally a **full-text search engine** (Elasticsearch, Typesense) for keyword (BM25) search
@@ -71,6 +72,7 @@ flowchart TD
 ```
 
 **Properties:**
+
 - Query time: O(log N) average
 - Build time: O(N log N)
 - Memory: high (graph edges stored per node)
@@ -98,14 +100,14 @@ This is what a pure `numpy` cosine similarity implementation does — perfectly 
 
 ### Key Concepts
 
-| Term | Meaning |
-|---|---|
+| Term           | Meaning                                                                    |
+| -------------- | -------------------------------------------------------------------------- |
 | **Collection** | Like a table. Each collection has a fixed vector size and distance metric. |
-| **Point** | A record. Contains: `id`, `vector: float[]`, `payload: {any JSON}`. |
-| **Payload** | Arbitrary metadata attached to a point (title, date, page, file path, …). |
-| **Distance** | `Cosine`, `Dot`, or `Euclidean`. Cosine is standard for text embeddings. |
-| **Filter** | JSON predicate on payload fields, applied during or after ANN search. |
-| **Segment** | Internal storage unit; Qdrant manages segments automatically. |
+| **Point**      | A record. Contains: `id`, `vector: float[]`, `payload: {any JSON}`.        |
+| **Payload**    | Arbitrary metadata attached to a point (title, date, page, file path, …).  |
+| **Distance**   | `Cosine`, `Dot`, or `Euclidean`. Cosine is standard for text embeddings.   |
+| **Filter**     | JSON predicate on payload fields, applied during or after ANN search.      |
+| **Segment**    | Internal storage unit; Qdrant manages segments automatically.              |
 
 ### Write Path
 
@@ -130,13 +132,13 @@ await qdrant.upsert("my-collection", {
 
 ```typescript
 // Search for nearest neighbours
-const results = await qdrant.search("my-collection", {
-  vector: queryEmbedding,   // embed the user's question first
-  limit: 5,
-  filter: {
-    must: [{ key: "year", match: { value: 2026 } }]   // optional metadata filter
-  },
-  with_payload: true
+const results = await qdrant.search('my-collection', {
+    vector: queryEmbedding, // embed the user's question first
+    limit: 5,
+    filter: {
+        must: [{ key: 'year', match: { value: 2026 } }] // optional metadata filter
+    },
+    with_payload: true
 });
 
 // results[0] = { id, score, payload }
@@ -162,14 +164,14 @@ flowchart TD
 
 ### Practical Qdrant Settings for This Project
 
-| Setting | Recommended value | Rationale |
-|---|---|---|
-| Distance metric | `Cosine` | Standard for text embeddings from nomic-embed-text / BGE |
-| Vector size | `768` (nomic-embed-text) | Match the embedding model's output dimension |
-| HNSW `m` | `16` | Default; sufficient for < 1 M vectors |
-| HNSW `ef_construct` | `100` | Default; higher = slower build but better index quality |
-| On-disk payload | Yes | Keeps RAM usage low; payload is only fetched for top-K hits |
-| Collection replication | 1 (single node) | Personal/local use; no need for HA |
+| Setting                | Recommended value        | Rationale                                                   |
+| ---------------------- | ------------------------ | ----------------------------------------------------------- |
+| Distance metric        | `Cosine`                 | Standard for text embeddings from nomic-embed-text / BGE    |
+| Vector size            | `768` (nomic-embed-text) | Match the embedding model's output dimension                |
+| HNSW `m`               | `16`                     | Default; sufficient for < 1 M vectors                       |
+| HNSW `ef_construct`    | `100`                    | Default; higher = slower build but better index quality     |
+| On-disk payload        | Yes                      | Keeps RAM usage low; payload is only fetched for top-K hits |
+| Collection replication | 1 (single node)          | Personal/local use; no need for HA                          |
 
 ---
 
@@ -177,26 +179,26 @@ flowchart TD
 
 ### Personal Scale (this project's primary use case)
 
-| Metric | Typical value | Notes |
-|---|---|---|
-| Documents | 100 – 10 K | Years of a magazine, a book library |
-| Chunks (if chunking) | 1 K – 200 K | ~10–20 chunks per article |
-| Summaries (if summary-only) | 100 – 10 K | One embedding per article |
-| Query latency (HNSW) | < 5 ms | Negligible even on CPU |
-| Memory (Qdrant) | 10 – 200 MB | Easily fits in 32 GB RAM |
-| Embedding cost (local) | $0 | nomic-embed-text via Ollama |
+| Metric                      | Typical value | Notes                               |
+| --------------------------- | ------------- | ----------------------------------- |
+| Documents                   | 100 – 10 K    | Years of a magazine, a book library |
+| Chunks (if chunking)        | 1 K – 200 K   | ~10–20 chunks per article           |
+| Summaries (if summary-only) | 100 – 10 K    | One embedding per article           |
+| Query latency (HNSW)        | < 5 ms        | Negligible even on CPU              |
+| Memory (Qdrant)             | 10 – 200 MB   | Easily fits in 32 GB RAM            |
+| Embedding cost (local)      | $0            | nomic-embed-text via Ollama         |
 
 At this scale, you could skip Qdrant entirely and do brute-force cosine similarity in memory (NumPy / `Float32Array`). Qdrant adds operational complexity without meaningful performance gain until you exceed ~100 K vectors.
 
 ### Production Scale
 
-| Metric | Typical range | When you need Qdrant/Weaviate/Pinecone |
-|---|---|---|
-| Vectors | > 1 M | Brute-force becomes too slow (> 1 s) |
-| QPS | > 100 | Dedicated vector DB handles concurrency |
-| Multi-tenancy | Yes | Per-tenant collection isolation |
-| Filtered search | Complex | Vector DB filter pushdown beats post-filter |
-| High availability | Required | Qdrant cluster mode, Pinecone cloud |
+| Metric            | Typical range | When you need Qdrant/Weaviate/Pinecone      |
+| ----------------- | ------------- | ------------------------------------------- |
+| Vectors           | > 1 M         | Brute-force becomes too slow (> 1 s)        |
+| QPS               | > 100         | Dedicated vector DB handles concurrency     |
+| Multi-tenancy     | Yes           | Per-tenant collection isolation             |
+| Filtered search   | Complex       | Vector DB filter pushdown beats post-filter |
+| High availability | Required      | Qdrant cluster mode, Pinecone cloud         |
 
 **Verdict for this project**: Qdrant is already in use for agent memory. For the library feature, using the same Qdrant instance with a per-library collection is the correct approach — it avoids adding a second dependency and scales to millions of article chunks if the library ever grows.
 
@@ -206,12 +208,12 @@ At this scale, you could skip Qdrant entirely and do brute-force cosine similari
 
 By default this project uses **`nomic-embed-text`** via Ollama, configured via the `OLLAMA_EMBED_MODEL` environment variable. Any Ollama-compatible embedding model can be substituted by changing that variable — however, see the invariant below.
 
-| Model | Dimensions | Best for | VRAM / RAM |
-|---|---|---|---|
-| `nomic-embed-text` | 768 | General text, English-heavy | CPU only (< 500 MB RAM) |
-| `bge-large-en-v1.5` | 1024 | High accuracy English retrieval | CPU only (< 700 MB RAM) |
-| `mxbai-embed-large` | 1024 | Best-in-class MTEB score | CPU only (< 700 MB RAM) |
-| `text-embedding-3-small` (OpenAI) | 1536 | Cloud, multilingual | N/A (API) |
+| Model                             | Dimensions | Best for                        | VRAM / RAM              |
+| --------------------------------- | ---------- | ------------------------------- | ----------------------- |
+| `nomic-embed-text`                | 768        | General text, English-heavy     | CPU only (< 500 MB RAM) |
+| `bge-large-en-v1.5`               | 1024       | High accuracy English retrieval | CPU only (< 700 MB RAM) |
+| `mxbai-embed-large`               | 1024       | Best-in-class MTEB score        | CPU only (< 700 MB RAM) |
+| `text-embedding-3-small` (OpenAI) | 1536       | Cloud, multilingual             | N/A (API)               |
 
 **Invariant**: the embedding model used at ingestion time **must** be the same model used at query time. Changing models requires re-embedding the entire corpus.
 

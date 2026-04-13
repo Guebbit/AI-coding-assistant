@@ -34,12 +34,12 @@ sequenceDiagram
 
 At each step, the router assigns the current task to one of four profiles:
 
-| Profile | When it is used | Goal |
-|---|---|---|
-| `fast` | Simple Q&A, quick lookups | Low latency, small model |
+| Profile     | When it is used                  | Goal                      |
+| ----------- | -------------------------------- | ------------------------- |
+| `fast`      | Simple Q&A, quick lookups        | Low latency, small model  |
 | `reasoning` | Logic, math, multi-step analysis | Best reasoning capability |
-| `code` | Coding, debugging, refactoring | Best code understanding |
-| `default` | Everything else, safety fallback | Balanced general model |
+| `code`      | Coding, debugging, refactoring   | Best code understanding   |
+| `default`   | Everything else, safety fallback | Balanced general model    |
 
 ### Visual: how routing works
 
@@ -104,55 +104,55 @@ Each agent routing profile supports fine-grained generation parameter control vi
 
 ### Parameter cheat sheet
 
-| Parameter | Low value = | High value = | Recommended for precision |
-|---|---|---|---|
-| `temperature` | Precise, deterministic | Creative, varied | **Low (0.1–0.3)** |
-| `top_p` | Narrow probability range | Wider range | **Low-ish (0.7–0.85)** |
-| `top_k` | Fewer token candidates | More candidates | **Low (10–30)** |
-| `num_ctx` | Less context, faster, less VRAM | More context, slower, more VRAM | **High (4096–8192)** |
-| `repeat_penalty` | Allows repetition | Penalizes repetition | **Medium-high (1.2–1.3)** |
+| Parameter        | Low value =                     | High value =                    | Recommended for precision |
+| ---------------- | ------------------------------- | ------------------------------- | ------------------------- |
+| `temperature`    | Precise, deterministic          | Creative, varied                | **Low (0.1–0.3)**         |
+| `top_p`          | Narrow probability range        | Wider range                     | **Low-ish (0.7–0.85)**    |
+| `top_k`          | Fewer token candidates          | More candidates                 | **Low (10–30)**           |
+| `num_ctx`        | Less context, faster, less VRAM | More context, slower, more VRAM | **High (4096–8192)**      |
+| `repeat_penalty` | Allows repetition               | Penalizes repetition            | **Medium-high (1.2–1.3)** |
 
 ### Per-profile env vars
 
 **fast profile** — optimised for low latency:
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_MODEL_FAST_TEMPERATURE` | `0.3` | Sampling temperature |
-| `AGENT_MODEL_FAST_TOP_P` | `0.85` | Nucleus sampling probability |
-| `AGENT_MODEL_FAST_TOP_K` | `30` | Top-K token candidates |
-| `AGENT_MODEL_FAST_NUM_CTX` | `4096` | Context window size (tokens) |
-| `AGENT_MODEL_FAST_REPEAT_PENALTY` | `1.2` | Repetition penalty |
+| Variable                          | Default | Description                  |
+| --------------------------------- | ------- | ---------------------------- |
+| `AGENT_MODEL_FAST_TEMPERATURE`    | `0.3`   | Sampling temperature         |
+| `AGENT_MODEL_FAST_TOP_P`          | `0.85`  | Nucleus sampling probability |
+| `AGENT_MODEL_FAST_TOP_K`          | `30`    | Top-K token candidates       |
+| `AGENT_MODEL_FAST_NUM_CTX`        | `4096`  | Context window size (tokens) |
+| `AGENT_MODEL_FAST_REPEAT_PENALTY` | `1.2`   | Repetition penalty           |
 
 **code profile** — optimised for precise code generation:
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_MODEL_CODE_TEMPERATURE` | `0.2` | Sampling temperature |
-| `AGENT_MODEL_CODE_TOP_P` | `0.8` | Nucleus sampling probability |
-| `AGENT_MODEL_CODE_TOP_K` | `20` | Top-K token candidates |
-| `AGENT_MODEL_CODE_NUM_CTX` | `8192` | Context window size (tokens) |
-| `AGENT_MODEL_CODE_REPEAT_PENALTY` | `1.3` | Repetition penalty |
+| Variable                          | Default | Description                  |
+| --------------------------------- | ------- | ---------------------------- |
+| `AGENT_MODEL_CODE_TEMPERATURE`    | `0.2`   | Sampling temperature         |
+| `AGENT_MODEL_CODE_TOP_P`          | `0.8`   | Nucleus sampling probability |
+| `AGENT_MODEL_CODE_TOP_K`          | `20`    | Top-K token candidates       |
+| `AGENT_MODEL_CODE_NUM_CTX`        | `8192`  | Context window size (tokens) |
+| `AGENT_MODEL_CODE_REPEAT_PENALTY` | `1.3`   | Repetition penalty           |
 
 **reasoning profile** — optimised for accuracy and depth:
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_MODEL_REASONING_TEMPERATURE` | `0.2` | Sampling temperature |
-| `AGENT_MODEL_REASONING_TOP_P` | `0.8` | Nucleus sampling probability |
-| `AGENT_MODEL_REASONING_TOP_K` | `20` | Top-K token candidates |
-| `AGENT_MODEL_REASONING_NUM_CTX` | `8192` | Context window size (tokens) |
-| `AGENT_MODEL_REASONING_REPEAT_PENALTY` | `1.3` | Repetition penalty |
+| Variable                               | Default | Description                  |
+| -------------------------------------- | ------- | ---------------------------- |
+| `AGENT_MODEL_REASONING_TEMPERATURE`    | `0.2`   | Sampling temperature         |
+| `AGENT_MODEL_REASONING_TOP_P`          | `0.8`   | Nucleus sampling probability |
+| `AGENT_MODEL_REASONING_TOP_K`          | `20`    | Top-K token candidates       |
+| `AGENT_MODEL_REASONING_NUM_CTX`        | `8192`  | Context window size (tokens) |
+| `AGENT_MODEL_REASONING_REPEAT_PENALTY` | `1.3`   | Repetition penalty           |
 
 **default profile** — balanced general-purpose:
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_MODEL_DEFAULT_TEMPERATURE` | `0.3` | Sampling temperature |
-| `AGENT_MODEL_DEFAULT_TOP_P` | `0.85` | Nucleus sampling probability |
-| `AGENT_MODEL_DEFAULT_TOP_K` | `30` | Top-K token candidates |
-| `AGENT_MODEL_DEFAULT_NUM_CTX` | `8192` | Context window size (tokens) |
-| `AGENT_MODEL_DEFAULT_REPEAT_PENALTY` | `1.2` | Repetition penalty |
+| Variable                             | Default | Description                  |
+| ------------------------------------ | ------- | ---------------------------- |
+| `AGENT_MODEL_DEFAULT_TEMPERATURE`    | `0.3`   | Sampling temperature         |
+| `AGENT_MODEL_DEFAULT_TOP_P`          | `0.85`  | Nucleus sampling probability |
+| `AGENT_MODEL_DEFAULT_TOP_K`          | `30`    | Top-K token candidates       |
+| `AGENT_MODEL_DEFAULT_NUM_CTX`        | `8192`  | Context window size (tokens) |
+| `AGENT_MODEL_DEFAULT_REPEAT_PENALTY` | `1.2`   | Repetition penalty           |
 
 These options are resolved at startup from env vars and passed through to Ollama's `/api/generate` endpoint on every call. Runtime options take priority over any Modelfile defaults — see [Modelfile Example](/infra/modelfile-example) for the relationship between the two approaches.
 
@@ -160,15 +160,15 @@ These options are resolved at startup from env vars and passed through to Ollama
 
 ## Environment variables (full reference)
 
-| Variable | Default | Description |
-|---|---|---|
-| `AGENT_MODEL_ROUTER_MODE` | `rules` | `rules` or `model` |
-| `AGENT_MODEL_ROUTER_MODEL` | -- | Classifier model (model mode only) |
-| `AGENT_MODEL_FAST` | -- | Model for `fast` profile |
-| `AGENT_MODEL_REASONING` | -- | Model for `reasoning` profile |
-| `AGENT_MODEL_CODE` | -- | Model for `code` profile |
-| `AGENT_MODEL_DEFAULT` | -- | Model for `default` profile |
-| `OLLAMA_MODEL` | `llama3` | Global fallback (used if profile var is unset) |
+| Variable                   | Default  | Description                                    |
+| -------------------------- | -------- | ---------------------------------------------- |
+| `AGENT_MODEL_ROUTER_MODE`  | `rules`  | `rules` or `model`                             |
+| `AGENT_MODEL_ROUTER_MODEL` | --       | Classifier model (model mode only)             |
+| `AGENT_MODEL_FAST`         | --       | Model for `fast` profile                       |
+| `AGENT_MODEL_REASONING`    | --       | Model for `reasoning` profile                  |
+| `AGENT_MODEL_CODE`         | --       | Model for `code` profile                       |
+| `AGENT_MODEL_DEFAULT`      | --       | Model for `default` profile                    |
+| `OLLAMA_MODEL`             | `llama3` | Global fallback (used if profile var is unset) |
 
 ### Priority order for model selection
 
@@ -225,11 +225,11 @@ export AGENT_MODEL_ROUTER_MODEL=qwen3:4b
 
 Some tools have their own model vars (separate from the agent routing profiles):
 
-| Variable | Default | Tool |
-|---|---|---|
-| `TOOL_VISION_MODEL` | `llava-llama3` | `image_classify` |
-| `TOOL_STT_MODEL` | `whisper` | `speech_to_text` |
-| `TOOL_IDE_MODEL` | `starcoder2` | `code_autocomplete` |
+| Variable             | Default            | Tool                       |
+| -------------------- | ------------------ | -------------------------- |
+| `TOOL_VISION_MODEL`  | `llava-llama3`     | `image_classify`           |
+| `TOOL_STT_MODEL`     | `whisper`          | `speech_to_text`           |
+| `TOOL_IDE_MODEL`     | `starcoder2`       | `code_autocomplete`        |
 | `OLLAMA_EMBED_MODEL` | `nomic-embed-text` | `semantic_search` + memory |
 
 ---

@@ -15,8 +15,8 @@
  * @module evals/scorers/tool-accuracy
  */
 
-import { createScorer } from "../scorer-builder";
-import type { ScorerResult, ScorerRunInput } from "../types";
+import { createScorer } from '../scorer-builder';
+import type { IScorerResult, IScorerRunInput } from '../types';
 
 /**
  * Exported scorer instance.
@@ -24,54 +24,52 @@ import type { ScorerResult, ScorerRunInput } from "../types";
  * Registered as `"tool-accuracy"` in the eval harness.
  */
 export const toolAccuracyScorer = createScorer({
-  id: "tool-accuracy",
+    id: 'tool-accuracy',
 
-  /**
-   * Score a single agent run for tool-usage accuracy.
-   *
-   * @param run - The run to evaluate (input, output, metadata).
-   * @returns A normalised `ScorerResult` in [0, 1].
-   */
-  async score(run: ScorerRunInput): Promise<ScorerResult> {
-    const toolsUsed = (run.metadata?.toolsUsed as string[] | undefined) ?? [];
-    const toolErrors = (run.metadata?.toolErrors as string[] | undefined) ?? [];
-    const stepCount = (run.metadata?.stepCount as number | undefined) ?? 0;
+    /**
+     * Score a single agent run for tool-usage accuracy.
+     *
+     * @param run - The run to evaluate (input, output, metadata).
+     * @returns A normalised `ScorerResult` in [0, 1].
+     */
+    async score(run: IScorerRunInput): Promise<IScorerResult> {
+        const toolsUsed = (run.metadata?.toolsUsed as string[] | undefined) ?? [];
+        const toolErrors = (run.metadata?.toolErrors as string[] | undefined) ?? [];
+        const stepCount = (run.metadata?.stepCount as number | undefined) ?? 0;
 
-    /* Direct answer with no tools and no steps — perfectly valid. */
-    if (toolsUsed.length === 0 && stepCount === 0) {
-      return {
-        score: 1,
-        reasoning:
-          "Agent answered directly without tools — acceptable for simple tasks.",
-        metadata: { toolsUsed, toolErrors },
-      };
+        /* Direct answer with no tools and no steps — perfectly valid. */
+        if (toolsUsed.length === 0 && stepCount === 0) {
+            return {
+                score: 1,
+                reasoning: 'Agent answered directly without tools — acceptable for simple tasks.',
+                metadata: { toolsUsed, toolErrors }
+            };
+        }
+
+        /* Steps executed but no tools selected — possibly a routing issue. */
+        if (toolsUsed.length === 0 && stepCount > 0) {
+            return {
+                score: 0.5,
+                reasoning:
+                    'Agent ran multiple steps but selected no tools — may indicate a routing issue.',
+                metadata: { toolsUsed, toolErrors, stepCount }
+            };
+        }
+
+        /* Calculate error ratio and derive a proportional score. */
+        const errorRatio = toolsUsed.length > 0 ? toolErrors.length / toolsUsed.length : 0;
+        const score = Math.max(0, 1 - errorRatio);
+
+        const reasoning =
+            toolErrors.length === 0
+                ? `All ${toolsUsed.length} tool call(s) succeeded.`
+                : `${toolErrors.length} of ${toolsUsed.length} tool call(s) failed ` +
+                  `(error ratio: ${(errorRatio * 100).toFixed(0)}%).`;
+
+        return {
+            score,
+            reasoning,
+            metadata: { toolsUsed, toolErrors, errorRatio }
+        };
     }
-
-    /* Steps executed but no tools selected — possibly a routing issue. */
-    if (toolsUsed.length === 0 && stepCount > 0) {
-      return {
-        score: 0.5,
-        reasoning:
-          "Agent ran multiple steps but selected no tools — may indicate a routing issue.",
-        metadata: { toolsUsed, toolErrors, stepCount },
-      };
-    }
-
-    /* Calculate error ratio and derive a proportional score. */
-    const errorRatio =
-      toolsUsed.length > 0 ? toolErrors.length / toolsUsed.length : 0;
-    const score = Math.max(0, 1 - errorRatio);
-
-    const reasoning =
-      toolErrors.length === 0
-        ? `All ${toolsUsed.length} tool call(s) succeeded.`
-        : `${toolErrors.length} of ${toolsUsed.length} tool call(s) failed ` +
-          `(error ratio: ${(errorRatio * 100).toFixed(0)}%).`;
-
-    return {
-      score,
-      reasoning,
-      metadata: { toolsUsed, toolErrors, errorRatio },
-    };
-  },
 });

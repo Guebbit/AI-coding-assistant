@@ -21,23 +21,23 @@
  * @module processors/verification
  */
 
-import { generate } from "../llm/ollama";
-import { emit } from "../events/bus";
-import { getLogger } from "../logger/logger";
-import { createProcessor } from "./processor-builder";
+import { generate } from '../llm/ollama';
+import { emit } from '../events/bus';
+import { getLogger } from '../logger/logger';
+import { createProcessor } from './processor-builder';
 
-const log = getLogger("verification-processor");
+const log = getLogger('verification-processor');
 
 /** Enabled only when explicitly opted in. */
-const ENABLED = process.env.AGENT_VERIFICATION_ENABLED === "true";
+const ENABLED = process.env.AGENT_VERIFICATION_ENABLED === 'true';
 
 /** Model used for the verification call — defaults to the fast model. */
 const VERIFICATION_MODEL =
-  process.env.AGENT_VERIFICATION_MODEL ??
-  process.env.AGENT_MODEL_FAST ??
-  process.env.AGENT_MODEL_DEFAULT ??
-  process.env.OLLAMA_MODEL ??
-  "llama3";
+    process.env.AGENT_VERIFICATION_MODEL ??
+    process.env.AGENT_MODEL_FAST ??
+    process.env.AGENT_MODEL_DEFAULT ??
+    process.env.OLLAMA_MODEL ??
+    'llama3';
 
 /**
  * Verification gate `Processor`.
@@ -50,69 +50,68 @@ const VERIFICATION_MODEL =
  * tool choice is valid.
  */
 export const verificationProcessor = createProcessor({
-  /**
-   * Check whether the chosen tool correctly addresses the task.
-   *
-   * @param args - Output step arguments from the agent (includes task and action).
-   * @returns Modified args (with issue appended to thought) or void.
-   */
-  async processOutputStep(args) {
-    if (!ENABLED || args.action === "none") return;
+    /**
+     * Check whether the chosen tool correctly addresses the task.
+     *
+     * @param args - Output step arguments from the agent (includes task and action).
+     * @returns Modified args (with issue appended to thought) or void.
+     */
+    async processOutputStep(args) {
+        if (!ENABLED || args.action === 'none') return;
 
-    const verifyPrompt =
-      `You are a verification assistant.\n` +
-      `The agent chose the following tool for the given task.\n\n` +
-      `Task: ${args.task}\n` +
-      `Chosen tool: ${args.action}\n` +
-      `Tool input: ${JSON.stringify(args.toolInput)}\n` +
-      `Agent thought: ${args.thought}\n\n` +
-      `Did this tool choice correctly address the task?\n` +
-      `Reply ONLY with JSON: {"valid": true|false, "issue": "reason if invalid or null"}`;
+        const verifyPrompt =
+            `You are a verification assistant.\n` +
+            `The agent chose the following tool for the given task.\n\n` +
+            `Task: ${args.task}\n` +
+            `Chosen tool: ${args.action}\n` +
+            `Tool input: ${JSON.stringify(args.toolInput)}\n` +
+            `Agent thought: ${args.thought}\n\n` +
+            `Did this tool choice correctly address the task?\n` +
+            `Reply ONLY with JSON: {"valid": true|false, "issue": "reason if invalid or null"}`;
 
-    let valid = true;
-    let issue: string | null = null;
+        let valid = true;
+        let issue: string | null = null;
 
-    try {
-      const raw = await generate(verifyPrompt, {
-        model: VERIFICATION_MODEL,
-        stream: false,
-        format: "json",
-      });
-      const cleaned = raw.replace(/```(?:json)?\n?/g, "").trim();
-      const parsed = JSON.parse(cleaned) as {
-        valid?: boolean;
-        issue?: string | null;
-      };
-      valid = parsed.valid !== false;
-      issue = typeof parsed.issue === "string" ? parsed.issue : null;
-    } catch (err) {
-      log.warn("verification_call_failed", { error: String(err) });
-      /* Fail open — do not block the agent on a verification error. */
-      return;
+        try {
+            const raw = await generate(verifyPrompt, {
+                model: VERIFICATION_MODEL,
+                stream: false,
+                format: 'json'
+            });
+            const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+            const parsed = JSON.parse(cleaned) as {
+                valid?: boolean;
+                issue?: string | null;
+            };
+            valid = parsed.valid !== false;
+            issue = typeof parsed.issue === 'string' ? parsed.issue : null;
+        } catch (err) {
+            log.warn('verification_call_failed', { error: String(err) });
+            /* Fail open — do not block the agent on a verification error. */
+            return;
+        }
+
+        if (!valid && issue) {
+            log.warn('verification_failed', {
+                step: args.stepNumber,
+                action: args.action,
+                issue
+            });
+
+            emit({
+                type: 'tool:verification_failed',
+                payload: {
+                    step: args.stepNumber,
+                    tool: args.action,
+                    issue
+                }
+            });
+
+            /* Append the issue to the thought so the agent can self-correct. */
+            return {
+                ...args,
+                thought: `${args.thought}\n\n[Verification failed] ${issue} — please reconsider.`
+            };
+        }
     }
-
-    if (!valid && issue) {
-      log.warn("verification_failed", {
-        step: args.stepNumber,
-        action: args.action,
-        issue,
-      });
-
-      emit({
-        type: "tool:verification_failed",
-        payload: {
-          step: args.stepNumber,
-          tool: args.action,
-          issue,
-        },
-      });
-
-      /* Append the issue to the thought so the agent can self-correct. */
-      return {
-        ...args,
-        thought:
-          `${args.thought}\n\n[Verification failed] ${issue} — please reconsider.`,
-      };
-    }
-  },
 });

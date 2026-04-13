@@ -68,12 +68,12 @@ This caps cost, latency, and runaway behavior.
 
 ## Failure modes (and what happens)
 
-| What goes wrong | What the loop does |
-|---|---|
-| LLM returns invalid JSON | Appends parse error to context, tries again next step |
+| What goes wrong                         | What the loop does                                          |
+| --------------------------------------- | ----------------------------------------------------------- |
+| LLM returns invalid JSON                | Appends parse error to context, tries again next step       |
 | LLM requests a tool that does not exist | Appends "unknown tool" error + valid tool list, tries again |
-| Tool throws a runtime error | Appends error message to context, continues loop |
-| Max steps reached | Returns fallback string, emits `agent:max_steps` event |
+| Tool throws a runtime error             | Appends error message to context, continues loop            |
+| Max steps reached                       | Returns fallback string, emits `agent:max_steps` event      |
 
 The loop is built to **recover and continue** whenever possible.
 

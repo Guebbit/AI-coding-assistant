@@ -37,7 +37,7 @@ type FindingSource = "typescript" | "convention" | "llm";
  * Findings from all three sources (TypeScript, conventions, LLM) share
  * this shape so the IDE can render them uniformly.
  */
-interface Finding {
+interface IFinding {
   /** Where this finding came from. */
   source: FindingSource;
   /** How severe the issue is. */
@@ -174,7 +174,7 @@ const pageReviewSchema = z.object({
 });
 
 /** A single review suggestion with a title, detail, and priority. */
-interface CategorizedSuggestion {
+interface ICategorizedSuggestion {
   /** Short summary of the suggestion. */
   title: string;
   /** Detailed explanation or remediation advice. */
@@ -189,15 +189,15 @@ interface CategorizedSuggestion {
  * Each key is a review category containing an array of suggestions
  * returned by the LLM.
  */
-interface PageReviewResponseBody {
+interface IPageReviewResponseBody {
   /** Issues that could cause incorrect behaviour. */
-  correctness: CategorizedSuggestion[];
+  correctness: ICategorizedSuggestion[];
   /** Suggestions for improving code clarity and long-term maintenance. */
-  maintainability: CategorizedSuggestion[];
+  maintainability: ICategorizedSuggestion[];
   /** Deviations from established coding standards. */
-  standards: CategorizedSuggestion[];
+  standards: ICategorizedSuggestion[];
   /** Nice-to-have improvements that go beyond correctness. */
-  enhancements: CategorizedSuggestion[];
+  enhancements: ICategorizedSuggestion[];
 }
 
 /**
@@ -388,7 +388,7 @@ function getTypeScriptFindings(
   content: string,
   filePath: string,
   language: string,
-): Finding[] {
+): IFinding[] {
   const compilerOptions: ts.CompilerOptions = isTypeScriptLike(language)
     ? {
         target: ts.ScriptTarget.ES2022,
@@ -422,7 +422,7 @@ function getTypeScriptFindings(
       line: location ? location.line + 1 : undefined,
       column: location ? location.character + 1 : undefined,
       rule: `TS${diagnostic.code}`,
-    } satisfies Finding;
+    } satisfies IFinding;
   });
 }
 
@@ -437,8 +437,8 @@ function getTypeScriptFindings(
  * @param language - Language identifier (some rules are TS-only).
  * @returns An array of `Finding` objects for style/convention violations.
  */
-function getConventionFindings(content: string, language: string): Finding[] {
-  const findings: Finding[] = [];
+function getConventionFindings(content: string, language: string): IFinding[] {
+  const findings: IFinding[] = [];
   const lines = content.split("\n");
 
   for (const [index, line] of lines.entries()) {
@@ -530,7 +530,7 @@ function getConventionFindings(content: string, language: string): Finding[] {
  * @param candidate - Raw value from the LLM JSON response.
  * @returns A normalised `Finding`, or `null` if the candidate is invalid.
  */
-function normalizeLlmFinding(candidate: unknown): Finding | null {
+function normalizeLlmFinding(candidate: unknown): IFinding | null {
   if (typeof candidate !== "object" || candidate === null) {
     return null;
   }
@@ -578,7 +578,7 @@ function normalizeLlmFinding(candidate: unknown): Finding | null {
  * @param candidate - Raw value from the LLM JSON response.
  * @returns A normalised `CategorizedSuggestion`, or `null` if invalid.
  */
-function normalizePageReviewSuggestion(candidate: unknown): CategorizedSuggestion | null {
+function normalizePageReviewSuggestion(candidate: unknown): ICategorizedSuggestion | null {
   if (typeof candidate !== "object" || candidate === null) {
     return null;
   }
@@ -616,8 +616,8 @@ function normalizePageReviewSuggestion(candidate: unknown): CategorizedSuggestio
  * @param raw - Raw JSON string from the LLM.
  * @returns A fully-formed `PageReviewResponseBody` (may have empty arrays).
  */
-function parsePageReviewBody(raw: string): PageReviewResponseBody {
-  const fallback: PageReviewResponseBody = {
+function parsePageReviewBody(raw: string): IPageReviewResponseBody {
+  const fallback: IPageReviewResponseBody = {
     correctness: [],
     maintainability: [],
     standards: [],
@@ -626,7 +626,7 @@ function parsePageReviewBody(raw: string): PageReviewResponseBody {
 
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const categories: Array<keyof PageReviewResponseBody> = [
+    const categories: Array<keyof IPageReviewResponseBody> = [
       "correctness",
       "maintainability",
       "standards",
@@ -636,7 +636,7 @@ function parsePageReviewBody(raw: string): PageReviewResponseBody {
       const rawList = Array.isArray(parsed[category]) ? parsed[category] : [];
       fallback[category] = rawList
         .map((item) => normalizePageReviewSuggestion(item))
-        .filter((item): item is CategorizedSuggestion => item !== null)
+        .filter((item): item is ICategorizedSuggestion => item !== null)
         .slice(0, 12);
     }
   } catch {
@@ -803,7 +803,7 @@ export function registerIdeRoutes(application: express.Express): void {
       ...getConventionFindings(parsed.data.content, language),
     ];
 
-    let llmFindings: Finding[] = [];
+    let llmFindings: IFinding[] = [];
     let llmModelUsed: string | null = null;
     if (parsed.data.includeLlm) {
       const llmModel = parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL;
@@ -839,7 +839,7 @@ export function registerIdeRoutes(application: express.Express): void {
             : [];
         llmFindings = asArray
           .map((finding: unknown) => normalizeLlmFinding(finding))
-          .filter((finding: Finding | null): finding is Finding => finding !== null)
+          .filter((finding: IFinding | null): finding is IFinding => finding !== null)
           .slice(0, parsed.data.maxFindings);
       } catch (error) {
         log.warn("lint_conventions_llm_enrichment_failed", {

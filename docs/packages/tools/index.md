@@ -54,14 +54,14 @@ Only enabled when allowWrite: true:
 
 ## Security boundaries (at a glance)
 
-| Tool | What it can access | What it cannot touch |
-|---|---|---|
-| `read_file` | Any file under project root | Files outside project root |
-| `shell` | Allowlisted commands only | `rm`, `curl`, `bash`, etc. |
-| `mysql_query` | Any `SELECT` query | `INSERT`, `UPDATE`, `DELETE`, `DROP` |
-| `browser_fetch` | `http://` and `https://` URLs | `file://`, `ftp://`, `javascript:` |
-| `write_file` | Files inside `PROJECT_OUTPUT_ROOT` | Your actual source code |
-| `scaffold_project` | `BOILERPLATE_ROOT` → `PROJECT_OUTPUT_ROOT` | Anything outside those two |
+| Tool               | What it can access                         | What it cannot touch                 |
+| ------------------ | ------------------------------------------ | ------------------------------------ |
+| `read_file`        | Any file under project root                | Files outside project root           |
+| `shell`            | Allowlisted commands only                  | `rm`, `curl`, `bash`, etc.           |
+| `mysql_query`      | Any `SELECT` query                         | `INSERT`, `UPDATE`, `DELETE`, `DROP` |
+| `browser_fetch`    | `http://` and `https://` URLs              | `file://`, `ftp://`, `javascript:`   |
+| `write_file`       | Files inside `PROJECT_OUTPUT_ROOT`         | Your actual source code              |
+| `scaffold_project` | `BOILERPLATE_ROOT` → `PROJECT_OUTPUT_ROOT` | Anything outside those two           |
 
 ## Tool pages
 
@@ -81,19 +81,19 @@ Each tool has a dedicated page with input/output spec, how-it-works diagram, and
 
 ## Quick reference: which tool for which task?
 
-| What you want to do | Tool to use |
-|---|---|
-| Read a config file or source file | `read_file` |
-| List files, check git log, run npm | `shell` |
-| Query your database | `mysql_query` |
-| Scrape a web page | `browser_fetch` |
-| Describe or classify an image | `image_classify` |
-| Find relevant text/files by meaning | `semantic_search` |
-| Transcribe audio to text | `speech_to_text` |
-| Extract text from a PDF | `read_pdf` |
-| Get code completion at cursor | `code_autocomplete` |
-| Create/edit a file in generated-projects | `write_file` |
-| Scaffold a new project from template | `scaffold_project` |
+| What you want to do                      | Tool to use         |
+| ---------------------------------------- | ------------------- |
+| Read a config file or source file        | `read_file`         |
+| List files, check git log, run npm       | `shell`             |
+| Query your database                      | `mysql_query`       |
+| Scrape a web page                        | `browser_fetch`     |
+| Describe or classify an image            | `image_classify`    |
+| Find relevant text/files by meaning      | `semantic_search`   |
+| Transcribe audio to text                 | `speech_to_text`    |
+| Extract text from a PDF                  | `read_pdf`          |
+| Get code completion at cursor            | `code_autocomplete` |
+| Create/edit a file in generated-projects | `write_file`        |
+| Scaffold a new project from template     | `scaffold_project`  |
 
 ```mermaid
 flowchart LR

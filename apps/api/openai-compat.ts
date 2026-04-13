@@ -69,19 +69,20 @@ const rateLimitBuckets = new Map<string, Map<string, number[]>>();
 /**
  * A single entry in the OpenAI `ListModelsResponse` `data` array.
  */
-interface OpenAiModelEntry {
+interface IOpenAiModelEntry {
   /** Unique model identifier (e.g. `"manna"`, `"manna-fast"`). */
   id: string;
   /** Always `"model"` per the OpenAI spec. */
   object: "model";
   /** Unix timestamp when this model was "created". */
   created: number;
-  /** Organisation that owns the model. */
+  /** Organisation that owns the model. Per the OpenAI spec, field name is snake_case. */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   owned_by: string;
 }
 
 /** All Manna model IDs exposed to OpenAI-compatible clients. */
-const MANNA_MODELS: OpenAiModelEntry[] = [
+const MANNA_MODELS: IOpenAiModelEntry[] = [
   { id: "manna", object: "model", created: MODEL_CREATED_AT, owned_by: "manna" },
   { id: "manna-agent", object: "model", created: MODEL_CREATED_AT, owned_by: "manna" },
   { id: "manna-fast", object: "model", created: MODEL_CREATED_AT, owned_by: "manna" },

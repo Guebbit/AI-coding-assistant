@@ -15,11 +15,13 @@ PDFs are binary files — you cannot just `cat` them. This tool uses the `pdf-pa
 The tool accepts either a file path (disk) or inline base64 data (e.g. from an API upload). When both are provided, `data` takes precedence.
 
 **From disk:**
+
 ```json
 { "path": "relative/path/to/file.pdf" }
 ```
 
 **From upload (base64):**
+
 ```json
 { "data": "<base64-encoded PDF>" }
 ```
@@ -28,8 +30,8 @@ The tool accepts either a file path (disk) or inline base64 data (e.g. from an A
 
 ```json
 {
-  "text": "Full extracted text from the PDF...",
-  "pages": 12
+    "text": "Full extracted text from the PDF...",
+    "pages": 12
 }
 ```
 
@@ -56,11 +58,13 @@ There is also a dedicated upload endpoint: `POST /upload/read-pdf` (accepts `mul
 You have a 30-page API spec or RFC PDF and you want the key points.
 
 **Prompt:**
+
 ```
 Read data/specs/api-specification.pdf and summarise the authentication section.
 ```
 
 **What happens:**
+
 1. Tool extracts all text from the PDF
 2. Agent reads the text and finds the auth section
 3. Returns a clear summary
@@ -70,6 +74,7 @@ Read data/specs/api-specification.pdf and summarise the authentication section.
 ### Use case 2 -- Extract action items from a meeting agenda PDF
 
 **Prompt:**
+
 ```
 Read data/examples/meeting-agenda.pdf and list all action items with their owners.
 ```
@@ -79,6 +84,7 @@ Read data/examples/meeting-agenda.pdf and list all action items with their owner
 ### Use case 3 -- Answer a question from a document
 
 **Prompt:**
+
 ```
 Read data/docs/employee-handbook.pdf and tell me what the vacation policy is.
 ```
@@ -90,11 +96,13 @@ Agent extracts all text, searches for the vacation section, and quotes the relev
 ### Use case 4 -- Multi-step: read PDF then compare with code
 
 **Prompt:**
+
 ```
 Read data/specs/spec.pdf and check if packages/agent/agent.ts implements the described loop correctly.
 ```
 
 **Steps:**
+
 ```
 Step 1: read_pdf    ->  { "path": "data/specs/spec.pdf" }
 Step 2: read_file   ->  { "path": "packages/agent/agent.ts" }
@@ -105,10 +113,10 @@ Step 3: action: "none"  ->  Agent compares spec vs implementation
 
 ## Good test prompts
 
-| What you type | What the agent does |
-|---|---|
-| `Read data/examples/spec.pdf and summarise the top 5 key points.` | Extracts text, summarises |
-| `How many pages does data/docs/manual.pdf have?` | Returns `pages` count |
+| What you type                                                              | What the agent does                 |
+| -------------------------------------------------------------------------- | ----------------------------------- |
+| `Read data/examples/spec.pdf and summarise the top 5 key points.`          | Extracts text, summarises           |
+| `How many pages does data/docs/manual.pdf have?`                           | Returns `pages` count               |
 | `Read data/contracts/agreement.pdf and find any mention of payment terms.` | Extracts text, searches for section |
 
 ## Notes

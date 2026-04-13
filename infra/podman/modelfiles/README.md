@@ -17,21 +17,18 @@
 ## ⚙️ How It Works
 
 1. Each **subdirectory in `/modelfiles` = a base model**
-
-    * Example: `llama3:8b`
+    - Example: `llama3:8b`
 
 2. Each file inside = a **custom variant**
+    - Must follow naming:
 
-    * Must follow naming:
-
-      ```
-      Modelfile-<custom_name>
-      ```
+        ```
+        Modelfile-<custom_name>
+        ```
 
 3. On container startup:
-
-    * Missing base models are **pulled**
-    * Each Modelfile is used to **create a derived model**
+    - Missing base models are **pulled**
+    - Each Modelfile is used to **create a derived model**
 
 ---
 
@@ -75,15 +72,14 @@ When `model-loader` runs:
 
 1. Scan `/modelfiles`
 2. For each base model:
+    - Check if exists → otherwise `ollama pull`
 
-    * Check if exists → otherwise `ollama pull`
 3. For each Modelfile:
+    - Run:
 
-    * Run:
-
-      ```
-      ollama create <custom_model> -f <Modelfile>
-      ```
+        ```
+        ollama create <custom_model> -f <Modelfile>
+        ```
 
 ---
 
@@ -91,23 +87,23 @@ When `model-loader` runs:
 
 ### `ollama`
 
-* Runs inference server
-* GPU-enabled
-* Stores models in:
+- Runs inference server
+- GPU-enabled
+- Stores models in:
 
-  ```
-  ~/.ollama
-  ```
+    ```
+    ~/.ollama
+    ```
 
 ### `open-webui`
 
-* Web interface → http://localhost:3000
-* Connects to Ollama API
+- Web interface → http://localhost:3000
+- Connects to Ollama API
 
 ### `model-loader`
 
-* One-shot container
-* Builds all custom models at startup
+- One-shot container
+- Builds all custom models at startup
 
 ---
 
@@ -123,10 +119,10 @@ When `model-loader` runs:
 
 ## ⚠️ Important Notes
 
-* `~/.ollama` is **read-write** → avoid manual corruption
-* Model creation runs **every container start**
-* Duplicate model names will **overwrite silently**
-* Ensure Modelfiles are valid before deploy
+- `~/.ollama` is **read-write** → avoid manual corruption
+- Model creation runs **every container start**
+- Duplicate model names will **overwrite silently**
+- Ensure Modelfiles are valid before deploy
 
 ---
 
@@ -134,65 +130,65 @@ When `model-loader` runs:
 
 1. Create directory:
 
-   ```
-   modelfiles/mistral:7b/
-   ```
+    ```
+    modelfiles/mistral:7b/
+    ```
 
 2. Add file:
 
-   ```
-   Modelfile-chat
-   ```
+    ```
+    Modelfile-chat
+    ```
 
 3. Restart stack:
 
-   ```
-   docker compose up -d
-   ```
+    ```
+    docker compose up -d
+    ```
 
 4. Use model:
 
-   ```
-   mistral-7b-chat
-   ```
+    ```
+    mistral-7b-chat
+    ```
 
 ---
 
 ## 🧪 Debug Tips
 
-* List models:
+- List models:
 
-  ```
-  ollama list
-  ```
+    ```
+    ollama list
+    ```
 
-* Check logs:
+- Check logs:
 
-  ```
-  docker logs model-loader
-  ```
+    ```
+    docker logs model-loader
+    ```
 
-* Rebuild manually:
+- Rebuild manually:
 
-  ```
-  ollama create <name> -f <Modelfile>
-  ```
+    ```
+    ollama create <name> -f <Modelfile>
+    ```
 
 ---
 
 ## 🎯 Best Practices
 
-* Keep Modelfiles **small and focused**
-* Use clear naming (`assistant`, `coder`, `rp`, etc.)
-* Version base models (`llama3:8b`, not just `llama3`)
-* Avoid heavy SYSTEM prompts → impacts performance
+- Keep Modelfiles **small and focused**
+- Use clear naming (`assistant`, `coder`, `rp`, etc.)
+- Version base models (`llama3:8b`, not just `llama3`)
+- Avoid heavy SYSTEM prompts → impacts performance
 
 ---
 
 ## 🔚 Summary
 
-* Drop Modelfiles → restart → models auto-built
-* Structure = **base model → variants**
-* Fully automated via `model-loader`
+- Drop Modelfiles → restart → models auto-built
+- Structure = **base model → variants**
+- Fully automated via `model-loader`
 
 ---

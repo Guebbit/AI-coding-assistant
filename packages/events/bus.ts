@@ -17,7 +17,7 @@
  * @module events/bus
  */
 
-import { getLogger } from "../logger/logger";
+import { getLogger } from '../logger/logger';
 
 /**
  * Shape of every event that flows through the bus.
@@ -25,21 +25,21 @@ import { getLogger } from "../logger/logger";
  * `type` is a dot-or-colon–separated string identifier (e.g. `"agent:step"`).
  * `payload` carries arbitrary data relevant to the event.
  */
-export interface AgentEvent {
-  /** Dot- or colon-separated event identifier (e.g. `"agent:done"`). */
-  type: string;
+export interface IAgentEvent {
+    /** Dot- or colon-separated event identifier (e.g. `"agent:done"`). */
+    type: string;
 
-  /** Arbitrary data associated with the event. */
-  payload: unknown;
+    /** Arbitrary data associated with the event. */
+    payload: unknown;
 }
 
 /** Callback signature accepted by `on`. */
-type EventHandler = (event: AgentEvent) => void;
+type EventHandler = (event: IAgentEvent) => void;
 
 /** Internal registry: event type → ordered list of handlers. */
 const handlers = new Map<string, EventHandler[]>();
 
-const log = getLogger("events");
+const log = getLogger('events');
 
 /**
  * Subscribe to events of a specific type.
@@ -51,9 +51,9 @@ const log = getLogger("events");
  * @param handler - Callback invoked whenever a matching event is emitted.
  */
 export function on(type: string, handler: EventHandler): void {
-  const list = handlers.get(type) ?? [];
-  list.push(handler);
-  handlers.set(type, list);
+    const list = handlers.get(type) ?? [];
+    list.push(handler);
+    handlers.set(type, list);
 }
 
 /**
@@ -65,13 +65,13 @@ export function on(type: string, handler: EventHandler): void {
  * @param handler - The handler function to remove.
  */
 export function off(type: string, handler: EventHandler): void {
-  const list = handlers.get(type);
-  if (list) {
-    handlers.set(
-      type,
-      list.filter((h) => h !== handler),
-    );
-  }
+    const list = handlers.get(type);
+    if (list) {
+        handlers.set(
+            type,
+            list.filter((h) => h !== handler)
+        );
+    }
 }
 
 /**
@@ -82,18 +82,18 @@ export function off(type: string, handler: EventHandler): void {
  *
  * @param event - The event to broadcast.
  */
-export function emit(event: AgentEvent): void {
-  const typed = handlers.get(event.type) ?? [];
-  const wildcard = handlers.get("*") ?? [];
+export function emit(event: IAgentEvent): void {
+    const typed = handlers.get(event.type) ?? [];
+    const wildcard = handlers.get('*') ?? [];
 
-  for (const h of [...typed, ...wildcard]) {
-    try {
-      h(event);
-    } catch (err) {
-      log.error("event_handler_failed", {
-        eventType: event.type,
-        error: String(err),
-      });
+    for (const h of [...typed, ...wildcard]) {
+        try {
+            h(event);
+        } catch (err) {
+            log.error('event_handler_failed', {
+                eventType: event.type,
+                error: String(err)
+            });
+        }
     }
-  }
 }

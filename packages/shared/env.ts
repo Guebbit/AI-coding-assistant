@@ -21,8 +21,8 @@
  * @returns The parsed float or the fallback.
  */
 export function envFloat(value: string | undefined, fallback: number): number {
-  const parsed = parseFloat(value ?? String(fallback));
-  return Number.isNaN(parsed) ? fallback : parsed;
+    const parsed = parseFloat(value ?? String(fallback));
+    return Number.isNaN(parsed) ? fallback : parsed;
 }
 
 /**
@@ -36,6 +36,6 @@ export function envFloat(value: string | undefined, fallback: number): number {
  * @returns The parsed integer or the fallback.
  */
 export function envInt(value: string | undefined, fallback: number): number {
-  const parsed = parseInt(value ?? String(fallback), 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
+    const parsed = parseInt(value ?? String(fallback), 10);
+    return Number.isNaN(parsed) ? fallback : parsed;
 }

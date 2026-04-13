@@ -20,7 +20,7 @@
 
 import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
-import type { AgentEvent } from "../../packages/events/bus";
+import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
@@ -87,7 +87,7 @@ export function registerStreamRoutes(app: Express): void {
     };
 
     /* ── Event bridge ─────────────────────────────────────────────── */
-    const handler = (event: AgentEvent): void => {
+    const handler = (event: IAgentEvent): void => {
       try {
         switch (event.type) {
           case "agent:step": {

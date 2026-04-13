@@ -12,7 +12,7 @@
  * @module shared/path-safety
  */
 
-import path from "path";
+import path from 'path';
 
 /**
  * Resolve `userPath` relative to the current working directory and
@@ -26,12 +26,12 @@ import path from "path";
  * @throws {Error} When the path escapes the project root.
  */
 export function resolveSafePath(userPath: string): string {
-  const resolved = path.resolve(process.cwd(), userPath);
-  const root = path.resolve(process.cwd());
-  if (!resolved.startsWith(root + path.sep) && resolved !== root) {
-    throw new Error("Access denied: path is outside the project root");
-  }
-  return resolved;
+    const resolved = path.resolve(process.cwd(), userPath);
+    const root = path.resolve(process.cwd());
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+        throw new Error('Access denied: path is outside the project root');
+    }
+    return resolved;
 }
 
 /**
@@ -47,9 +47,9 @@ export function resolveSafePath(userPath: string): string {
  * @throws {Error} When the path escapes the allowed root.
  */
 export function resolveInsideRoot(root: string, userPath: string): string {
-  const resolved = path.resolve(root, userPath);
-  if (!resolved.startsWith(root + path.sep) && resolved !== root) {
-    throw new Error("Access denied: path is outside the allowed root");
-  }
-  return resolved;
+    const resolved = path.resolve(root, userPath);
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+        throw new Error('Access denied: path is outside the allowed root');
+    }
+    return resolved;
 }

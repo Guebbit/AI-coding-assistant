@@ -10,42 +10,41 @@
  */
 
 /** Base URL for the Ollama REST API, configurable via environment variable. */
-const OLLAMA_BASE_URL =
-  process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 
 /**
  * Options accepted by both `generate` and `generateWithMetadata`.
  *
  * Every field is optional — sensible defaults are applied when omitted.
  */
-export interface GenerateOptions {
-  /** Ollama model name (default: `OLLAMA_MODEL` env var or `"llama3"`). */
-  model?: string;
+export interface IGenerateOptions {
+    /** Ollama model name (default: `OLLAMA_MODEL` env var or `"llama3"`). */
+    model?: string;
 
-  /** Whether to stream the response token-by-token (default: `false`). */
-  stream?: boolean;
+    /** Whether to stream the response token-by-token (default: `false`). */
+    stream?: boolean;
 
-  /** Optional text suffix for fill-in-the-middle / infill completion. */
-  suffix?: string;
+    /** Optional text suffix for fill-in-the-middle / infill completion. */
+    suffix?: string;
 
-  /** Optional system prompt that overrides the model's built-in system message. */
-  system?: string;
+    /** Optional system prompt that overrides the model's built-in system message. */
+    system?: string;
 
-  /**
-   * Response format hint forwarded to Ollama.
-   * Pass `"json"` to request JSON output, or a JSON schema object for
-   * structured generation.
-   */
-  format?: "json" | Record<string, unknown>;
+    /**
+     * Response format hint forwarded to Ollama.
+     * Pass `"json"` to request JSON output, or a JSON schema object for
+     * structured generation.
+     */
+    format?: 'json' | Record<string, unknown>;
 
-  /** Base64-encoded images for multimodal (vision) models. */
-  images?: string[];
+    /** Base64-encoded images for multimodal (vision) models. */
+    images?: string[];
 
-  /**
-   * Provider-specific generation options forwarded verbatim to
-   * Ollama's `options` field (temperature, top_p, num_ctx, etc.).
-   */
-  options?: Record<string, unknown>;
+    /**
+     * Provider-specific generation options forwarded verbatim to
+     * Ollama's `options` field (temperature, top_p, num_ctx, etc.).
+     */
+    options?: Record<string, unknown>;
 }
 
 /**
@@ -54,36 +53,36 @@ export interface GenerateOptions {
  * Contains both the generated text and Ollama-specific telemetry
  * (timing, token counts, done reason, etc.).
  */
-export interface GenerateResult {
-  /** The generated text content. */
-  response: string;
+export interface IGenerateResult {
+    /** The generated text content. */
+    response: string;
 
-  /** The model name that actually served the request. */
-  model: string;
+    /** The model name that actually served the request. */
+    model: string;
 
-  /** Whether generation is complete (always `true` for non-streaming). */
-  done: boolean;
+    /** Whether generation is complete (always `true` for non-streaming). */
+    done: boolean;
 
-  /** Reason generation ended (e.g. `"stop"`, `"length"`). */
-  doneReason?: string;
+    /** Reason generation ended (e.g. `"stop"`, `"length"`). */
+    doneReason?: string;
 
-  /** Total wall-clock duration of the request in nanoseconds. */
-  totalDurationNs?: number;
+    /** Total wall-clock duration of the request in nanoseconds. */
+    totalDurationNs?: number;
 
-  /** Time spent loading the model into memory in nanoseconds. */
-  loadDurationNs?: number;
+    /** Time spent loading the model into memory in nanoseconds. */
+    loadDurationNs?: number;
 
-  /** Number of tokens in the evaluated prompt. */
-  promptEvalCount?: number;
+    /** Number of tokens in the evaluated prompt. */
+    promptEvalCount?: number;
 
-  /** Time spent evaluating the prompt in nanoseconds. */
-  promptEvalDurationNs?: number;
+    /** Time spent evaluating the prompt in nanoseconds. */
+    promptEvalDurationNs?: number;
 
-  /** Number of tokens generated in the response. */
-  evalCount?: number;
+    /** Number of tokens generated in the response. */
+    evalCount?: number;
 
-  /** Time spent generating the response in nanoseconds. */
-  evalDurationNs?: number;
+    /** Time spent generating the response in nanoseconds. */
+    evalDurationNs?: number;
 }
 
 /**
@@ -96,12 +95,9 @@ export interface GenerateResult {
  * @param options - Optional overrides for model selection, streaming, etc.
  * @returns The raw text response from the model.
  */
-export async function generate(
-  prompt: string,
-  options: GenerateOptions = {},
-): Promise<string> {
-  const result = await generateWithMetadata(prompt, options);
-  return result.response;
+export async function generate(prompt: string, options: IGenerateOptions = {}): Promise<string> {
+    const result = await generateWithMetadata(prompt, options);
+    return result.response;
 }
 
 /**
@@ -117,65 +113,67 @@ export async function generate(
  * @throws {Error} When the Ollama API returns a non-2xx status code.
  */
 export async function generateWithMetadata(
-  prompt: string,
-  options: GenerateOptions = {},
-): Promise<GenerateResult> {
-  const {
-    model = process.env.OLLAMA_MODEL ?? "llama3",
-    stream = false,
-    suffix,
-    system,
-    format,
-    images,
-    options: providerOptions,
-  } = options;
+    prompt: string,
+    options: IGenerateOptions = {}
+): Promise<IGenerateResult> {
+    const {
+        model = process.env.OLLAMA_MODEL ?? 'llama3',
+        stream = false,
+        suffix,
+        system,
+        format,
+        images,
+        options: providerOptions
+    } = options;
 
-  const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      prompt,
-      stream,
-      suffix,
-      system,
-      format,
-      images,
-      options: providerOptions,
-    }),
-  });
+    const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model,
+            prompt,
+            stream,
+            suffix,
+            system,
+            format,
+            images,
+            options: providerOptions
+        })
+    });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `Ollama API error: ${res.status} ${res.statusText}${body ? ` — ${body}` : ""}`,
-    );
-  }
+    if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(
+            `Ollama API error: ${res.status} ${res.statusText}${body ? ` — ${body}` : ''}`
+        );
+    }
 
-  /* Ollama returns snake_case keys — map them to our camelCase interface. */
-  const data = (await res.json()) as {
-    response: string;
-    model?: string;
-    done?: boolean;
-    done_reason?: string;
-    total_duration?: number;
-    load_duration?: number;
-    prompt_eval_count?: number;
-    prompt_eval_duration?: number;
-    eval_count?: number;
-    eval_duration?: number;
-  };
+    /* Ollama returns snake_case keys — map them to our camelCase interface. */
+    const data = (await res.json()) as {
+        response: string;
+        model?: string;
+        done?: boolean;
+        /* eslint-disable @typescript-eslint/naming-convention -- Ollama REST API uses snake_case */
+        done_reason?: string;
+        total_duration?: number;
+        load_duration?: number;
+        prompt_eval_count?: number;
+        prompt_eval_duration?: number;
+        eval_count?: number;
+        eval_duration?: number;
+        /* eslint-enable @typescript-eslint/naming-convention */
+    };
 
-  return {
-    response: data.response,
-    model: data.model ?? model,
-    done: data.done ?? true,
-    doneReason: data.done_reason,
-    totalDurationNs: data.total_duration,
-    loadDurationNs: data.load_duration,
-    promptEvalCount: data.prompt_eval_count,
-    promptEvalDurationNs: data.prompt_eval_duration,
-    evalCount: data.eval_count,
-    evalDurationNs: data.eval_duration,
-  };
+    return {
+        response: data.response,
+        model: data.model ?? model,
+        done: data.done ?? true,
+        doneReason: data.done_reason,
+        totalDurationNs: data.total_duration,
+        loadDurationNs: data.load_duration,
+        promptEvalCount: data.prompt_eval_count,
+        promptEvalDurationNs: data.prompt_eval_duration,
+        evalCount: data.eval_count,
+        evalDurationNs: data.eval_duration
+    };
 }

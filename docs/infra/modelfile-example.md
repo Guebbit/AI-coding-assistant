@@ -31,10 +31,10 @@ SYSTEM You are a concise, accurate assistant. Prefer short answers.
 
 This project supports two complementary ways to control generation parameters:
 
-| Approach | How it works | Best for |
-|---|---|---|
-| **Modelfile** | Parameters are baked into the derived model at creation time | Permanent, version-controlled defaults; works with Open WebUI and `ollama run` |
-| **Runtime options (env vars)** | Parameters are sent with every API call via `options` field | Per-tool or per-profile tuning without creating extra model variants |
+| Approach                       | How it works                                                 | Best for                                                                       |
+| ------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| **Modelfile**                  | Parameters are baked into the derived model at creation time | Permanent, version-controlled defaults; works with Open WebUI and `ollama run` |
+| **Runtime options (env vars)** | Parameters are sent with every API call via `options` field  | Per-tool or per-profile tuning without creating extra model variants           |
 
 **Important:** runtime options always win. If your Modelfile sets `temperature 0.7` but your env var sets `AGENT_MODEL_CODE_TEMPERATURE=0.2`, Ollama will use `0.2` for that call. You can use Modelfiles as a baseline and override selectively at runtime.
 
