@@ -12,6 +12,11 @@ This documentation is now organized into **5 clear tracks**:
 4. **Modeling & Routing** → [/model-selection](/model-selection)
 5. **Package Reference** → [/packages/](/packages/)
 
+**New — Library & RAG:**
+- [Library Ingestion & Search](/library-ingestion) — multi-PDF ingestion, semantic search, two-pass pipeline
+- [RAG Theory](/theory/RAG) — what RAG is, architectures, when to use
+- [Vector Databases](/theory/VECTOR_DATABASES) — Qdrant, HNSW, practical scaling
+
 ---
 
 ## What this project is
@@ -47,6 +52,9 @@ flowchart LR
 ## Fast links
 
 - Endpoint Map: [/endpoint-map](/endpoint-map)
+- Library Ingestion & Search: [/library-ingestion](/library-ingestion)
+- RAG Theory: [/theory/RAG](/theory/RAG)
+- Vector Databases: [/theory/VECTOR_DATABASES](/theory/VECTOR_DATABASES)
 - Scenarios: [/scenarios](/scenarios)
 - Agent package: [/packages/agent](/packages/agent)
 - LLM package: [/packages/llm](/packages/llm)
