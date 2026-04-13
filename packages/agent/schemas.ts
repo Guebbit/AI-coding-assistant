@@ -13,7 +13,7 @@
  * @module agent/schemas
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Zod schema that validates a single agent reasoning step.
@@ -28,20 +28,20 @@ import { z } from "zod";
  * ```
  */
 export const agentStepSchema = z.object({
-  /** The model's internal chain-of-thought reasoning. */
-  thought: z.string().min(1).describe("Internal reasoning"),
+    /** The model's internal chain-of-thought reasoning. */
+    thought: z.string().min(1).describe('Internal reasoning'),
 
-  /**
-   * Name of the tool to invoke, or the literal string `"none"` when
-   * the task is complete and no further tool call is needed.
-   */
-  action: z.string().min(1).describe('Tool name or "none"'),
+    /**
+     * Name of the tool to invoke, or the literal string `"none"` when
+     * the task is complete and no further tool call is needed.
+     */
+    action: z.string().min(1).describe('Tool name or "none"'),
 
-  /**
-   * Key/value pairs forwarded verbatim to `tool.execute()`.
-   * An empty object `{}` is valid (and expected) when `action` is `"none"`.
-   */
-  input: z.record(z.unknown()).describe("Tool input parameters"),
+    /**
+     * Key/value pairs forwarded verbatim to `tool.execute()`.
+     * An empty object `{}` is valid (and expected) when `action` is `"none"`.
+     */
+    input: z.record(z.unknown()).describe('Tool input parameters')
 });
 
 /**

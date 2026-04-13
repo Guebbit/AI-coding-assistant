@@ -43,12 +43,13 @@ Called by the agent after a run completes. Saves the task + outcome.
 
 ```typescript
 await memory.addMemory({
-  task: "Read package.json and list npm scripts",
-  result: "Found 6 scripts: dev, build, typecheck, lint, docs:dev, docs:build"
+    task: 'Read package.json and list npm scripts',
+    result: 'Found 6 scripts: dev, build, typecheck, lint, docs:dev, docs:build'
 });
 ```
 
 Both stores are updated:
+
 1. Ring buffer: prepend, evict oldest if > 20
 2. Qdrant: embed the entry with Ollama, store vector + text
 
@@ -57,11 +58,12 @@ Both stores are updated:
 Called by the agent when building a prompt. Retrieves relevant past entries.
 
 ```typescript
-const memories = await memory.getMemory("npm scripts configuration", 5);
+const memories = await memory.getMemory('npm scripts configuration', 5);
 // Returns up to 5 entries semantically similar to the query
 ```
 
 What Qdrant does:
+
 1. Embed the query with Ollama (`OLLAMA_EMBED_MODEL`)
 2. Find the closest stored vectors (cosine similarity)
 3. Return top N results
@@ -102,6 +104,7 @@ Run 2: "What build commands are available?"
 Unbounded memory = massive prompts = slower, more expensive, confused model.
 
 Current limits:
+
 - Ring buffer: 20 entries (recency)
 - Qdrant recall: top N by similarity (relevance)
 
@@ -111,11 +114,11 @@ This keeps prompts focused and the model sharp.
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
-| `QDRANT_COLLECTION` | -- | Collection name (e.g. `agent_memory`) |
-| `OLLAMA_EMBED_MODEL` | `nomic-embed-text` | Embedding model |
+| Variable             | Default                 | Description                           |
+| -------------------- | ----------------------- | ------------------------------------- |
+| `QDRANT_URL`         | `http://localhost:6333` | Qdrant server URL                     |
+| `QDRANT_COLLECTION`  | --                      | Collection name (e.g. `agent_memory`) |
+| `OLLAMA_EMBED_MODEL` | `nomic-embed-text`      | Embedding model                       |
 
 ---
 
@@ -130,6 +133,7 @@ docker run -d \
 ```
 
 Then configure:
+
 ```bash
 export QDRANT_URL="http://localhost:6333"
 export QDRANT_COLLECTION="agent_memory"

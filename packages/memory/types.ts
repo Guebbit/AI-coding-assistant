@@ -12,28 +12,28 @@
  * The `content` field is what was previously stored as a plain string.
  * All other fields are optional metadata that enrich the entry.
  */
-export interface MemoryEntry {
-  /** Unique ID generated at insertion time (UUID v4). */
-  id: string;
+export interface IMemoryEntry {
+    /** Unique ID generated at insertion time (UUID v4). */
+    id: string;
 
-  /** Wall-clock time when the entry was created. */
-  timestamp: Date;
+    /** Wall-clock time when the entry was created. */
+    timestamp: Date;
 
-  /** Who produced this memory: the user, the assistant, or a tool call. */
-  role: "user" | "assistant" | "tool";
+    /** Who produced this memory: the user, the assistant, or a tool call. */
+    role: 'user' | 'assistant' | 'tool';
 
-  /** The raw text content — this is what the LLM will see in its prompt. */
-  content: string;
+    /** The raw text content — this is what the LLM will see in its prompt. */
+    content: string;
 
-  /**
-   * Pre-computed embedding vector (populated after the embedding call).
-   * Omitted when Qdrant / Ollama are unavailable.
-   */
-  embedding?: number[];
+    /**
+     * Pre-computed embedding vector (populated after the embedding call).
+     * Omitted when Qdrant / Ollama are unavailable.
+     */
+    embedding?: number[];
 
-  /**
-   * Arbitrary key/value metadata (task id, tool name, model, etc.).
-   * Stored alongside the vector in Qdrant so you can filter / query later.
-   */
-  metadata?: Record<string, unknown>;
+    /**
+     * Arbitrary key/value metadata (task id, tool name, model, etc.).
+     * Stored alongside the vector in Qdrant so you can filter / query later.
+     */
+    metadata?: Record<string, unknown>;
 }

@@ -64,11 +64,13 @@ flowchart TD
 ### Use case 1 — Checking project status
 
 **Prompt:**
+
 ```
 What branch am I on and are there any uncommitted changes?
 ```
 
 **What happens inside:**
+
 1. Agent calls `shell` → `{ "command": "git status" }`
 2. stdout shows the current branch and file status
 3. Agent translates it to plain English for you
@@ -78,11 +80,13 @@ What branch am I on and are there any uncommitted changes?
 ### Use case 2 — Finding a file across the whole project
 
 **Prompt:**
+
 ```
 Find all TypeScript files that import from packages/events.
 ```
 
 **What happens inside:**
+
 ```
 shell  →  { "command": "grep -r \"from 'packages/events'\" --include=\"*.ts\" ." }
 ```
@@ -94,11 +98,13 @@ Returns every matching file path and line number.
 ### Use case 3 — Checking running processes
 
 **Prompt:**
+
 ```
 Is the Ollama process running?
 ```
 
 **What happens inside:**
+
 ```
 shell  →  { "command": "ps aux" }
 ```
@@ -110,11 +116,13 @@ Agent scans stdout for a line containing `ollama` and tells you yes/no.
 ### Use case 4 — Recent git history
 
 **Prompt:**
+
 ```
 Show me the last 5 commits with their messages.
 ```
 
 **What happens inside:**
+
 ```
 shell  →  { "command": "git log --oneline -5" }
 ```
@@ -125,11 +133,11 @@ Returns 5 short commit lines, which the agent can describe or filter.
 
 ## Good test prompts
 
-| What you type | Command the agent will try |
-|---|---|
-| `Run pwd and tell me current directory.` | `pwd` |
-| `List files in packages with ls.` | `ls packages` |
-| `How much disk space is free?` | `df -h` |
-| `What node version is installed?` | `node --version` |
-| `Show me the last 10 commits.` | `git log --oneline -10` |
-| `Run rm -rf /tmp` | ❌ **Rejected** — `rm` is not in allowlist |
+| What you type                            | Command the agent will try                 |
+| ---------------------------------------- | ------------------------------------------ |
+| `Run pwd and tell me current directory.` | `pwd`                                      |
+| `List files in packages with ls.`        | `ls packages`                              |
+| `How much disk space is free?`           | `df -h`                                    |
+| `What node version is installed?`        | `node --version`                           |
+| `Show me the last 10 commits.`           | `git log --oneline -10`                    |
+| `Run rm -rf /tmp`                        | ❌ **Rejected** — `rm` is not in allowlist |

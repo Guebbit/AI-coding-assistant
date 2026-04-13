@@ -27,14 +27,9 @@
  * ```
  */
 
-export type {
-  Scorer,
-  ScorerResult,
-  ScorerRunInput,
-  CreateScorerOptions,
-} from "./types";
+export type { IScorer, IScorerResult, IScorerRunInput, ICreateScorerOptions } from './types';
 
-export { createScorer } from "./scorer-builder";
+export { createScorer } from './scorer-builder';
 
-export { toolAccuracyScorer } from "./scorers/tool-accuracy";
-export { agentQualityScorer } from "./scorers/agent-quality";
+export { toolAccuracyScorer } from './scorers/tool-accuracy';
+export { agentQualityScorer } from './scorers/agent-quality';

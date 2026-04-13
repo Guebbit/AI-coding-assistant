@@ -56,11 +56,13 @@ flowchart TD
 ### Use case 1 — Research a library before using it
 
 **Prompt:**
+
 ```
 Fetch https://vitepress.dev and summarise what VitePress is in 2 sentences.
 ```
 
 What happens:
+
 1. Chromium loads the VitePress homepage
 2. Full text extracted (including JS-rendered sections)
 3. Agent summarises in plain English
@@ -70,6 +72,7 @@ What happens:
 ### Use case 2 — Check a package's latest changelog
 
 **Prompt:**
+
 ```
 Fetch https://github.com/ollama/ollama/releases and tell me what changed in the latest release.
 ```
@@ -79,6 +82,7 @@ Fetch https://github.com/ollama/ollama/releases and tell me what changed in the 
 ### Use case 3 — Scrape a documentation page
 
 **Prompt:**
+
 ```
 Fetch https://docs.docker.com/compose/install/ and give me the Linux install steps.
 ```
@@ -88,6 +92,7 @@ Fetch https://docs.docker.com/compose/install/ and give me the Linux install ste
 ### Use case 4 — Check if a site is up and what it says
 
 **Prompt:**
+
 ```
 Fetch http://localhost:3000 and tell me if Open WebUI loaded correctly.
 ```
@@ -98,9 +103,9 @@ Agent fetches the page, checks the title/content, and tells you whether it looks
 
 ## Good test prompts
 
-| What you type | What the agent fetches |
-|---|---|
-| `Fetch https://example.com and summarise the main text.` | `https://example.com` |
+| What you type                                               | What the agent fetches                  |
+| ----------------------------------------------------------- | --------------------------------------- |
+| `Fetch https://example.com and summarise the main text.`    | `https://example.com`                   |
 | `What does the npm page for express say about its purpose?` | `https://www.npmjs.com/package/express` |
-| `Summarise the Playwright docs homepage.` | `https://playwright.dev` |
-| `Is https://httpstat.us/200 returning OK?` | `https://httpstat.us/200` |
+| `Summarise the Playwright docs homepage.`                   | `https://playwright.dev`                |
+| `Is https://httpstat.us/200 returning OK?`                  | `https://httpstat.us/200`               |

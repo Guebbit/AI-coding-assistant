@@ -14,19 +14,19 @@ This is **not** a `grep`. It understands meaning. You search by concept and it r
 
 ```json
 {
-  "query": "what to search for",
-  "documents": ["optional text snippet 1", "optional text snippet 2"],
-  "paths": ["optional/file1.md", "optional/file2.ts"],
-  "topK": 5
+    "query": "what to search for",
+    "documents": ["optional text snippet 1", "optional text snippet 2"],
+    "paths": ["optional/file1.md", "optional/file2.ts"],
+    "topK": 5
 }
 ```
 
-| Field | Required | Notes |
-|---|---|---|
-| `query` | ✅ | What you are looking for (in plain English) |
-| `documents` | ❌ | Inline text snippets to rank |
-| `paths` | ❌ | File paths to read and rank — file contents are loaded automatically |
-| `topK` | ❌ | How many top results to return (default: all, sorted) |
+| Field       | Required | Notes                                                                |
+| ----------- | -------- | -------------------------------------------------------------------- |
+| `query`     | ✅       | What you are looking for (in plain English)                          |
+| `documents` | ❌       | Inline text snippets to rank                                         |
+| `paths`     | ❌       | File paths to read and rank — file contents are loaded automatically |
+| `topK`      | ❌       | How many top results to return (default: all, sorted)                |
 
 You must provide at least one of `documents` or `paths`.
 
@@ -36,8 +36,16 @@ A ranked list of results with similarity scores:
 
 ```json
 [
-  { "text": "The agent loop runs up to 5 steps...", "score": 0.94, "source": "packages/agent/agent.ts" },
-  { "text": "Max steps reached without a conclusive answer.", "score": 0.81, "source": "packages/agent/agent.ts" }
+    {
+        "text": "The agent loop runs up to 5 steps...",
+        "score": 0.94,
+        "source": "packages/agent/agent.ts"
+    },
+    {
+        "text": "Max steps reached without a conclusive answer.",
+        "score": 0.81,
+        "source": "packages/agent/agent.ts"
+    }
 ]
 ```
 
@@ -73,20 +81,22 @@ Semantic search for "how does the agent stop":
 ### Use case 1 — Find relevant documentation sections
 
 **Prompt:**
+
 ```
 Search docs/theory/ for content related to "how memory affects agent decisions" and rank the results.
 ```
 
 **Agent builds:**
+
 ```json
 {
-  "query": "how memory affects agent decisions",
-  "paths": [
-    "docs/theory/agent-loop.md",
-    "docs/theory/prompt-context-memory.md",
-    "docs/theory/how-it-works-layered.md"
-  ],
-  "topK": 3
+    "query": "how memory affects agent decisions",
+    "paths": [
+        "docs/theory/agent-loop.md",
+        "docs/theory/prompt-context-memory.md",
+        "docs/theory/how-it-works-layered.md"
+    ],
+    "topK": 3
 }
 ```
 
@@ -97,6 +107,7 @@ Returns the 3 most semantically relevant passages.
 ### Use case 2 — Find where a concept is implemented in code
 
 **Prompt:**
+
 ```
 Which TypeScript files deal with "error recovery and retry logic"?
 ```
@@ -110,17 +121,18 @@ Agent collects all `.ts` files and runs semantic search to find the most relevan
 You have 5 candidate error messages and want the one most relevant to a user complaint.
 
 **Agent builds:**
+
 ```json
 {
-  "query": "database connection failed",
-  "documents": [
-    "Failed to reach MySQL host",
-    "Model response timeout",
-    "File not found in project root",
-    "Unable to connect to database server",
-    "Shell command rejected by allowlist"
-  ],
-  "topK": 2
+    "query": "database connection failed",
+    "documents": [
+        "Failed to reach MySQL host",
+        "Model response timeout",
+        "File not found in project root",
+        "Unable to connect to database server",
+        "Shell command rejected by allowlist"
+    ],
+    "topK": 2
 }
 ```
 
@@ -130,8 +142,8 @@ Returns: `"Unable to connect to database server"` and `"Failed to reach MySQL ho
 
 ## Good test prompts
 
-| What you type | What the agent does |
-|---|---|
+| What you type                                                           | What the agent does                     |
+| ----------------------------------------------------------------------- | --------------------------------------- |
 | `Search packages/agent/ for code related to "step limit and fallback".` | Embeds `.ts` files, ranks by similarity |
-| `Which doc page best explains how memory works?` | Embeds docs, semantic rank |
-| `Find the most relevant section in README.md for "write mode tools".` | Embeds sections, ranks |
+| `Which doc page best explains how memory works?`                        | Embeds docs, semantic rank              |
+| `Find the most relevant section in README.md for "write mode tools".`   | Embeds sections, ranks                  |

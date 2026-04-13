@@ -22,7 +22,7 @@
  * @module evals/scorer-builder
  */
 
-import type { Scorer, CreateScorerOptions } from "./types";
+import type { IScorer, ICreateScorerOptions } from './types';
 
 /**
  * Create a `Scorer` from a plain options object.
@@ -30,9 +30,9 @@ import type { Scorer, CreateScorerOptions } from "./types";
  * @param options - Configuration for the scorer (`id` and `score` function).
  * @returns A `Scorer` object ready to be used in the eval harness.
  */
-export function createScorer(options: CreateScorerOptions): Scorer {
-  return {
-    id: options.id,
-    score: options.score,
-  };
+export function createScorer(options: ICreateScorerOptions): IScorer {
+    return {
+        id: options.id,
+        score: options.score
+    };
 }

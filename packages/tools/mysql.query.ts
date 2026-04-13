@@ -16,8 +16,8 @@
  * @module tools/mysql.query
  */
 
-import mysql from "mysql2/promise";
-import type { Tool } from "./types";
+import mysql from 'mysql2/promise';
+import type { ITool } from './types';
 
 /**
  * Tool instance for executing read-only MySQL queries.
@@ -27,49 +27,47 @@ import type { Tool } from "./types";
  * { "sql": "SELECT id, name FROM users WHERE active = ?", "params": [true] }
  * ```
  */
-export const mysqlQueryTool: Tool = {
-  name: "mysql_query",
-  description:
-    "Execute a read-only SELECT query against MySQL. " +
-    "Input: { sql: string, params?: unknown[] }",
+export const mysqlQueryTool: ITool = {
+    name: 'mysql_query',
+    description:
+        'Execute a read-only SELECT query against MySQL. ' +
+        'Input: { sql: string, params?: unknown[] }',
 
-  /**
-   * Open a connection, execute the SELECT query, and return the result rows.
-   *
-   * @param input        - Tool input object.
-   * @param input.sql    - SQL query string (must begin with `SELECT`).
-   * @param input.params - Optional array of bind-parameter values for prepared statements.
-   * @returns The result rows from the query.
-   * @throws {Error} When the SQL is empty, not a SELECT, or the connection fails.
-   */
-  async execute({ sql, params }) {
-    if (typeof sql !== "string" || sql.trim() === "") {
-      throw new Error('"sql" must be a non-empty string');
+    /**
+     * Open a connection, execute the SELECT query, and return the result rows.
+     *
+     * @param input        - Tool input object.
+     * @param input.sql    - SQL query string (must begin with `SELECT`).
+     * @param input.params - Optional array of bind-parameter values for prepared statements.
+     * @returns The result rows from the query.
+     * @throws {Error} When the SQL is empty, not a SELECT, or the connection fails.
+     */
+    async execute({ sql, params }) {
+        if (typeof sql !== 'string' || sql.trim() === '') {
+            throw new Error('"sql" must be a non-empty string');
+        }
+
+        /* Safety: only allow SELECT statements to prevent mutations. */
+        if (!/^\s*SELECT\b/i.test(sql)) {
+            throw new Error('Only SELECT queries are permitted. Received: ' + sql.slice(0, 80));
+        }
+
+        const connection = await mysql.createConnection({
+            host: process.env.MYSQL_HOST ?? 'localhost',
+            port: Number.parseInt(process.env.MYSQL_PORT ?? '3306', 10),
+            user: process.env.MYSQL_USER ?? 'root',
+            password: process.env.MYSQL_PASSWORD ?? '',
+            database: process.env.MYSQL_DATABASE ?? '',
+            /* Never allow multi-statement execution (defence-in-depth). */
+            multipleStatements: false
+        });
+
+        try {
+            const queryParams = Array.isArray(params) ? params : [];
+            const [rows] = await connection.execute(sql, queryParams);
+            return rows;
+        } finally {
+            await connection.end();
+        }
     }
-
-    /* Safety: only allow SELECT statements to prevent mutations. */
-    if (!/^\s*SELECT\b/i.test(sql)) {
-      throw new Error(
-        "Only SELECT queries are permitted. Received: " + sql.slice(0, 80),
-      );
-    }
-
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST ?? "localhost",
-      port: Number.parseInt(process.env.MYSQL_PORT ?? "3306", 10),
-      user: process.env.MYSQL_USER ?? "root",
-      password: process.env.MYSQL_PASSWORD ?? "",
-      database: process.env.MYSQL_DATABASE ?? "",
-      /* Never allow multi-statement execution (defence-in-depth). */
-      multipleStatements: false,
-    });
-
-    try {
-      const queryParams = Array.isArray(params) ? params : [];
-      const [rows] = await connection.execute(sql, queryParams);
-      return rows;
-    } finally {
-      await connection.end();
-    }
-  },
 };

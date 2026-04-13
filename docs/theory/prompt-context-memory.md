@@ -25,6 +25,7 @@ flowchart TD
 ## Each block explained
 
 ### Task
+
 What the user wants right now. Provided once at the start, included in every step's prompt.
 
 ```
@@ -32,6 +33,7 @@ What the user wants right now. Provided once at the start, included in every ste
 ```
 
 ### Memory
+
 Relevant outcomes from **previous runs** (not the current one). Retrieved by semantic similarity to the current task.
 
 ```
@@ -41,6 +43,7 @@ Memory entry: "task=read npm scripts, result=found 6 scripts: dev, build, ..."
 This lets the agent "remember" that it did something similar before, even across sessions.
 
 ### Context
+
 The **growing log** of what happened in the current run. Each tool result is appended here.
 
 ```
@@ -51,6 +54,7 @@ Step 2 result: [agent answer]
 Context is local to one run — it resets when a new `/run` request comes in.
 
 ### Tool list
+
 The list of currently available tools with their descriptions. This is what the model reads to decide which tool to call.
 
 ```
@@ -78,17 +82,17 @@ The model is forced to return **exactly this structure**:
 
 ```json
 {
-  "thought": "I need to read package.json to find the scripts.",
-  "action": "read_file",
-  "input": { "path": "package.json" }
+    "thought": "I need to read package.json to find the scripts.",
+    "action": "read_file",
+    "input": { "path": "package.json" }
 }
 ```
 
 ```json
 {
-  "thought": "I have all the information I need to answer.",
-  "action": "none",
-  "input": {}
+    "thought": "I have all the information I need to answer.",
+    "action": "none",
+    "input": {}
 }
 ```
 

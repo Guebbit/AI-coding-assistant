@@ -15,10 +15,6 @@
  * ```
  */
 
-export type {
-  Processor,
-  ProcessInputStepArgs,
-  ProcessOutputStepArgs,
-} from "./types";
+export type { IProcessor, IProcessInputStepArgs, IProcessOutputStepArgs } from './types';
 
-export { createProcessor } from "./processor-builder";
+export { createProcessor } from './processor-builder';

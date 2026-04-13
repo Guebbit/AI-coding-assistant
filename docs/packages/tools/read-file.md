@@ -45,11 +45,13 @@ flowchart TD
 You just cloned a new repo and want to know what it does without reading every file yourself.
 
 **Prompt:**
+
 ```
 Read README.md and give me a 3-sentence summary of what this project does.
 ```
 
 **What happens inside:**
+
 1. Agent calls `read_file` with `{ "path": "README.md" }`
 2. Gets back the full README text
 3. Summarises it into 3 sentences for you
@@ -61,11 +63,13 @@ Read README.md and give me a 3-sentence summary of what this project does.
 Something in your app is broken and you think it is a config issue.
 
 **Prompt:**
+
 ```
 Read apps/api/index.ts and tell me which tools are currently registered.
 ```
 
 **What happens inside:**
+
 1. Agent calls `read_file` with `{ "path": "apps/api/index.ts" }`
 2. Gets the source code
 3. Scans for the tool registration block and lists the names for you
@@ -75,11 +79,13 @@ Read apps/api/index.ts and tell me which tools are currently registered.
 ### Use case 3 — Multi-step reasoning (agent reads multiple files)
 
 **Prompt:**
+
 ```
 Find where the Agent class is defined and explain what its constructor does.
 ```
 
 **What happens inside (up to 5 steps):**
+
 ```
 Step 1: read_file  →  packages/agent/agent.ts     ← finds the class
 Step 2: read_file  →  packages/agent/src/model-router.ts  ← follows an import
@@ -90,9 +96,9 @@ Step 3: action: "none"  →  gives final answer
 
 ## Good test prompts
 
-| What you type | What the agent does |
-|---|---|
-| `Read package.json and tell me all npm scripts.` | Opens `package.json`, reads `scripts` block |
-| `Open packages/agent/agent.ts and summarize the loop.` | Reads the file and describes the agentic loop |
-| `What TypeScript version is this project using?` | Reads `package.json`, finds `typescript` in devDependencies |
-| `Does this project have ESLint? Show me the rules.` | Reads `eslint.config.ts` |
+| What you type                                          | What the agent does                                         |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| `Read package.json and tell me all npm scripts.`       | Opens `package.json`, reads `scripts` block                 |
+| `Open packages/agent/agent.ts and summarize the loop.` | Reads the file and describes the agentic loop               |
+| `What TypeScript version is this project using?`       | Reads `package.json`, finds `typescript` in devDependencies |
+| `Does this project have ESLint? Show me the rules.`    | Reads `eslint.config.ts`                                    |

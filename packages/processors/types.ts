@@ -21,21 +21,21 @@
  * A processor may return a modified copy to change what the agent sends
  * to the LLM, or return `void` / `undefined` to leave everything unchanged.
  */
-export interface ProcessInputStepArgs {
-  /** The task the agent was asked to perform. */
-  task: string;
+export interface IProcessInputStepArgs {
+    /** The task the agent was asked to perform. */
+    task: string;
 
-  /** Accumulated context from previous steps. */
-  context: string;
+    /** Accumulated context from previous steps. */
+    context: string;
 
-  /** Relevant memory entries surfaced for this step. */
-  memory: string[];
+    /** Relevant memory entries surfaced for this step. */
+    memory: string[];
 
-  /** Current step index (zero-based). */
-  stepNumber: number;
+    /** Current step index (zero-based). */
+    stepNumber: number;
 
-  /** Names of the tools currently available to the agent. */
-  tools: string[];
+    /** Names of the tools currently available to the agent. */
+    tools: string[];
 }
 
 /**
@@ -43,24 +43,24 @@ export interface ProcessInputStepArgs {
  * A processor may return a modified copy (e.g. to override the action)
  * or return `void` / `undefined` to leave everything unchanged.
  */
-export interface ProcessOutputStepArgs {
-  /** The original task the agent was asked to perform. */
-  task: string;
+export interface IProcessOutputStepArgs {
+    /** The original task the agent was asked to perform. */
+    task: string;
 
-  /** Current step index (zero-based). */
-  stepNumber: number;
+    /** Current step index (zero-based). */
+    stepNumber: number;
 
-  /** The raw text response from the LLM. */
-  text: string;
+    /** The raw text response from the LLM. */
+    text: string;
 
-  /** Parsed reasoning from the LLM response. */
-  thought: string;
+    /** Parsed reasoning from the LLM response. */
+    thought: string;
 
-  /** The action (tool name or "none") chosen by the LLM. */
-  action: string;
+    /** The action (tool name or "none") chosen by the LLM. */
+    action: string;
 
-  /** The input the LLM chose to supply to the selected tool. */
-  toolInput: Record<string, unknown>;
+    /** The input the LLM chose to supply to the selected tool. */
+    toolInput: Record<string, unknown>;
 }
 
 /**
@@ -73,24 +73,24 @@ export interface ProcessOutputStepArgs {
  * modified argument object, the *modified* version is forwarded to the next
  * processor in the chain (and ultimately used by the agent).
  */
-export interface Processor {
-  /**
-   * Called *before* the LLM prompt is built for each step.
-   *
-   * Return a modified `ProcessInputStepArgs` to override context, memory,
-   * or the tool list.  Return `void`/`undefined` to leave them unchanged.
-   */
-  processInputStep?(
-    args: ProcessInputStepArgs,
-  ): Promise<ProcessInputStepArgs | void> | ProcessInputStepArgs | void;
+export interface IProcessor {
+    /**
+     * Called *before* the LLM prompt is built for each step.
+     *
+     * Return a modified `ProcessInputStepArgs` to override context, memory,
+     * or the tool list.  Return `void`/`undefined` to leave them unchanged.
+     */
+    processInputStep?(
+        args: IProcessInputStepArgs
+    ): Promise<IProcessInputStepArgs | void> | IProcessInputStepArgs | void;
 
-  /**
-   * Called *after* the LLM response is parsed, but *before* any tool runs.
-   *
-   * Return a modified `ProcessOutputStepArgs` to override the action or
-   * tool input.  Return `void`/`undefined` to leave them unchanged.
-   */
-  processOutputStep?(
-    args: ProcessOutputStepArgs,
-  ): Promise<ProcessOutputStepArgs | void> | ProcessOutputStepArgs | void;
+    /**
+     * Called *after* the LLM response is parsed, but *before* any tool runs.
+     *
+     * Return a modified `ProcessOutputStepArgs` to override the action or
+     * tool input.  Return `void`/`undefined` to leave them unchanged.
+     */
+    processOutputStep?(
+        args: IProcessOutputStepArgs
+    ): Promise<IProcessOutputStepArgs | void> | IProcessOutputStepArgs | void;
 }

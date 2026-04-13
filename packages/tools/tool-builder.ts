@@ -9,8 +9,8 @@
  * @module tools/tool-builder
  */
 
-import { z } from "zod";
-import type { Tool } from "./types";
+import { z } from 'zod';
+import type { ITool } from './types';
 
 /**
  * Options accepted by `createTool`.
@@ -21,45 +21,42 @@ import type { Tool } from "./types";
  * @template TInput  - Inferred from `inputSchema` (defaults to `Record<string, unknown>`).
  * @template TOutput - Inferred from `outputSchema` (defaults to `unknown`).
  */
-export interface CreateToolOptions<
-  TInput extends Record<string, unknown>,
-  TOutput,
-> {
-  /**
-   * Unique identifier — used as `tool.name` and matched by the agent loop.
-   * Prefer snake_case to stay consistent with existing tools (e.g. `"read_file"`).
-   */
-  id: string;
+export interface ICreateToolOptions<TInput extends Record<string, unknown>, TOutput> {
+    /**
+     * Unique identifier — used as `tool.name` and matched by the agent loop.
+     * Prefer snake_case to stay consistent with existing tools (e.g. `"read_file"`).
+     */
+    id: string;
 
-  /** Human-readable description forwarded to the LLM prompt. */
-  description: string;
+    /** Human-readable description forwarded to the LLM prompt. */
+    description: string;
 
-  /**
-   * Zod schema that describes the expected input shape.
-   *
-   * When supplied, the input is validated **before** `execute` is called.
-   * Validation errors surface as thrown `ZodError` instances.
-   */
-  inputSchema?: z.ZodType<TInput>;
+    /**
+     * Zod schema that describes the expected input shape.
+     *
+     * When supplied, the input is validated **before** `execute` is called.
+     * Validation errors surface as thrown `ZodError` instances.
+     */
+    inputSchema?: z.ZodType<TInput>;
 
-  /**
-   * Zod schema that describes the output shape.
-   *
-   * Purely informational — validation of the output is left to the
-   * caller (e.g. an eval scorer can use it to confirm shape compliance).
-   */
-  outputSchema?: z.ZodType<TOutput>;
+    /**
+     * Zod schema that describes the output shape.
+     *
+     * Purely informational — validation of the output is left to the
+     * caller (e.g. an eval scorer can use it to confirm shape compliance).
+     */
+    outputSchema?: z.ZodType<TOutput>;
 
-  /**
-   * The tool's implementation.
-   *
-   * Receives a *typed* input (inferred from `inputSchema`) so you get
-   * full IDE auto-complete and type safety inside the function body.
-   *
-   * @param input - Validated input object (or raw input if no schema).
-   * @returns A result that will be JSON-serialised by the agent.
-   */
-  execute: (input: TInput) => Promise<TOutput>;
+    /**
+     * The tool's implementation.
+     *
+     * Receives a *typed* input (inferred from `inputSchema`) so you get
+     * full IDE auto-complete and type safety inside the function body.
+     *
+     * @param input - Validated input object (or raw input if no schema).
+     * @returns A result that will be JSON-serialised by the agent.
+     */
+    execute: (input: TInput) => Promise<TOutput>;
 }
 
 /**
@@ -84,30 +81,30 @@ export interface CreateToolOptions<
  * @returns A fully-formed `Tool` instance ready for the agent.
  */
 export function createTool<
-  TInput extends Record<string, unknown> = Record<string, unknown>,
-  TOutput = unknown,
->(options: CreateToolOptions<TInput, TOutput>): Tool {
-  return {
-    name: options.id,
-    description: options.description,
-    inputSchema: options.inputSchema,
-    outputSchema: options.outputSchema,
+    TInput extends Record<string, unknown> = Record<string, unknown>,
+    TOutput = unknown
+>(options: ICreateToolOptions<TInput, TOutput>): ITool {
+    return {
+        name: options.id,
+        description: options.description,
+        inputSchema: options.inputSchema,
+        outputSchema: options.outputSchema,
 
-    /**
-     * Wrapper that validates the raw LLM input against the schema
-     * (when provided) before delegating to the user's `execute` fn.
-     *
-     * @param rawInput - Untyped input object from the LLM response.
-     * @returns The tool's result (type-erased to `unknown` for the `Tool` interface).
-     */
-    async execute(rawInput: Record<string, unknown>): Promise<unknown> {
-      if (options.inputSchema) {
-        /* Validate — throws ZodError with a descriptive message on failure. */
-        const parsed = options.inputSchema.parse(rawInput);
-        return options.execute(parsed);
-      }
+        /**
+         * Wrapper that validates the raw LLM input against the schema
+         * (when provided) before delegating to the user's `execute` fn.
+         *
+         * @param rawInput - Untyped input object from the LLM response.
+         * @returns The tool's result (type-erased to `unknown` for the `Tool` interface).
+         */
+        async execute(rawInput: Record<string, unknown>): Promise<unknown> {
+            if (options.inputSchema) {
+                /* Validate — throws ZodError with a descriptive message on failure. */
+                const parsed = options.inputSchema.parse(rawInput);
+                return options.execute(parsed);
+            }
 
-      return options.execute(rawInput as TInput);
-    },
-  };
+            return options.execute(rawInput as TInput);
+        }
+    };
 }

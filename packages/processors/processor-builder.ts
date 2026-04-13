@@ -24,7 +24,7 @@
  * @module processors/processor-builder
  */
 
-import type { Processor } from "./types";
+import type { IProcessor } from './types';
 
 /**
  * Create a `Processor` from a plain object literal.
@@ -33,6 +33,6 @@ import type { Processor } from "./types";
  *                    (`processInputStep`, `processOutputStep`).
  * @returns The same object, typed as `Processor`.
  */
-export function createProcessor(processor: Processor): Processor {
-  return processor;
+export function createProcessor(processor: IProcessor): IProcessor {
+    return processor;
 }

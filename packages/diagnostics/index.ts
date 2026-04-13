@@ -12,6 +12,6 @@
  * @module diagnostics
  */
 
-export type { IDiagnosticEntry } from "./types";
-export { writeDiagnosticLog } from "./writer";
-export { cleanupOldLogs } from "./cleanup";
+export type { IDiagnosticEntry } from './types';
+export { writeDiagnosticLog } from './writer';
+export { cleanupOldLogs } from './cleanup';

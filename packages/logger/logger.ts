@@ -14,7 +14,7 @@
  * @module logger/logger
  */
 
-import { createLogger, format, transports, type Logger } from "winston";
+import { createLogger, format, transports, type Logger } from 'winston';
 
 /**
  * Parse a string environment variable as a boolean.
@@ -28,11 +28,11 @@ import { createLogger, format, transports, type Logger } from "winston";
  * @returns The parsed boolean.
  */
 function asBoolean(value: string | undefined, defaultValue: boolean): boolean {
-  if (value === undefined) {
-    return defaultValue;
-  }
+    if (value === undefined) {
+        return defaultValue;
+    }
 
-  return value.toLowerCase() === "true";
+    return value.toLowerCase() === 'true';
 }
 
 /* ── Resolved configuration from environment ─────────────────────────── */
@@ -41,7 +41,7 @@ function asBoolean(value: string | undefined, defaultValue: boolean): boolean {
 const LOG_ENABLED = asBoolean(process.env.LOG_ENABLED, true);
 
 /** Minimum log severity (e.g. `"info"`, `"debug"`, `"warn"`). */
-const LOG_LEVEL = process.env.LOG_LEVEL ?? "info";
+const LOG_LEVEL = process.env.LOG_LEVEL ?? 'info';
 
 /** When `true`, logs are human-readable; otherwise JSON lines. */
 const LOG_PRETTY = asBoolean(process.env.LOG_PRETTY, false);
@@ -50,20 +50,20 @@ const LOG_PRETTY = asBoolean(process.env.LOG_PRETTY, false);
 
 /** Structured JSON format — one JSON object per log line. */
 const jsonFormat = format.combine(
-  format.timestamp(),
-  format.errors({ stack: true }),
-  format.splat(),
-  format.json(),
+    format.timestamp(),
+    format.errors({ stack: true }),
+    format.splat(),
+    format.json()
 );
 
 /** Colourised, human-readable format for local development. */
 const prettyFormat = format.combine(
-  format.colorize(),
-  format.timestamp(),
-  format.printf(({ timestamp, level, message, ...meta }) => {
-    const details = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
-    return `${timestamp} ${level}: ${message}${details}`;
-  }),
+    format.colorize(),
+    format.timestamp(),
+    format.printf(({ timestamp, level, message, ...meta }) => {
+        const details = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+        return `${timestamp} ${level}: ${message}${details}`;
+    })
 );
 
 /* ── Root logger instance ────────────────────────────────────────────── */
@@ -76,11 +76,11 @@ const prettyFormat = format.combine(
  * filtering.
  */
 export const logger = createLogger({
-  level: LOG_LEVEL,
-  silent: !LOG_ENABLED,
-  defaultMeta: { service: "ai-assistant" },
-  format: LOG_PRETTY ? prettyFormat : jsonFormat,
-  transports: [new transports.Console()],
+    level: LOG_LEVEL,
+    silent: !LOG_ENABLED,
+    defaultMeta: { service: 'ai-assistant' },
+    format: LOG_PRETTY ? prettyFormat : jsonFormat,
+    transports: [new transports.Console()]
 });
 
 /**
@@ -93,5 +93,5 @@ export const logger = createLogger({
  * @returns A Winston `Logger` instance with the component metadata attached.
  */
 export function getLogger(component: string): Logger {
-  return logger.child({ component });
+    return logger.child({ component });
 }

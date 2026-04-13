@@ -42,35 +42,37 @@ sequenceDiagram
 
 ## All event types
 
-| Event | When it fires | Payload |
-|---|---|---|
-| `agent:start` | Before the first loop step | `{ task }` |
-| `agent:step` | After each model decision | `{ step, thought, action, input }` |
-| `agent:model_routed` | After router picks a profile | `{ profile, model }` |
-| `tool:result` | After a tool runs successfully | `{ tool, result }` |
-| `tool:error` | After a tool throws an error | `{ tool, error }` |
-| `agent:done` | When action is "none" (task complete) | `{ answer }` |
-| `agent:max_steps` | When step limit is reached | `{ steps }` |
-| `agent:error` | Unrecoverable loop error | `{ error }` |
+| Event                | When it fires                         | Payload                            |
+| -------------------- | ------------------------------------- | ---------------------------------- |
+| `agent:start`        | Before the first loop step            | `{ task }`                         |
+| `agent:step`         | After each model decision             | `{ step, thought, action, input }` |
+| `agent:model_routed` | After router picks a profile          | `{ profile, model }`               |
+| `tool:result`        | After a tool runs successfully        | `{ tool, result }`                 |
+| `tool:error`         | After a tool throws an error          | `{ tool, error }`                  |
+| `agent:done`         | When action is "none" (task complete) | `{ answer }`                       |
+| `agent:max_steps`    | When step limit is reached            | `{ steps }`                        |
+| `agent:error`        | Unrecoverable loop error              | `{ error }`                        |
 
 ## Why it is designed this way
 
 ### Without events (tight coupling):
+
 ```typescript
 // agent.ts
-import { logger } from "./logger";
+import { logger } from './logger';
 
 // Now agent depends on logger — harder to test, harder to replace
-logger.info("step done", { step, action });
+logger.info('step done', { step, action });
 ```
 
 ### With events (loose coupling):
+
 ```typescript
 // agent.ts
-events.emit({ type: "agent:step", step, action });
+events.emit({ type: 'agent:step', step, action });
 
 // api/index.ts
-events.on("*", (event) => logger.info(event));
+events.on('*', (event) => logger.info(event));
 ```
 
 The agent knows nothing about logging. You can swap the logger, add metrics, or send events to a WebSocket — all without touching `agent.ts`.
@@ -108,20 +110,20 @@ For production observability, you would replace the in-memory bus with a persist
 ## Subscribing to events in your own code
 
 ```typescript
-import { events } from "packages/events";
+import { events } from 'packages/events';
 
 // Subscribe to all events
-events.on("*", (event) => {
-  console.log(event.type, event);
+events.on('*', (event) => {
+    console.log(event.type, event);
 });
 
 // Subscribe to specific event
-events.on("tool:error", (event) => {
-  alertOncall(event.tool, event.error);
+events.on('tool:error', (event) => {
+    alertOncall(event.tool, event.error);
 });
 
 // Unsubscribe
-events.off("tool:error", myHandler);
+events.off('tool:error', myHandler);
 ```
 
 ```mermaid

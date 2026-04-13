@@ -9,30 +9,30 @@
  * A single chunk produced by `chunkText`.
  */
 export interface IChunk {
-  /** The chunk's text content. */
-  content: string;
+    /** The chunk's text content. */
+    content: string;
 
-  /** Zero-based position of this chunk in the sequence. */
-  index: number;
+    /** Zero-based position of this chunk in the sequence. */
+    index: number;
 }
 
 /**
  * Options controlling how `chunkText` splits text.
  */
 export interface IChunkOptions {
-  /**
-   * Maximum number of characters per chunk.
-   * @default 500
-   */
-  chunkSize?: number;
+    /**
+     * Maximum number of characters per chunk.
+     * @default 500
+     */
+    chunkSize?: number;
 
-  /**
-   * Number of characters to overlap between consecutive chunks.
-   * Overlap ensures that context spanning a chunk boundary is captured
-   * in both adjacent chunks, reducing information loss at split points.
-   * @default 50
-   */
-  overlap?: number;
+    /**
+     * Number of characters to overlap between consecutive chunks.
+     * Overlap ensures that context spanning a chunk boundary is captured
+     * in both adjacent chunks, reducing information loss at split points.
+     * @default 50
+     */
+    overlap?: number;
 }
 
 /**
@@ -54,20 +54,20 @@ export interface IChunkOptions {
  * ```
  */
 export function chunkText(text: string, options?: IChunkOptions): IChunk[] {
-  const chunkSize = Math.max(1, options?.chunkSize ?? 500);
-  const overlap = Math.min(options?.overlap ?? 50, chunkSize - 1);
-  const step = chunkSize - overlap;
+    const chunkSize = Math.max(1, options?.chunkSize ?? 500);
+    const overlap = Math.min(options?.overlap ?? 50, chunkSize - 1);
+    const step = chunkSize - overlap;
 
-  const chunks: IChunk[] = [];
-  let offset = 0;
-  let index = 0;
+    const chunks: IChunk[] = [];
+    let offset = 0;
+    let index = 0;
 
-  while (offset < text.length) {
-    const content = text.slice(offset, offset + chunkSize);
-    chunks.push({ content, index });
-    offset += step;
-    index++;
-  }
+    while (offset < text.length) {
+        const content = text.slice(offset, offset + chunkSize);
+        chunks.push({ content, index });
+        offset += step;
+        index++;
+    }
 
-  return chunks;
+    return chunks;
 }

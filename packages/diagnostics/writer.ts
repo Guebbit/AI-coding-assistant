@@ -13,16 +13,16 @@
  * @module diagnostics/writer
  */
 
-import fs from "fs/promises";
-import path from "path";
-import { resolveInsideRoot } from "../shared";
-import type { IDiagnosticEntry } from "./types";
+import fs from 'fs/promises';
+import path from 'path';
+import { resolveInsideRoot } from '../shared';
+import type { IDiagnosticEntry } from './types';
 
 /** Toggle file output. Set `DIAGNOSTIC_LOG_ENABLED=false` to disable. */
-const LOG_ENABLED = process.env.DIAGNOSTIC_LOG_ENABLED !== "false";
+const LOG_ENABLED = process.env.DIAGNOSTIC_LOG_ENABLED !== 'false';
 
 /** Directory where diagnostic Markdown files are written. */
-const LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? "data/diagnostics";
+const LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? 'data/diagnostics';
 
 /**
  * Slugify a task string into a safe filename component.
@@ -34,16 +34,16 @@ const LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? "data/diagnostics";
  * @returns A lowercase, hyphen-separated slug.
  */
 function slugify(task: string): string {
-  const raw = task
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .slice(0, 60);
-  /* Trim leading/trailing hyphens without a regex to avoid ReDoS. */
-  let start = 0;
-  let end = raw.length;
-  while (start < end && raw[start] === "-") start++;
-  while (end > start && raw[end - 1] === "-") end--;
-  return raw.slice(start, end);
+    const raw = task
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .slice(0, 60);
+    /* Trim leading/trailing hyphens without a regex to avoid ReDoS. */
+    let start = 0;
+    let end = raw.length;
+    while (start < end && raw[start] === '-') start++;
+    while (end > start && raw[end - 1] === '-') end--;
+    return raw.slice(start, end);
 }
 
 /**
@@ -52,15 +52,15 @@ function slugify(task: string): string {
  * @param severity - The entry severity level.
  * @returns A short emoji string.
  */
-function severityBadge(severity: IDiagnosticEntry["severity"]): string {
-  switch (severity) {
-    case "error":
-      return "🔴";
-    case "warn":
-      return "🟡";
-    default:
-      return "🟢";
-  }
+function severityBadge(severity: IDiagnosticEntry['severity']): string {
+    switch (severity) {
+        case 'error':
+            return '🔴';
+        case 'warn':
+            return '🟡';
+        default:
+            return '🟢';
+    }
 }
 
 /**
@@ -79,52 +79,52 @@ function severityBadge(severity: IDiagnosticEntry["severity"]): string {
  * @returns The absolute path of the written file, or `""` when disabled.
  */
 export async function writeDiagnosticLog(
-  entries: IDiagnosticEntry[],
-  taskSlug: string,
-  aiCommentary?: string,
+    entries: IDiagnosticEntry[],
+    taskSlug: string,
+    aiCommentary?: string
 ): Promise<string> {
-  if (!LOG_ENABLED) return "";
+    if (!LOG_ENABLED) return '';
 
-  const absDir = path.resolve(process.cwd(), LOG_DIR);
-  await fs.mkdir(absDir, { recursive: true });
+    const absDir = path.resolve(process.cwd(), LOG_DIR);
+    await fs.mkdir(absDir, { recursive: true });
 
-  const iso = new Date().toISOString().replace(/[:.]/g, "-");
-  const slug = slugify(taskSlug);
-  /* Sanitise the filename: keep only alphanumeric, hyphens, and dots.
-   * This removes any residual characters that could be used for path
-   * injection even after slugify. */
-  const safeFilename = `${iso}_${slug}.md`.replace(/[^a-zA-Z0-9_\-. ]/g, "_");
+    const iso = new Date().toISOString().replace(/[:.]/g, '-');
+    const slug = slugify(taskSlug);
+    /* Sanitise the filename: keep only alphanumeric, hyphens, and dots.
+     * This removes any residual characters that could be used for path
+     * injection even after slugify. */
+    const safeFilename = `${iso}_${slug}.md`.replace(/[^a-zA-Z0-9_\-. ]/g, '_');
 
-  /* resolveInsideRoot ensures the file stays inside absDir. */
-  const filePath = resolveInsideRoot(absDir, safeFilename);
+    /* resolveInsideRoot ensures the file stays inside absDir. */
+    const filePath = resolveInsideRoot(absDir, safeFilename);
 
-  const rows = entries
-    .map(
-      (e) =>
-        `| ${e.step} | ${severityBadge(e.severity)} ${e.severity} | ${e.category} | ${e.message} |`,
-    )
-    .join("\n");
+    const rows = entries
+        .map(
+            (e) =>
+                `| ${e.step} | ${severityBadge(e.severity)} ${e.severity} | ${e.category} | ${e.message} |`
+        )
+        .join('\n');
 
-  const table =
-    entries.length > 0
-      ? `| Step | Severity | Category | Message |\n|------|----------|----------|------|\n${rows}`
-      : "_No entries recorded._";
+    const table =
+        entries.length > 0
+            ? `| Step | Severity | Category | Message |\n|------|----------|----------|------|\n${rows}`
+            : '_No entries recorded._';
 
-  const commentary = aiCommentary?.trim() || "No commentary available.";
+    const commentary = aiCommentary?.trim() || 'No commentary available.';
 
-  const content = [
-    `# Diagnostic Report — ${new Date().toISOString()} — ${slug}`,
-    "",
-    "## Timeline",
-    "",
-    table,
-    "",
-    "## AI Commentary",
-    "",
-    commentary,
-    "",
-  ].join("\n");
+    const content = [
+        `# Diagnostic Report — ${new Date().toISOString()} — ${slug}`,
+        '',
+        '## Timeline',
+        '',
+        table,
+        '',
+        '## AI Commentary',
+        '',
+        commentary,
+        ''
+    ].join('\n');
 
-  await fs.writeFile(filePath, content, "utf-8");
-  return filePath;
+    await fs.writeFile(filePath, content, 'utf-8');
+    return filePath;
 }
