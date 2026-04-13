@@ -4,12 +4,11 @@
 # Services:
 #   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
 #   open-webui    — Chat UI connected to Ollama
-#   model-loader  — One-shot container that pulls / builds Ollama models
 #   qdrant        — Local vector database for agent memory
 #
 # Usage:
-#   1. Copy infra/podman/.env.example → infra/podman/.env and fill in values
-#   2. From this directory: docker compose --env-file .env up -d
+#   1. Copy .env.example → .env and fill in values
+#   2. From repo root: docker compose --env-file .env up -d
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -62,21 +61,6 @@ services:
         volumes:
             - open-webui-data:/app/backend/data:Z
         restart: unless-stopped
-
-    model-loader:
-        image: ollama/ollama:latest
-        depends_on:
-            - ollama
-        environment:
-            - OLLAMA_HOST=http://ollama:11434
-        volumes:
-            # Mount custom Modelfiles into the container
-            - ./modelfiles:/modelfiles:rw
-            # The startup script handles waiting + pulling + creating models
-            - ./create-models.sh:/create-models.sh:rw
-        entrypoint: ['bash', '-c']
-        command: ['/create-models.sh']
-        restart: on-failure
 
     qdrant:
         image: qdrant/qdrant:latest

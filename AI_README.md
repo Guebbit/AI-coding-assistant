@@ -538,8 +538,8 @@ The stream closes automatically when the agent run completes (done / error / max
 │   │       └── agent-quality.ts  — scores response quality
 │   └── logger/
 │       └── logger.ts         — getLogger(name); winston wrapper
-├── infra/
-│   └── podman/               — docker-compose for Ollama + Open WebUI; no MySQL
+├── docker-compose.yml        — compose stack for Ollama + Open WebUI + Qdrant; no MySQL
+├── .env.example              — compose env template
 ├── data/                     — runtime data; gitignored
 │   ├── boilerplates/         — template sources for scaffold_project
 │   ├── diagrams/             — output of generate_diagram (SVG/PNG + .mmd sources)

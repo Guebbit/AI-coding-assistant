@@ -15,7 +15,6 @@ npm install
 ## 2) Start Ollama + Open WebUI stack
 
 ```bash
-cd infra/podman
 cp .env.example .env
 # set LINUX_USERNAME and WEBUI_SECRET_KEY
 docker compose --env-file .env up -d

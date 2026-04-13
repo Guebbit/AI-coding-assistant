@@ -40,16 +40,16 @@ Planned expansions include:
 ```text
 ai-assistant/
 ├── apps/
-│   └── api/          ← Express API entry point (`POST /run`)
+│   └── api/              ← Express API entry point (`POST /run`)
 ├── packages/
-│   ├── agent/        ← Agent loop
-│   ├── events/       ← Event bus
-│   ├── llm/          ← Ollama wrapper ("lim" in your note likely means this)
-│   ├── memory/       ← In-memory short-term memory
-│   └── tools/        ← Tool interface + built-in tools
-├── infra/
-│   └── podman/       ← Ollama compose stack
-└── data/             ← Runtime data (gitignored)
+│   ├── agent/            ← Agent loop
+│   ├── events/           ← Event bus
+│   ├── llm/              ← Ollama wrapper ("lim" in your note likely means this)
+│   ├── memory/           ← In-memory short-term memory
+│   └── tools/            ← Tool interface + built-in tools
+├── docker-compose.yml    ← Ollama + Open WebUI + Qdrant compose stack
+├── .env.example          ← Compose env template
+└── data/                 ← Runtime data (gitignored)
 ```
 
 ## Quick start
@@ -63,7 +63,6 @@ npm install
 ### 2) Start Ollama
 
 ```bash
-cd infra/podman
 cp .env.example .env
 # fill LINUX_USERNAME
 
@@ -172,7 +171,7 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 
 ### Infra compose variables
 
-`infra/podman/.env` is only for the compose stack (Ollama + model-loader), mainly:
+`.env` (at the repo root) is only for the compose stack (Ollama + Open WebUI + Qdrant), mainly:
 
 - `LINUX_USERNAME`
 
@@ -207,7 +206,7 @@ If Qdrant is unavailable, the app continues with local in-memory recent memory o
 
 ## Why compose has no database
 
-Correct: `infra/podman/docker-compose.yml` does **not** include MySQL.
+Correct: `docker-compose.yml` does **not** include MySQL.
 
 Reason: MySQL is optional and only needed if you want `mysql_query` to hit a real DB.
 You can either:
