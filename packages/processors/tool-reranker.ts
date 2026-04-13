@@ -164,9 +164,9 @@ export function createToolRerankerProcessor(
                 });
 
                 return { ...args, tools: topTools };
-            } catch (err) {
+            } catch (error) {
                 /* Fail open — return the original tool list if reranking errors. */
-                log.warn('tool_reranker_failed', { error: String(err) });
+                log.warn('tool_reranker_failed', { error: String(error) });
                 return;
             }
         }

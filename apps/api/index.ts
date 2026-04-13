@@ -117,9 +117,9 @@ app.post("/run", async (req, res) => {
     );
     log.info("run_request_completed", { taskLength: task.length, writeEnabled, profile: profile ?? null });
     res.json({ result });
-  } catch (err) {
-    log.error("run_request_failed", { error: String(err) });
-    res.status(500).json({ error: String(err) });
+  } catch (error) {
+    log.error("run_request_failed", { error: String(error) });
+    res.status(500).json({ error: String(error) });
   }
 });
 

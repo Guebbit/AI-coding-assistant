@@ -94,8 +94,8 @@ export async function decomposeTask(
       stream: false,
       format: "json",
     });
-  } catch (err) {
-    log.warn("decomposer_llm_failed", { error: String(err) });
+  } catch (error) {
+    log.warn("decomposer_llm_failed", { error: String(error) });
     return buildFallback(task, "LLM call failed — falling back to single subtask.");
   }
 
@@ -123,8 +123,8 @@ export async function decomposeTask(
       reasoning: parsed.reasoning ?? "No reasoning provided by decomposer.",
       subtasks,
     };
-  } catch (parseErr) {
-    log.warn("decomposer_parse_failed", { error: String(parseErr) });
+  } catch (error) {
+    log.warn("decomposer_parse_failed", { error: String(error) });
     return buildFallback(task, "Failed to parse decomposer output.");
   }
 }

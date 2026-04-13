@@ -89,10 +89,10 @@ export function emit(event: IAgentEvent): void {
     for (const h of [...typed, ...wildcard]) {
         try {
             h(event);
-        } catch (err) {
+        } catch (error) {
             log.error('event_handler_failed', {
                 eventType: event.type,
-                error: String(err)
+                error: String(error)
             });
         }
     }

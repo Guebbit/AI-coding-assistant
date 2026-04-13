@@ -132,8 +132,8 @@ export function registerStreamRoutes(app: Express): void {
             /* Unhandled events are silently ignored. */
             break;
         }
-      } catch (err) {
-        log.warn("stream_event_write_failed", { error: String(err) });
+      } catch (error) {
+        log.warn("stream_event_write_failed", { error: String(error) });
       }
     };
 
@@ -155,9 +155,9 @@ export function registerStreamRoutes(app: Express): void {
         writeEvent("done", { result });
         log.info("stream_run_completed", { taskLength: task.length });
       })
-      .catch((err: unknown) => {
-        writeEvent("error", { error: String(err) });
-        log.error("stream_run_failed", { error: String(err) });
+      .catch((error: unknown) => {
+        writeEvent("error", { error: String(error) });
+        log.error("stream_run_failed", { error: String(error) });
       })
       .finally(() => {
         off("*", handler);

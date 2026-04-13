@@ -64,9 +64,9 @@ export function registerUploadRoutes(app: express.Express): void {
       });
 
       res.json(result);
-    } catch (err) {
-      log.error("upload_image_classify_failed", { error: String(err) });
-      res.status(500).json({ error: String(err) });
+    } catch (error) {
+      log.error("upload_image_classify_failed", { error: String(error) });
+      res.status(500).json({ error: String(error) });
     }
   });
 
@@ -102,9 +102,9 @@ export function registerUploadRoutes(app: express.Express): void {
       });
 
       res.json(result);
-    } catch (err) {
-      log.error("upload_speech_to_text_failed", { error: String(err) });
-      res.status(500).json({ error: String(err) });
+    } catch (error) {
+      log.error("upload_speech_to_text_failed", { error: String(error) });
+      res.status(500).json({ error: String(error) });
     }
   });
 
@@ -133,9 +133,9 @@ export function registerUploadRoutes(app: express.Express): void {
       });
 
       res.json(result);
-    } catch (err) {
-      log.error("upload_read_pdf_failed", { error: String(err) });
-      res.status(500).json({ error: String(err) });
+    } catch (error) {
+      log.error("upload_read_pdf_failed", { error: String(error) });
+      res.status(500).json({ error: String(error) });
     }
   });
 

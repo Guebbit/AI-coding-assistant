@@ -1,38 +1,121 @@
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 import configPrettier from 'eslint-config-prettier';
+import unicorn from 'eslint-plugin-unicorn';
+import oxlint from 'eslint-plugin-oxlint';
 
 export default tseslint.config(
     {
         ignores: ['**/dist/**', '**/docs/**', '**/node_modules/**']
     },
     ...tseslint.configs.recommended,
+    /*
+     * Disable ESLint rules that overlap with oxlint to avoid duplication.
+     * oxlint runs as a separate fast linter; these rules are delegated to it.
+     */
+    oxlint.configs['flat/recommended'],
     {
         files: ['**/*.ts'],
+        plugins: {
+            unicorn
+        },
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
             globals: {
                 ...globals.node
-            }
+            },
+            parserOptions: {
+                    projectService: true,
+                    tsconfigRootDir: import.meta.dirname
+                }
         },
         rules: {
             'no-console': 'warn',
             'no-debugger': 'warn',
+            'no-nested-ternary': 'off',
             '@typescript-eslint/no-non-null-assertion': 'off',
+            '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+
+            /*
+             * ── Plus-operands ────────────────────────────────────────────
+             * Allow mixing numbers and strings in `+` expressions, which is
+             * common for template-like string building without template literals.
+             */
+            '@typescript-eslint/restrict-plus-operands': [
+                'error',
+                {
+                    allowNumberAndString: true
+                }
+            ],
+
+            /*
+             * ── Unicorn rules ────────────────────────────────────────────
+             * A curated subset matching the boilerplate + vue-toolkit config.
+             */
+            'unicorn/better-regex': 'warn',
+            'unicorn/consistent-destructuring': 'warn',
+            'unicorn/catch-error-name': ['error', { name: 'error' }],
+            'unicorn/prefer-top-level-await': 'off',
+            'unicorn/no-nested-ternary': 'off',
+
+            /*
+             * Filename convention: kebab-case.
+             * Covers both `tool-builder.ts` and dot-separated names like
+             * `fs.read.ts` (each dot-separated segment is valid kebab-case).
+             */
+            'unicorn/filename-case': [
+                'error',
+                {
+                    case: 'kebabCase',
+                    ignore: [
+                        // dot-separated tool filenames, e.g. fs.read.ts, csv.read.ts
+                        /^[\da-z]+(?:\.[\da-z]+)*(?:-[\da-z]+)*\.ts$/
+                    ]
+                }
+            ],
+
+            /*
+             * Prevent common abbreviations that reduce readability.
+             * The replacements list matches boilerplate + vue-toolkit while
+             * explicitly allowing the short forms that Manna uses legitimately.
+             */
+            'unicorn/prevent-abbreviations': [
+                'warn',
+                {
+                    replacements: {
+                        opts: { options: true }
+                    },
+                    allowList: {
+                        i: true,
+                        e: true,
+                        len: true,
+                        prop: true,
+                        props: true,
+                        prev: true,
+                        ref: true,
+                        req: true,
+                        res: true,
+                        dir: true,
+                        env: true,
+                        args: true,
+                        Args: true
+                    }
+                }
+            ],
 
             /*
              * ── Naming conventions ──────────────────────────────────────
              * Enforces consistent identifier casing across the codebase.
-             * Set to "warn" so existing code can be migrated incrementally.
+             * Severity raised to "error" to match boilerplate + vue-toolkit.
              */
             '@typescript-eslint/naming-convention': [
-                'warn',
+                'error',
 
-                // Default: camelCase for any identifier not covered below
+                // Default: camelCase or PascalCase for any identifier not covered below
                 {
                     selector: 'default',
-                    format: ['camelCase'],
+                    format: ['camelCase', 'PascalCase'],
                     leadingUnderscore: 'allow',
                     trailingUnderscore: 'allow'
                 },
@@ -112,6 +195,13 @@ export default tseslint.config(
                 {
                     selector: 'typeProperty',
                     format: ['camelCase'],
+                    leadingUnderscore: 'allow'
+                },
+
+                // Member-like fallback: permissive to cover mixed codebases
+                {
+                    selector: 'memberLike',
+                    format: ['camelCase', 'PascalCase', 'UPPER_CASE', 'snake_case'],
                     leadingUnderscore: 'allow'
                 }
             ]

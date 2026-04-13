@@ -7,12 +7,6 @@
  * @module swarm
  */
 
-export { SwarmOrchestrator } from "./orchestrator";
-export { decomposeTask } from "./decomposer";
-export type {
-  ISubtask,
-  IDecomposition,
-  ISubtaskResult,
-  ISwarmResult,
-  ISwarmConfig,
-} from "./types";
+export * from "./orchestrator";
+export * from "./decomposer";
+export * from "./types";

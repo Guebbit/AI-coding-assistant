@@ -198,10 +198,10 @@ export async function addMemory(entry: string): Promise<void> {
                 }
             ]
         });
-    } catch (err) {
+    } catch (error) {
         qdrantEnabled = false;
         log.warn('memory_qdrant_disabled', {
-            error: String(err),
+            error: String(error),
             message: 'Falling back to in-memory only'
         });
         logMemoryAddedLocalOnly(startedAt);
@@ -278,9 +278,9 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
             durationMs: Date.now() - startedAt
         });
         return output;
-    } catch (err) {
+    } catch (error) {
         log.warn('memory_qdrant_search_failed', {
-            error: String(err),
+            error: String(error),
             queryLength: query.length,
             returnedCount: recent.length,
             durationMs: Date.now() - startedAt
@@ -306,9 +306,9 @@ export async function clearMemory(): Promise<void> {
     try {
         await qdrant.deleteCollection(QDRANT_COLLECTION);
         vectorSize = null;
-    } catch (err) {
+    } catch (error) {
         log.warn('memory_clear_failed', {
-            error: String(err),
+            error: String(error),
             durationMs: Date.now() - startedAt
         });
         logMemoryClearedRecentOnly(startedAt);
@@ -367,10 +367,10 @@ export async function addStructuredMemory(
                 }
             ]
         });
-    } catch (err) {
+    } catch (error) {
         qdrantEnabled = false;
         log.warn('memory_qdrant_disabled', {
-            error: String(err),
+            error: String(error),
             message: 'Falling back to in-memory only'
         });
         logMemoryAddedLocalOnly(startedAt);

@@ -89,11 +89,11 @@ export const generateDiagramTool = createTool({
         // 3. Render with mmdc (mermaid-cli)
         try {
             await execFileAsync('npx', ['mmdc', '-i', mmdPath, '-o', outPath, '-b', 'transparent']);
-        } catch (err) {
+        } catch (error) {
             throw new Error(
                 `mermaid-cli (mmdc) failed to render diagram. ` +
                     `Format: ${format}, source file: ${mmdPath}. ` +
-                    `Underlying error: ${String(err)}`
+                    `Underlying error: ${String(error)}`
             );
         }
 

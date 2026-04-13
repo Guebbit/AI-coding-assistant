@@ -138,9 +138,9 @@ export function registerSwarmRoutes(app: Express): void {
         },
         totalDurationMs: result.totalDurationMs,
       });
-    } catch (err) {
-      log.error("swarm_request_failed", { error: String(err) });
-      res.status(500).json({ error: String(err) });
+    } catch (error) {
+      log.error("swarm_request_failed", { error: String(error) });
+      res.status(500).json({ error: String(error) });
     }
   });
 
@@ -241,8 +241,8 @@ export function registerSwarmRoutes(app: Express): void {
           default:
             break;
         }
-      } catch (writeErr) {
-        log.warn("swarm_stream_event_write_failed", { error: String(writeErr) });
+      } catch (error) {
+        log.warn("swarm_stream_event_write_failed", { error: String(error) });
       }
     };
 
@@ -268,9 +268,9 @@ export function registerSwarmRoutes(app: Express): void {
         });
         log.info("swarm_stream_completed", { taskLength: task.length });
       })
-      .catch((err: unknown) => {
-        writeEvent("error", { error: String(err) });
-        log.error("swarm_stream_failed", { error: String(err) });
+      .catch((error: unknown) => {
+        writeEvent("error", { error: String(error) });
+        log.error("swarm_stream_failed", { error: String(error) });
       })
       .finally(() => {
         off("*", handler);

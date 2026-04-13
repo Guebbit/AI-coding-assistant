@@ -257,19 +257,19 @@ export class SwarmOrchestrator {
         durationMs,
         success: true,
       };
-    } catch (err) {
+    } catch (error) {
       const durationMs = Date.now() - startedAt;
-      const error = String(err);
+      const errorMessage = String(error);
 
       log.warn("swarm_subtask_failed", {
         subtaskId: subtask.id,
         durationMs,
-        error,
+        error: errorMessage,
       });
 
       emit({
         type: "swarm:subtask_error",
-        payload: { subtaskId: subtask.id, error },
+        payload: { subtaskId: subtask.id, error: errorMessage },
       });
 
       return {
@@ -277,7 +277,7 @@ export class SwarmOrchestrator {
         answer: "",
         durationMs,
         success: false,
-        error,
+        error: errorMessage,
       };
     }
   }
@@ -366,8 +366,8 @@ export class SwarmOrchestrator {
         stream: false,
       });
       return answer.trim();
-    } catch (err) {
-      log.warn("swarm_synthesis_failed", { error: String(err) });
+    } catch (error) {
+      log.warn("swarm_synthesis_failed", { error: String(error) });
       /* Graceful degradation — concatenate subtask answers. */
       return subtaskResults
         .filter((r) => r.success)

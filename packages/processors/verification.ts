@@ -85,8 +85,8 @@ export const verificationProcessor = createProcessor({
             };
             valid = parsed.valid !== false;
             issue = typeof parsed.issue === 'string' ? parsed.issue : null;
-        } catch (err) {
-            log.warn('verification_call_failed', { error: String(err) });
+        } catch (error) {
+            log.warn('verification_call_failed', { error: String(error) });
             /* Fail open — do not block the agent on a verification error. */
             return;
         }

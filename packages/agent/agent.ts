@@ -385,23 +385,23 @@ export class Agent {
                 stream: false
             });
             summary = debugResult.trim() || summary;
-        } catch (debugErr) {
-            log.warn('agent_self_debug_failed', { error: String(debugErr) });
+        } catch (error) {
+            log.warn('agent_self_debug_failed', { error: String(error) });
         }
 
         /* Persist the dead-end so future runs can avoid repeating it. */
         try {
             await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`);
-        } catch (memErr) {
-            log.warn('agent_memory_add_failed', { error: String(memErr) });
+        } catch (error) {
+            log.warn('agent_memory_add_failed', { error: String(error) });
         }
 
         /* Write the full diagnostic log with the AI commentary. */
         try {
             diagnosticFile = await writeDiagnosticLog(diagnosticEntries, task, summary);
             await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
-        } catch (logErr) {
-            log.warn('agent_diagnostic_log_failed', { error: String(logErr) });
+        } catch (error) {
+            log.warn('agent_diagnostic_log_failed', { error: String(error) });
         }
 
         emit({
