@@ -58,20 +58,13 @@ Configure the database connection:
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "How many users signed up this month?"
-             ↓
-Agent thinks: "I need to query the database"
-             ↓
-Agent calls:  mysql_query  →  {
-  "sql": "SELECT COUNT(*) as total FROM users WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
-}
-             ↓
-Tool connects to MySQL using env vars, runs the SELECT
-             ↓
-Result: [{ "total": 47 }]
-             ↓
-Agent answers: "47 users signed up this month."
+```mermaid
+flowchart TD
+    A["You ask: 'How many users signed up this month?'"] --> B["Agent thinks: 'I need to query the database'"]
+    B --> C["Agent calls: mysql_query →\nSELECT COUNT(*) as total FROM users\nWHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"]
+    C --> D["Tool connects to MySQL using env vars, runs SELECT"]
+    D --> E["Result: [{ total: 47 }]"]
+    E --> F["Agent answers: '47 users signed up this month.'"]
 ```
 
 ## Real-life use cases

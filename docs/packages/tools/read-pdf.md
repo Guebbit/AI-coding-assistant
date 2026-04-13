@@ -38,18 +38,13 @@ The tool accepts either a file path (disk) or inline base64 data (e.g. from an A
 
 ## How it works internally
 
-```text
-PDF from disk OR base64 data from upload
-    |
-Tool resolves path against project root (rejects traversal) or uses base64 directly
-    |
-pdf-parse library reads binary PDF
-    |
-Extracts text layer from each page
-    |
-Returns: { text: "...", pages: N }
-    |
-Agent can now reason about the PDF content
+```mermaid
+flowchart TD
+    A["PDF from disk OR base64 data from upload"] --> B["Tool resolves path against project root\n(rejects traversal) or uses base64 directly"]
+    B --> C["pdf-parse library reads binary PDF"]
+    C --> D["Extracts text layer from each page"]
+    D --> E["Returns: { text: '...', pages: N }"]
+    E --> F["Agent can now reason about the PDF content"]
 ```
 
 There is also a dedicated upload endpoint: `POST /upload/read-pdf` (accepts `multipart/form-data`).

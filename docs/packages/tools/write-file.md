@@ -74,25 +74,15 @@ Without `allowWrite: true`, both `write_file` and `scaffold_project` are not reg
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "Create a new React app called my-widget with a basic App.tsx"
-  (with allowWrite: true)
-             |
-Agent thinks: "I need to create the file"
-             |
-Agent calls:  write_file  ->  {
-  "path": "my-widget/src/App.tsx",
-  "content": "import React from 'react';\n\nexport default function App() {\n  return <div>Hello</div>;\n}\n",
-  "mode": "create"
-}
-             |
-Tool resolves full path:  data/generated-projects/my-widget/src/App.tsx
-             |
-Creates parent directories if needed, writes the file
-             |
-Returns: { path: "...", bytesWritten: 89 }
-             |
-Agent confirms file was created
+```mermaid
+flowchart TD
+    A["You ask: 'Create a new React app called my-widget with a basic App.tsx'\n(with allowWrite: true)"]
+    A --> B["Agent thinks: 'I need to create the file'"]
+    B --> C["Agent calls: write_file →\n{ path: 'my-widget/src/App.tsx', content: '...', mode: 'create' }"]
+    C --> D["Tool resolves full path:\ndata/generated-projects/my-widget/src/App.tsx"]
+    D --> E["Creates parent directories if needed, writes the file"]
+    E --> F["Returns: { path: '...', bytesWritten: 89 }"]
+    F --> G["Agent confirms file was created"]
 ```
 
 ## Real-life use cases

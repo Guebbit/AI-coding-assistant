@@ -59,17 +59,12 @@ The transcribed text as a plain string:
 
 ## How it works internally
 
-```text
-Audio from disk OR base64 data from upload  (.wav / .mp3 / .m4a)
-    |
-Tool reads file bytes (or uses provided base64 directly)
-    |
-POST /v1/audio/transcriptions  ->  Ollama (OpenAI-compatible endpoint)
-  multipart/form-data: file + model + language + prompt
-    |
-Whisper model transcribes the audio
-    |
-Tool returns transcribed text to agent
+```mermaid
+flowchart TD
+    A["Audio from disk OR base64 upload\n(.wav / .mp3 / .m4a)"] --> B["Tool reads file bytes\n(or uses provided base64)"]
+    B --> C["POST /v1/audio/transcriptions → Ollama\nmultipart/form-data: file + model + language + prompt"]
+    C --> D["Whisper model transcribes audio"]
+    D --> E["Tool returns transcribed text to agent"]
 ```
 
 There is also a dedicated upload endpoint: `POST /upload/speech-to-text` (accepts `multipart/form-data`).

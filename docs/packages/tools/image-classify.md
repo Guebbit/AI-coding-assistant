@@ -68,19 +68,13 @@ These defaults are tuned for factual precision — the vision model is asked to 
 
 ## How the tool works internally
 
-```text
-Image from disk OR base64 data from upload
-    ↓
-Tool encodes file bytes as Base64 (or uses provided base64 directly)
-    ↓
-POST /api/generate  →  Ollama
-  { model: "llava-llama3", prompt: "...", images: ["<base64>"] }
-    ↓
-Ollama passes image to vision model
-    ↓
-Model returns text description
-    ↓
-Tool returns description to agent
+```mermaid
+flowchart TD
+    A["Image from disk OR base64 data from upload"] --> B["Tool encodes file bytes as Base64\n(or uses provided base64 directly)"]
+    B --> C["POST /api/generate → Ollama\n{ model: 'llava-llama3', prompt: '...', images: ['base64'] }"]
+    C --> D["Ollama passes image to vision model"]
+    D --> E["Model returns text description"]
+    E --> F["Tool returns description to agent"]
 ```
 
 There is also a dedicated upload endpoint: `POST /upload/image-classify` (accepts `multipart/form-data`).

@@ -12,14 +12,11 @@ The model can reason, plan, and summarise on its own — but tools let it **act 
 
 ## Role
 
-```text
-Agent decides:   "I should use tool X with input Y"
-                        |
-Runtime:         Executes tool X(Y)
-                        |
-Result:          Appended to agent context
-                        |
-Agent decides:   next action (or "none" = done)
+```mermaid
+flowchart TD
+    A["Agent decides:\n'I should use tool X with input Y'"] --> B["Runtime:\nExecutes tool X(Y)"]
+    B --> C["Result:\nAppended to agent context"]
+    C --> D["Agent decides:\nnext action (or 'none' = done)"]
 ```
 
 ## Tool contract

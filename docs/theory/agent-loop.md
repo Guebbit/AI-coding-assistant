@@ -10,44 +10,18 @@ The agent is a loop: ask the model → run the tool → repeat (max 5 steps) →
 
 ## Visual loop
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│                      AGENT LOOP                         │
-│                                                         │
-│  ┌──────────────┐                                       │
-│  │  Build prompt │  task + memory + context + tools     │
-│  └──────┬───────┘                                       │
-│         │                                               │
-│         ▼                                               │
-│  ┌──────────────┐                                       │
-│  │  Route step  │  fast / reasoning / code / default    │
-│  └──────┬───────┘                                       │
-│         │                                               │
-│         ▼                                               │
-│  ┌──────────────┐                                       │
-│  │  Ask LLM     │  → strict JSON: thought+action+input  │
-│  └──────┬───────┘                                       │
-│         │                                               │
-│    ┌────┴─────┐                                         │
-│    │ action?  │                                         │
-│    └────┬─────┘                                         │
-│         │                                               │
-│    ─────┼─────────────────────────────                  │
-│   "none"│            tool name (e.g."read_file")        │
-│         │                    │                          │
-│         ▼                    ▼                          │
-│      DONE ✅         ┌──────────────┐                   │
-│                      │  Run tool    │                   │
-│                      └──────┬───────┘                   │
-│                             │                           │
-│                             ▼                           │
-│                      ┌──────────────┐                   │
-│                      │ Append result│ → back to top     │
-│                      │ to context   │                   │
-│                      └──────────────┘                   │
-│                                                         │
-│  Max steps = 5  →  fallback answer if limit reached     │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph LOOP["AGENT LOOP"]
+        Build["Build prompt\ntask + memory + context + tools"] --> Route["Route step\nfast / reasoning / code / default"]
+        Route --> Ask["Ask LLM\n→ strict JSON: thought + action + input"]
+        Ask --> Decision{"action?"}
+        Decision -->|"'none'"| Done["✅ DONE"]
+        Decision -->|"tool name (e.g. read_file)"| RunTool["Run tool"]
+        RunTool --> Append["Append result to context"]
+        Append --> Build
+    end
+    LOOP -.->|"Max steps = 5"| Fallback["⚠️ Fallback answer if limit reached"]
 ```
 
 ## Concrete example: "What npm scripts are available?"
@@ -105,10 +79,10 @@ The loop is built to **recover and continue** whenever possible.
 
 ## Stop conditions
 
-```text
-1. action: "none"   → model says it is done  → returns answer
-2. step count >= 5  → step limit reached      → returns fallback
-3. Unrecoverable error                        → emits agent:error
+```mermaid
+flowchart LR
+    A["1. action: 'none' → returns answer"] --- B["2. step count ≥ 5 → returns fallback"]
+    B --- C["3. Unrecoverable error → emits agent:error"]
 ```
 
 ```mermaid

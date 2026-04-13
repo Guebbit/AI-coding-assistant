@@ -78,35 +78,57 @@ Two operational surfaces:
 
 ## Execution graph — `POST /run`
 
-```
-HTTP POST /run  { task, allowWrite?, profile? }
-  └─ apps/api/index.ts
-       ├─ validates profile (if present) against fast|reasoning|code|default
-       ├─ selects Agent instance (readOnly or writeEnabled)
-       └─ agent.run(task, { profile? })
-            ├─ getMemory(task)          ← packages/memory/memory.ts
-            ├─ emit("agent:start")
-            └─ LOOP (max MAX_STEPS, default 5):
-                 ├─ processInputStep processors
-                 ├─ buildPrompt(task, context, memory)
-                 ├─ routeModel(task, context, step, forcedProfile?)
-                 │    ├─ if forcedProfile set: return it immediately (no LLM cost)
-                 │    ├─ mode=rules: keyword + heuristic match
-                 │    └─ mode=model: calls ROUTER_MODEL with JSON prompt
-                 ├─ generateWithMetadata(prompt, { model })
-                 ├─ parse response → agentStepSchema (Zod)
-                 │    on parse failure: append correction to context, continue
-                 ├─ processOutputStep processors
-                 ├─ if action === "none":
-                 │    ├─ addMemory(...)
-                 │    ├─ emit("agent:done")
-                 │    └─ return thought  ← final answer
-                 ├─ if action unknown:
-                 │    └─ append error to context, continue
-                 └─ tool.execute(input)
-                      ├─ on success: append result to context, emit("tool:result")
-                      └─ on failure: append error to context, emit("tool:error")
-            └─ if loop exhausted: emit("agent:max_steps"), return fallback string
+```mermaid
+flowchart TD
+    POST["HTTP POST /run { task, allowWrite?, profile? }"]
+    POST --> API["apps/api/index.ts"]
+    API --> Validate["validates profile against fast|reasoning|code|default"]
+    API --> Select["selects Agent instance (readOnly or writeEnabled)"]
+    API --> Run["agent.run(task, { profile? })"]
+
+    Run --> GetMem["getMemory(task) ← packages/memory/memory.ts"]
+    Run --> EmitStart["emit('agent:start')"]
+
+    subgraph LOOP["LOOP (max MAX_STEPS, default 5)"]
+        ProcInput["processInputStep processors"]
+        BuildPrompt["buildPrompt(task, context, memory)"]
+        RouteModel["routeModel(task, context, step, forcedProfile?)"]
+        RouteModel --> Forced{"forcedProfile set?"}
+        Forced -->|Yes| ReturnImm["return it immediately (no LLM cost)"]
+        Forced -->|No| Mode{"router mode?"}
+        Mode -->|rules| Keywords["keyword + heuristic match"]
+        Mode -->|model| RouterLLM["calls ROUTER_MODEL with JSON prompt"]
+
+        Generate["generateWithMetadata(prompt, { model })"]
+        Parse["parse response → agentStepSchema (Zod)"]
+        Parse -->|"parse failure"| Correct["append correction to context, continue"]
+        Correct --> ProcInput
+        ProcOutput["processOutputStep processors"]
+
+        ActionCheck{"action?"}
+        ActionCheck -->|"'none'"| AddMem["addMemory(...)"]
+        AddMem --> EmitDone["emit('agent:done')"]
+        EmitDone --> ReturnAnswer["return thought ← final answer"]
+
+        ActionCheck -->|"unknown"| AppendErr["append error to context, continue"]
+        AppendErr --> ProcInput
+
+        ActionCheck -->|"tool name"| ToolExec["tool.execute(input)"]
+        ToolExec -->|success| ToolOk["append result to context, emit('tool:result')"]
+        ToolExec -->|failure| ToolFail["append error to context, emit('tool:error')"]
+        ToolOk --> ProcInput
+        ToolFail --> ProcInput
+
+        ProcInput --> BuildPrompt --> RouteModel
+        ReturnImm --> Generate
+        Keywords --> Generate
+        RouterLLM --> Generate
+        Generate --> Parse --> ProcOutput --> ActionCheck
+    end
+
+    EmitStart --> LOOP
+    GetMem --> LOOP
+    LOOP -->|"loop exhausted"| MaxSteps["emit('agent:max_steps'), return fallback string"]
 ```
 
 ---

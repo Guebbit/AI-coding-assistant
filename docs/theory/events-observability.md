@@ -10,30 +10,34 @@ Components emit named events → API subscribes and logs them. Loose coupling, f
 
 ## Visual: Event flow through a typical run
 
-```text
-POST /run
-  |
-  ▼
-API  ─────── subscribes to all events via on("*", handler)
-  |
-  ▼
-agent.run(task)
-  |
-  ├── emit  agent:start      { task }
-  |
-  ├─[step 1]─────────────────────────────────────
-  |   ├── emit  agent:step   { step: 1, thought, action, input }
-  |   ├── emit  agent:model_routed  { profile: "code", model: "qwen2.5-coder" }
-  |   ├── [tool executes]
-  |   └── emit  tool:result  { tool: "read_file", result: "..." }
-  |
-  ├─[step 2]─────────────────────────────────────
-  |   ├── emit  agent:step   { step: 2, thought, action: "none" }
-  |   └── (no tool call — action is "none")
-  |
-  └── emit  agent:done       { answer: "..." }
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant Agent
+    participant Events as Event Bus
 
-API logs each event as structured JSON (or pretty-prints if LOG_PRETTY=true)
+    Client->>API: POST /run
+    API->>Events: on("*", handler)
+    API->>Agent: agent.run(task)
+    Agent->>Events: emit(agent:start, { task })
+
+    rect rgb(240, 248, 255)
+        Note over Agent,Events: Step 1
+        Agent->>Events: emit(agent:step, { step: 1, thought, action, input })
+        Agent->>Events: emit(agent:model_routed, { profile: "code", model: "qwen2.5-coder" })
+        Note over Agent: tool executes
+        Agent->>Events: emit(tool:result, { tool: "read_file", result: "..." })
+    end
+
+    rect rgb(240, 248, 255)
+        Note over Agent,Events: Step 2
+        Agent->>Events: emit(agent:step, { step: 2, thought, action: "none" })
+        Note over Agent: no tool call — action is "none"
+    end
+
+    Agent->>Events: emit(agent:done, { answer: "..." })
+    Note over API: logs each event as structured JSON
 ```
 
 ## All event types

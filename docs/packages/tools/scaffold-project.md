@@ -96,24 +96,16 @@ data/
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "Scaffold a new project from template react-ts called my-widget"
-  (with allowWrite: true)
-             |
-Agent calls:  scaffold_project  ->  {
-  "template": "react-ts",
-  "projectName": "my-widget"
-}
-             |
-Tool checks:  data/boilerplates/react-ts  exists? -> yes
-Tool checks:  data/generated-projects/my-widget  exists? -> no (safe to create)
-             |
-Tool copies entire react-ts/ tree  ->  data/generated-projects/my-widget/
-Tool reads:   data/boilerplates/react-ts/template.json
-             |
-Returns:  { projectPath: "data/generated-projects/my-widget", metadata: {...} }
-             |
-Agent: "Project my-widget created from react-ts template."
+```mermaid
+flowchart TD
+    A["You ask: 'Scaffold a new project from template react-ts called my-widget'\n(with allowWrite: true)"]
+    A --> B["Agent calls: scaffold_project →\n{ template: 'react-ts', projectName: 'my-widget' }"]
+    B --> C["Tool checks: data/boilerplates/react-ts exists? → yes"]
+    C --> D["Tool checks: data/generated-projects/my-widget exists? → no (safe)"]
+    D --> E["Tool copies react-ts/ tree →\ndata/generated-projects/my-widget/"]
+    E --> F["Tool reads: data/boilerplates/react-ts/template.json"]
+    F --> G["Returns: { projectPath, metadata }"]
+    G --> H["Agent: 'Project my-widget created from react-ts template.'"]
 ```
 
 ## Setting up your first boilerplate

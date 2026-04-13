@@ -43,14 +43,11 @@ The completed/suggested code as a plain string.
 
 ## How it works internally
 
-```text
-Your prefix + suffix
-    |
-Tool sends to Ollama using "suffix" field (infill mode)
-    |
-Code model (e.g. starcoder2) generates the middle/continuation
-    |
-Returns completion string
+```mermaid
+flowchart TD
+    A["Your prefix + suffix"] --> B["Tool sends to Ollama\nusing suffix field (infill mode)"]
+    B --> C["Code model (e.g. starcoder2)\ngenerates the middle/continuation"]
+    C --> D["Returns completion string"]
 ```
 
 ## Model defaults (priority order)

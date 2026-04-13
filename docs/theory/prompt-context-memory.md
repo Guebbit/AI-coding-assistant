@@ -10,33 +10,16 @@ Each LLM call sees: task + memory (past runs) + context (current run) + tool lis
 
 ## Visual: What the model sees each step
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                   PROMPT (sent to LLM)                       │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ TASK                                                  │   │
-│  │  "Find where the agent emits completion events."      │   │
-│  └───────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ MEMORY  (from previous runs — semantic recall)        │   │
-│  │  "Previous run: read_file on agent.ts returned loop"  │   │
-│  └───────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ CONTEXT  (steps so far in THIS run)                   │   │
-│  │  "Step 1 result: agent.ts content = ..."              │   │
-│  └───────────────────────────────────────────────────────┘   │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │ TOOL LIST  (what actions are available)               │   │
-│  │  read_file: "Read a file..." │ shell: "Run command..."│   │
-│  └───────────────────────────────────────────────────────┘   │
-│                                                              │
-│  → Model must return:                                        │
-│    { "thought": "...", "action": "...", "input": {...} }     │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph PROMPT["PROMPT (sent to LLM)"]
+        TASK["📋 TASK\n'Find where the agent emits completion events.'"]
+        MEMORY["🧠 MEMORY (from previous runs — semantic recall)\n'Previous run: read_file on agent.ts returned loop'"]
+        CONTEXT["📝 CONTEXT (steps so far in THIS run)\n'Step 1 result: agent.ts content = ...'"]
+        TOOLS["🔧 TOOL LIST (what actions are available)\nread_file · shell · mysql_query · ..."]
+    end
+    PROMPT --> LLM["LLM"]
+    LLM --> Output["Model must return:\n{ thought, action, input }"]
 ```
 
 ## Each block explained
@@ -78,12 +61,13 @@ shell: "Run an allowlisted shell command. Input: { command }"
 
 ## Why memory is capped
 
-```text
-Unbounded memory = massive prompt = slow + expensive + confused model
-
-Current limits:
-  Local ring buffer:  20 entries max  (oldest evicted first)
-  Qdrant recall:      top N by similarity  (relevant, not just recent)
+```mermaid
+flowchart LR
+    subgraph Limits["Current limits"]
+        Ring["Local ring buffer:\n20 entries max\n(oldest evicted first)"]
+        Qdrant["Qdrant recall:\ntop N by similarity\n(relevant, not just recent)"]
+    end
+    Unbounded["⚠️ Unbounded memory =\nmassive prompt =\nslow + expensive + confused model"] -.->|"solved by"| Limits
 ```
 
 Capped memory keeps prompts focused and the model sharp.
@@ -140,16 +124,20 @@ STEP 2 PROMPT:
 
 ## Memory lifecycle (across runs)
 
-```text
-Run 1:
-  task → agent runs → result → addMemory({ task, result })
-                                         stored in Qdrant
-
-Run 2 (different task, same topic):
-  task → getMemory(task)
-       → Qdrant finds similar past entries
-       → injects into prompt as "memory" block
-       → agent benefits from previous work
+```mermaid
+flowchart TD
+    subgraph Run1["Run 1"]
+        T1["task"] --> Agent1["agent runs"] --> R1["result"]
+        R1 --> Add["addMemory({ task, result })"]
+        Add --> Store["stored in Qdrant"]
+    end
+    subgraph Run2["Run 2 (different task, same topic)"]
+        T2["task"] --> Get["getMemory(task)"]
+        Get --> Find["Qdrant finds similar past entries"]
+        Find --> Inject["injects into prompt as 'memory' block"]
+        Inject --> Benefit["agent benefits from previous work"]
+    end
+    Store -.-> Get
 ```
 
 ```mermaid
