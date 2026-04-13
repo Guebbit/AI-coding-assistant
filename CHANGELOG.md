@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+
+- **`openapi.yaml` — `/upload/read-pdf` section placement**: Moved `/upload/read-pdf` from under the misplaced `# ── Library endpoints ──` comment to sit with the other upload endpoints (after `/upload/speech-to-text`), where it belongs.
+- **`openapi.yaml` — `RunRequest.allowWrite` description**: Updated to mention all three tools unlocked by `allowWrite: true` — `write_file`, `scaffold_project`, and `document_ingest` (the third was previously omitted).
+- **`openapi.yaml` — `/health` response schema**: Added missing `timestamp` field (`type: string, format: date-time`) to match the actual implementation which returns `{ status: "ok", timestamp: new Date().toISOString() }`.
+- **`openapi.yaml` — `/upload/image-classify` model description**: Replaced the hardcoded and inaccurate `llava:13b` default with a generic reference to the `TOOL_VISION_MODEL` environment variable, consistent with `AI_README.md`.
+
 ### Added
 - **Informational endpoints** (`apps/api/info-endpoints.ts`): three new lightweight `GET` endpoints that require no LLM call:
   - `GET /info/modes` — lists all Manna agent routing profiles (modes) with their resolved Ollama models, controlling env vars, and descriptions.

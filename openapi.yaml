@@ -55,6 +55,11 @@ paths:
                                     status:
                                         type: string
                                         example: ok
+                                    timestamp:
+                                        type: string
+                                        format: date-time
+                                        description: ISO 8601 timestamp of when the health check was served.
+                                        example: '2026-04-13T20:05:07.044Z'
 
     /run:
         post:
@@ -244,7 +249,7 @@ paths:
             summary: Classify or describe an uploaded image
             description: |
                 Accepts a multipart file upload and classifies/describes the image using
-                `TOOL_VISION_MODEL` (default `llava:13b`). Max file size: 50 MB.
+                the model configured in `TOOL_VISION_MODEL`. Max file size: 50 MB.
             operationId: uploadImageClassify
             requestBody:
                 required: true
@@ -320,6 +325,45 @@ paths:
                                     text:
                                         type: string
                                         description: Transcribed text
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
+
+    /upload/read-pdf:
+        post:
+            tags: [upload]
+            summary: Extract text from an uploaded PDF
+            description: |
+                Accepts a multipart PDF upload and returns the extracted text plus page count.
+                Max file size: 50 MB.
+            operationId: uploadReadPdf
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required: [file]
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                    description: PDF file
+            responses:
+                '200':
+                    description: Extracted PDF content
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    text:
+                                        type: string
+                                        description: Full extracted text
+                                    pages:
+                                        type: integer
+                                        description: Total number of pages in the PDF
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -474,47 +518,6 @@ paths:
                                                                 type: boolean
                                                             description:
                                                                 type: string
-
-    # ── Library endpoints ──────────────────────────────────────────────────────
-
-    /upload/read-pdf:
-        post:
-            tags: [upload]
-            summary: Extract text from an uploaded PDF
-            description: |
-                Accepts a multipart PDF upload and returns the extracted text plus page count.
-                Max file size: 50 MB.
-            operationId: uploadReadPdf
-            requestBody:
-                required: true
-                content:
-                    multipart/form-data:
-                        schema:
-                            type: object
-                            required: [file]
-                            properties:
-                                file:
-                                    type: string
-                                    format: binary
-                                    description: PDF file
-            responses:
-                '200':
-                    description: Extracted PDF content
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    text:
-                                        type: string
-                                        description: Full extracted text
-                                    pages:
-                                        type: integer
-                                        description: Total number of pages in the PDF
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '500':
-                    $ref: '#/components/responses/InternalError'
 
     # ── OpenAI-compatible (temporary) ─────────────────────────────────────────
 
@@ -829,7 +832,7 @@ components:
                     type: boolean
                     default: false
                     description: |
-                        When `true`, unlocks the `write_file` and `scaffold_project` tools.
+                        When `true`, unlocks the `write_file`, `scaffold_project`, and `document_ingest` tools.
                         Default `false`.
                 profile:
                     type: string
