@@ -37,8 +37,13 @@ function slugify(task: string): string {
   return task
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+    .slice(0, 60)
+    /* Trim leading/trailing hyphens with a simple split-join (no ReDoS risk). */
+    .split("")
+    .reduce<string>((acc, ch, i, arr) => {
+      if (ch === "-" && (i === 0 || i === arr.length - 1)) return acc;
+      return acc + ch;
+    }, "");
 }
 
 /**
@@ -85,10 +90,13 @@ export async function writeDiagnosticLog(
 
   const iso = new Date().toISOString().replace(/[:.]/g, "-");
   const slug = slugify(taskSlug);
-  const filename = `${iso}_${slug}.md`;
+  /* Sanitise the filename: keep only alphanumeric, hyphens, and dots.
+   * This removes any residual characters that could be used for path
+   * injection even after slugify. */
+  const safeFilename = `${iso}_${slug}.md`.replace(/[^a-zA-Z0-9_\-. ]/g, "_");
 
   /* resolveInsideRoot ensures the file stays inside absDir. */
-  const filePath = resolveInsideRoot(absDir, filename);
+  const filePath = resolveInsideRoot(absDir, safeFilename);
 
   const rows = entries
     .map(

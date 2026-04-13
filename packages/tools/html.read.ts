@@ -15,17 +15,21 @@ import { z } from "zod";
 /**
  * Decode a small set of common HTML entities.
  *
+ * The `&amp;` case is handled last to avoid double-decoding patterns
+ * such as `&amp;lt;` → `&lt;` → `<`.
+ *
  * @param html - Raw HTML string that may contain entities.
  * @returns String with entities replaced by their Unicode equivalents.
  */
 function decodeEntities(html: string): string {
   return html
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
+    .replace(/&nbsp;/g, " ")
+    /* Replace &amp; last to prevent double-unescaping. */
+    .replace(/&amp;/g, "&");
 }
 
 /**
@@ -37,9 +41,9 @@ function decodeEntities(html: string): string {
 function htmlToText(html: string): string {
   return decodeEntities(
     html
-      /* Remove <script> and <style> blocks with their contents. */
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+      /* Remove <script>…</script> blocks including closing tags with spaces. */
+      .replace(/<script[\s\S]*?<\/script\s*>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style\s*>/gi, " ")
       /* Insert newlines at block-level boundaries. */
       .replace(/<\/(p|div|li|h[1-6]|tr|br)[^>]*>/gi, "\n")
       /* Strip remaining tags. */

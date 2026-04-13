@@ -79,15 +79,20 @@ async function extractZipEntry(
 /**
  * Strip XML tags from a string, returning plain text.
  *
+ * Inserts newlines at OOXML paragraph/line-break boundaries before
+ * removing all remaining tags.  The output contains no angle brackets.
+ *
  * @param xml - Raw XML string.
  * @returns Text content with all XML tags removed.
  */
 function stripXml(xml: string): string {
-  /* Insert newlines at paragraph/line-break boundaries before stripping. */
   return xml
-    .replace(/<w:p[ />]/g, "\n<w:p ")
-    .replace(/<w:br[^>]*>/g, "\n")
-    .replace(/<[^>]+>/g, "")
+    /* Insert newlines at paragraph/line-break elements before stripping. */
+    .replace(/<w:p[\s/>]/gi, "\n")
+    .replace(/<w:br[^>]*\/>/gi, "\n")
+    /* Remove all XML/HTML tags — must run before any output is used. */
+    .replace(/<[^>]*>/g, "")
+    /* Collapse excessive blank lines. */
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
