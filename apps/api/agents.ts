@@ -1,6 +1,7 @@
 /**
  * Shared agent wiring — constructs and exports the pre-built `Agent`
- * instances and the `createAgent` selector used by all API route modules.
+ * instances, the `createAgent` selector, and the `SwarmOrchestrator`
+ * factory used by all API route modules.
  *
  * Extracting agent setup into this module avoids duplication between
  * `index.ts` and `openai-compat.ts` while keeping each route module
@@ -11,6 +12,8 @@
 
 import { Agent } from "../../packages/agent/agent";
 import type { ModelProfile } from "../../packages/agent/model-router";
+import { SwarmOrchestrator } from "../../packages/swarm/orchestrator";
+import type { IProcessor } from "../../packages/processors/types";
 import {
   readFileTool,
   writeFileTool,
@@ -67,20 +70,37 @@ const allToolDescriptionMap = new Map<string, string>(
 /* ── Processor registration ──────────────────────────────────────────── */
 
 /**
+ * Build the list of active processors based on environment variables.
+ *
+ * Shared by both single-agent and swarm paths so the same middleware
+ * applies regardless of execution mode.
+ *
+ * @returns An array of active {@link IProcessor} instances.
+ */
+function buildProcessors(): IProcessor[] {
+  const procs: IProcessor[] = [];
+
+  if (process.env.AGENT_VERIFICATION_ENABLED === "true") {
+    procs.push(verificationProcessor);
+  }
+
+  if (process.env.TOOL_RERANKER_ENABLED === "true") {
+    procs.push(createToolRerankerProcessor(allToolDescriptionMap));
+  }
+
+  return procs;
+}
+
+/**
  * Attach optional processors to an agent based on environment variables.
  *
  * @param agent - The `Agent` instance to configure.
  * @returns The same `agent` for fluent chaining.
  */
 function attachProcessors(agent: Agent): Agent {
-  if (process.env.AGENT_VERIFICATION_ENABLED === "true") {
-    agent.addProcessor(verificationProcessor);
+  for (const proc of buildProcessors()) {
+    agent.addProcessor(proc);
   }
-
-  if (process.env.TOOL_RERANKER_ENABLED === "true") {
-    agent.addProcessor(createToolRerankerProcessor(allToolDescriptionMap));
-  }
-
   return agent;
 }
 
@@ -105,4 +125,19 @@ export const VALID_PROFILES = new Set<ModelProfile>(["fast", "reasoning", "code"
  */
 export function createAgent(allowWrite: boolean): Agent {
   return allowWrite ? writeEnabledAgent : readOnlyAgent;
+}
+
+/* ── Swarm factory ───────────────────────────────────────────────────── */
+
+/**
+ * Create a {@link SwarmOrchestrator} with the appropriate tool set and processors.
+ *
+ * @param allowWrite - Whether write tools should be available to worker agents.
+ * @returns A configured `SwarmOrchestrator` instance.
+ */
+export function createSwarmOrchestrator(allowWrite: boolean): SwarmOrchestrator {
+  const tools = allowWrite
+    ? [...readOnlyTools, ...writeTools]
+    : readOnlyTools;
+  return new SwarmOrchestrator(tools, buildProcessors());
 }

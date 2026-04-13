@@ -23,6 +23,10 @@ tags:
       description: File-upload helpers (image, audio, PDF)
     - name: openai-compat
       description: OpenAI-compatible endpoints for Open WebUI integration (temporary)
+    - name: swarm
+      description: |
+          Multi-agent swarm orchestration. Decomposes complex tasks into subtasks,
+          delegates each to a specialised agent instance, and synthesises a final answer.
     - name: info
       description: Informational endpoints — metadata about the Manna instance (no LLM calls)
     - name: library
@@ -157,6 +161,82 @@ paths:
 
                 '400':
                     $ref: '#/components/responses/BadRequest'
+
+    # ── Swarm endpoints ───────────────────────────────────────────────────────
+
+    /run/swarm:
+        post:
+            tags: [swarm]
+            summary: Run a multi-agent swarm to solve a complex task
+            description: |
+                Decomposes the task into subtasks using an LLM, executes each subtask
+                through a specialised agent (respecting dependency ordering), and
+                synthesises a final answer from all subtask results.
+
+                Use this instead of `POST /run` when the task is complex enough to
+                benefit from divide-and-conquer (e.g. "build X, write tests, and document it").
+            operationId: postRunSwarm
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SwarmRequest'
+                        examples:
+                            basic:
+                                summary: Complex multi-step task
+                                value:
+                                    task: 'Build a React login page with form validation, write unit tests, and create API documentation'
+                            withOptions:
+                                summary: With profile override and subtask limit
+                                value:
+                                    task: 'Refactor the auth module and update the related tests'
+                                    profile: code
+                                    maxSubtasks: 3
+                                    allowWrite: true
+            responses:
+                '200':
+                    description: Swarm completed successfully
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SwarmResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
+
+    /run/swarm/stream:
+        post:
+            tags: [swarm]
+            summary: Run a multi-agent swarm with SSE streaming
+            description: |
+                Same as `POST /run/swarm`, but streams agent lifecycle events as
+                Server-Sent Events. The connection stays open until the swarm completes.
+
+                SSE event types: `decomposed`, `subtask_start`, `subtask_done`,
+                `subtask_error`, `step`, `tool`, `route`, `done`, `error`.
+            operationId: postRunSwarmStream
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SwarmRequest'
+            responses:
+                '200':
+                    description: SSE event stream
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                                description: |
+                                    Server-Sent Events stream. Each event is typed
+                                    (decomposed, subtask_start, subtask_done, step, tool, route, done, error).
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
 
     # ── IDE endpoints ─────────────────────────────────────────────────────────
 
@@ -847,6 +927,82 @@ components:
                 result:
                     type: string
                     description: The agent's final answer as a plain string.
+
+        # ── Swarm schemas ────────────────────────────────────────────────────────
+
+        SwarmRequest:
+            type: object
+            required: [task]
+            properties:
+                task:
+                    type: string
+                    description: Natural-language description of the complex task to solve.
+                    example: 'Build a React login page, write tests, and create documentation'
+                allowWrite:
+                    type: boolean
+                    default: false
+                    description: When `true`, unlocks write tools for all subtask agents.
+                profile:
+                    type: string
+                    enum: [fast, reasoning, code, default]
+                    description: |
+                        Force a specific model profile for all subtask agents,
+                        overriding the decomposer's per-subtask suggestions.
+                maxSubtasks:
+                    type: integer
+                    minimum: 1
+                    maximum: 10
+                    default: 6
+                    description: Maximum number of subtasks the decomposer may produce.
+
+        SwarmSubtaskResult:
+            type: object
+            properties:
+                id:
+                    type: string
+                    description: Subtask identifier.
+                description:
+                    type: string
+                    description: What this subtask was asked to do.
+                profile:
+                    type: string
+                    description: Model profile used for this subtask.
+                success:
+                    type: boolean
+                    description: Whether the subtask completed without error.
+                answer:
+                    type: string
+                    description: The subtask agent's final answer.
+                durationMs:
+                    type: number
+                    description: Wall-clock execution time in milliseconds.
+                error:
+                    type: string
+                    description: Error message (only present when `success` is `false`).
+
+        SwarmResponse:
+            type: object
+            properties:
+                result:
+                    type: string
+                    description: The synthesised final answer.
+                subtaskResults:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/SwarmSubtaskResult'
+                    description: Individual results for each subtask.
+                decomposition:
+                    type: object
+                    properties:
+                        reasoning:
+                            type: string
+                            description: Decomposer's rationale for the subtask split.
+                        subtaskCount:
+                            type: integer
+                            description: Number of subtasks in the decomposition.
+                totalDurationMs:
+                    type: number
+                    description: Total wall-clock duration of the entire swarm run.
 
         # ── IDE schemas ───────────────────────────────────────────────────────────
 

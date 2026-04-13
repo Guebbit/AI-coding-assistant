@@ -17,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`openapi.yaml` — `/upload/image-classify` model description**: Replaced the hardcoded and inaccurate `llava:13b` default with a generic reference to the `TOOL_VISION_MODEL` environment variable, consistent with `AI_README.md`.
 
 ### Added
+- **Swarm orchestration** (`packages/swarm/`): Multi-agent task decomposition and execution. Complex tasks are broken into subtasks by an LLM decomposer, each delegated to a specialised `Agent` with its own model profile, then synthesised into a final answer.
+  - `packages/swarm/types.ts` — `ISubtask`, `IDecomposition`, `ISubtaskResult`, `ISwarmResult`, `ISwarmConfig`
+  - `packages/swarm/decomposer.ts` — `decomposeTask()` with fallback to single-subtask plan
+  - `packages/swarm/orchestrator.ts` — `SwarmOrchestrator` class with dependency-aware execution and synthesis
+- **Swarm HTTP endpoints** (`apps/api/swarm-endpoints.ts`):
+  - `POST /run/swarm` — run a swarm and return the final result as JSON
+  - `POST /run/swarm/stream` — run a swarm and stream lifecycle events as SSE
+- New env vars: `SWARM_DECOMPOSER_MODEL`, `SWARM_SYNTHESIS_MODEL`
+- New event types: `swarm:start`, `swarm:decomposed`, `swarm:subtask_start`, `swarm:subtask_done`, `swarm:subtask_error`, `swarm:done`
 - **Informational endpoints** (`apps/api/info-endpoints.ts`): three new lightweight `GET` endpoints that require no LLM call:
   - `GET /info/modes` — lists all Manna agent routing profiles (modes) with their resolved Ollama models, controlling env vars, and descriptions.
   - `GET /info/models` — proxies Ollama's `GET /api/tags` and returns all locally available models with size, digest, and detail metadata.
@@ -30,7 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Phase 4A — Tool reranker processor** (`packages/processors/tool-reranker.ts`): embeds tool descriptions once, then per-step selects the top-N most relevant tools by cosine similarity. Controlled by `TOOL_RERANKER_ENABLED` / `TOOL_RERANKER_TOP_N`.
 
 ### Changed
-
+- `apps/api/agents.ts`: extracted `buildProcessors()` helper; added `createSwarmOrchestrator()` factory; imports `SwarmOrchestrator` and `Processor` types.
+- `apps/api/index.ts`: registers swarm routes via `registerSwarmRoutes(app)` and info routes via `registerInfoRoutes(app)`.
 - `apps/api/agents.ts`: now imports and registers verification and tool-reranker processors; includes all new document reader tools in `readOnlyTools`; adds `document_ingest` to `writeTools`.
 - `packages/agent/agent.ts`: accumulates `IDiagnosticEntry[]` during the loop; passes budget state to `routeModel()`; writes diagnostic log on both success (when entries exist) and max-steps exhaustion.
 - `packages/tools/index.ts`: exports all new tool instances.

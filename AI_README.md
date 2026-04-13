@@ -73,9 +73,10 @@ It is NOT a chatbot frontend. It is a **tool-using agent server**.
 Four operational surfaces:
 
 1. `POST /run` — triggers the full agentic loop (reason → pick tool → execute → repeat).
-2. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
-3. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
-4. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
+2. `POST /run/swarm`, `POST /run/swarm/stream` — multi-agent swarm orchestration (decompose → delegate → synthesise).
+3. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
+4. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
+5. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
 
 ---
 
@@ -272,6 +273,12 @@ Canonical event types emitted during a run:
 | `tool:result`              | tool executed successfully                                                                                                                                                       |
 | `tool:error`               | tool threw                                                                                                                                                                       |
 | `tool:verification_failed` | verification processor detected an invalid tool choice; payload: `{ step, tool, issue }`                                                                                         |
+| `swarm:start`              | swarm orchestrator begins a run                                                                                                                                                  |
+| `swarm:decomposed`         | task decomposition complete; payload: `{ subtaskCount, reasoning, subtasks }`                                                                                                    |
+| `swarm:subtask_start`      | a subtask agent is starting; payload: `{ subtaskId, profile }`                                                                                                                   |
+| `swarm:subtask_done`       | a subtask agent completed; payload: `{ subtaskId, durationMs }`                                                                                                                  |
+| `swarm:subtask_error`      | a subtask agent failed; payload: `{ subtaskId, error }`                                                                                                                          |
+| `swarm:done`               | swarm finished with final answer; payload: `{ answer, totalDurationMs }`                                                                                                         |
 
 The API subscribes to `"*"` and logs all events via `winston`.
 
@@ -444,6 +451,67 @@ The stream closes automatically when the agent run completes (done / error / max
 
 ---
 
+## Swarm orchestration
+
+File: `packages/swarm/`  
+Endpoints: `apps/api/swarm-endpoints.ts`  
+Registered in `apps/api/index.ts` via `registerSwarmRoutes(app)`.
+
+The swarm decomposes a complex task into subtasks, delegates each to a specialised agent, and synthesises a final answer.
+
+```mermaid
+flowchart TD
+    POST["POST /run/swarm { task, allowWrite?, profile?, maxSubtasks? }"]
+    POST --> Orchestrator["SwarmOrchestrator.run()"]
+    Orchestrator --> Decompose["decomposeTask() — LLM call"]
+    Decompose --> Subtasks["ISubtask[] with profiles + dependencies"]
+    Subtasks --> TopoSort["Topological execution order"]
+    TopoSort --> Loop["For each ready subtask"]
+
+    subgraph SUBTASK["Per-subtask execution"]
+        CreateAgent["new Agent(tools)"]
+        Enrich["Build enriched prompt (description + dependency context)"]
+        RunAgent["agent.run(enrichedTask, { profile })"]
+        Collect["Collect ISubtaskResult"]
+    end
+
+    Loop --> SUBTASK
+    SUBTASK --> Loop
+    Loop -->|"all done"| Synthesise["Synthesis LLM call — merge subtask answers"]
+    Synthesise --> Result["ISwarmResult { answer, subtaskResults, totalDurationMs }"]
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /run/swarm` | Run swarm, return final result as JSON |
+| `POST /run/swarm/stream` | Run swarm, stream events as SSE |
+
+Request body:
+```json
+{
+  "task": "string (required)",
+  "allowWrite": false,
+  "profile": "fast|reasoning|code|default",
+  "maxSubtasks": 6
+}
+```
+
+SSE events for `/run/swarm/stream`:
+
+| SSE event | Trigger | Data shape |
+|---|---|---|
+| `decomposed` | `swarm:decomposed` | `{ subtaskCount, reasoning, subtasks }` |
+| `subtask_start` | `swarm:subtask_start` | `{ subtaskId, profile }` |
+| `subtask_done` | `swarm:subtask_done` | `{ subtaskId, durationMs }` |
+| `subtask_error` | `swarm:subtask_error` | `{ subtaskId, error }` |
+| `step` | `agent:step` | `{ step, action, thought }` |
+| `tool` | `tool:result` / `tool:error` | `{ tool, result? }` or `{ tool, error }` |
+| `route` | `agent:model_routed` | `{ profile, model, reason }` |
+| `done` | `swarm:done` | `{ result, totalDurationMs, subtaskCount }` |
+| `error` | swarm run failed | `{ error }` |
+
+---
+
 ## Key environment variables
 
 | Variable                                 | Default                   | Effect                                                                        |
@@ -472,6 +540,8 @@ The stream closes automatically when the agent run completes (done / error / max
 | `DIAGNOSTIC_LOG_ENABLED`                 | `true`                    | Toggle diagnostic Markdown file output                                        |
 | `DIAGNOSTIC_LOG_DIR`                     | `data/diagnostics`        | Output folder for diagnostic logs                                             |
 | `DIAGNOSTIC_LOG_MAX_FILES`               | `100`                     | Auto-prune threshold for diagnostic log files                                 |
+| `SWARM_DECOMPOSER_MODEL`                 | `AGENT_MODEL_REASONING`   | Model used for task decomposition in the swarm                                |
+| `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                            |
 | `PORT`                                   | `3001`                    | Express server port                                                           |
 | `OPENAI_COMPAT_RATE_LIMIT`               | `60`                      | Max `/v1/chat/completions` requests per minute per client IP                  |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                            |
@@ -492,8 +562,9 @@ The stream closes automatically when the agent run completes (done / error / max
 ├── apps/
 │   └── api/
 │       ├── index.ts          — Express entry; wires all packages; POST /run, GET /health
-│       ├── agents.ts         — shared agent instances (readOnlyAgent, writeEnabledAgent) + createAgent() + processor registration
+│       ├── agents.ts         — shared agent instances (readOnlyAgent, writeEnabledAgent) + createAgent() + createSwarmOrchestrator() + processor registration
 │       ├── stream-endpoints.ts — registerStreamRoutes(); POST /run/stream (SSE)
+│       ├── swarm-endpoints.ts — registerSwarmRoutes(); POST /run/swarm, POST /run/swarm/stream
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
 │       ├── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
@@ -503,6 +574,11 @@ The stream closes automatically when the agent run completes (done / error / max
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; diagnostic accumulation; self-debug on max_steps
 │   │   ├── model-router.ts   — routeModel(); profile resolution; rules vs model mode; budget-aware heuristics
 │   │   └── schemas.ts        — agentStepSchema (Zod); AgentStep type
+│   ├── swarm/
+│   │   ├── types.ts          — ISubtask, IDecomposition, ISubtaskResult, ISwarmResult, ISwarmConfig
+│   │   ├── decomposer.ts     — decomposeTask(); LLM-based task decomposition
+│   │   ├── orchestrator.ts   — SwarmOrchestrator class; dependency-aware execution + synthesis
+│   │   └── index.ts          — re-exports all swarm types and classes
 │   ├── diagnostics/
 │   │   ├── types.ts          — IDiagnosticEntry interface
 │   │   ├── writer.ts         — writeDiagnosticLog(); Markdown report writer

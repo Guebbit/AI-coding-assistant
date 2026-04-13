@@ -3,6 +3,8 @@
  *
  * Endpoints:
  * - `POST /run`                    — submit a task to the agent loop.
+ * - `POST /run/swarm`              — submit a task to the swarm orchestrator.
+ * - `POST /run/swarm/stream`       — swarm orchestrator with SSE streaming.
  * - `GET  /health`                 — liveness check for monitoring / Docker.
  * - `GET  /v1/models`              — OpenAI-compatible model list.
  * - `POST /v1/chat/completions`    — OpenAI-compatible chat completions.
@@ -13,6 +15,7 @@
  * IDE-specific routes (`/autocomplete`, `/lint-conventions`,
  * `/page-review`) are registered from `ide-endpoints.ts`.
  * OpenAI-compatible routes are registered from `openai-compat.ts`.
+ * Swarm routes are registered from `swarm-endpoints.ts`.
  * Informational routes (`/info/modes`, `/info/models`, `/help`) are
  * registered from `info-endpoints.ts`.
  *
@@ -27,6 +30,7 @@ import { registerIdeRoutes } from "./ide-endpoints";
 import { registerUploadRoutes } from "./upload-endpoints";
 import { registerOpenAiRoutes } from "./openai-compat";
 import { registerStreamRoutes } from "./stream-endpoints";
+import { registerSwarmRoutes } from "./swarm-endpoints";
 import { registerInfoRoutes } from "./info-endpoints";
 import { createAgent, VALID_PROFILES } from "./agents";
 
@@ -55,6 +59,9 @@ registerOpenAiRoutes(app);
 
 /* Register SSE streaming endpoint (POST /run/stream). */
 registerStreamRoutes(app);
+
+/* Register swarm endpoints (POST /run/swarm, POST /run/swarm/stream). */
+registerSwarmRoutes(app);
 
 /* Register informational endpoints (/info/modes, /info/models, /help). */
 registerInfoRoutes(app);
