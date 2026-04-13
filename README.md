@@ -223,6 +223,64 @@ npm run build
 npm run dev
 ```
 
+## Connect Open WebUI to Manna (temporary)
+
+> ⚠ **This integration is temporary.** The OpenAI-compatibility layer (`apps/api/openai-compat.ts`) exists only as a stopgap so that Open WebUI can be used as a quick frontend while the dedicated Manna custom frontend is in development. It will be removed once the custom frontend ships.
+
+Manna exposes OpenAI-compatible endpoints (`GET /v1/models` and `POST /v1/chat/completions`) so that **Open WebUI** — or any other OpenAI-compatible client — can use Manna as its backend.  When you route Open WebUI through Manna, your chats go through the full agentic loop: tools, memory, and model routing are all active.
+
+### Setup
+
+1. Start Manna (`npm run dev` or `npm start`) — it listens on `http://localhost:3001` by default.
+2. Open your Open WebUI instance.
+3. Go to **Settings → Connections → Add OpenAI API connection**.
+4. Set the **Base URL** to `http://localhost:3001/v1`.
+5. Set the **API Key** to any non-empty string (e.g. `manna`) — the key is not validated.
+6. Save. Open WebUI will call `/v1/models` and populate the model picker with the Manna profiles.
+
+### Available models
+
+| Model name | Manna profile | Description |
+|---|---|---|
+| `manna` / `manna-agent` | auto | Router selects the best profile for each task |
+| `manna-fast` | `fast` | Optimised for speed |
+| `manna-reasoning` | `reasoning` | Optimised for multi-step reasoning |
+| `manna-code` | `code` | Optimised for coding tasks |
+
+### Write tools
+
+By default, write tools (`write_file`, `scaffold_project`) are disabled.  To enable them for a message, prefix the message with `[WRITE]`:
+
+```
+[WRITE] Create a file hello.txt with content "Hello, world!"
+```
+
+### Test without Open WebUI
+
+```bash
+# List models
+curl http://localhost:3001/v1/models
+
+# Chat completion (non-streaming)
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna",
+    "messages": [{"role": "user", "content": "List files in the current directory"}]
+  }'
+
+# Chat completion (streaming)
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna-reasoning",
+    "stream": true,
+    "messages": [{"role": "user", "content": "Explain how the agent loop works"}]
+  }'
+```
+
+---
+
 ## IDE-focused direct endpoints
 
 These endpoints are separate from `/run` and do not use the agent loop:

@@ -2,36 +2,26 @@
  * Express API entry point — wires all packages into an HTTP server.
  *
  * Endpoints:
- * - `POST /run`   — submit a task to the agent loop.
- * - `GET  /health` — liveness check for monitoring / Docker.
+ * - `POST /run`                    — submit a task to the agent loop.
+ * - `GET  /health`                 — liveness check for monitoring / Docker.
+ * - `GET  /v1/models`              — OpenAI-compatible model list.
+ * - `POST /v1/chat/completions`    — OpenAI-compatible chat completions.
  *
  * IDE-specific routes (`/autocomplete`, `/lint-conventions`,
  * `/page-review`) are registered from `ide-endpoints.ts`.
+ * OpenAI-compatible routes are registered from `openai-compat.ts`.
  *
  * @module apps/api
  */
 
 import express from "express";
-import { Agent } from "../../packages/agent/agent";
 import type { ModelProfile } from "../../packages/agent/model-router";
-import {
-  readFileTool,
-  writeFileTool,
-  shellTool,
-  mysqlQueryTool,
-  browserTool,
-  scaffoldProjectTool,
-  imageClassifyTool,
-  semanticSearchTool,
-  speechToTextTool,
-  readPdfTool,
-  codeAutocompleteTool,
-  generateDiagramTool,
-} from "../../packages/tools/index";
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { registerIdeRoutes } from "./ide-endpoints";
 import { registerUploadRoutes } from "./upload-endpoints";
+import { registerOpenAiRoutes } from "./openai-compat";
+import { createAgent, VALID_PROFILES } from "./agents";
 
 const log = getLogger("api");
 
@@ -39,46 +29,6 @@ const log = getLogger("api");
 on("*", (event) => {
   log.info("event_emitted", { eventType: event.type, payload: event.payload });
 });
-
-/* ── Tool sets ───────────────────────────────────────────────────────── */
-
-/** Tools that only read data — always available. */
-const readOnlyTools = [
-  readFileTool,
-  shellTool,
-  mysqlQueryTool,
-  browserTool,
-  imageClassifyTool,
-  semanticSearchTool,
-  speechToTextTool,
-  readPdfTool,
-  codeAutocompleteTool,
-  generateDiagramTool,
-];
-
-/** Tools that mutate the filesystem — only enabled when `allowWrite` is `true`. */
-const writeTools = [writeFileTool, scaffoldProjectTool];
-
-/* ── Agent instances (shared across requests) ────────────────────────── */
-
-/** Agent with read-only tool access (default). */
-const readOnlyAgent = new Agent(readOnlyTools);
-
-/** Agent with both read and write tool access. */
-const writeEnabledAgent = new Agent([...readOnlyTools, ...writeTools]);
-
-/** Recognised model profile names for request validation. */
-const VALID_PROFILES = new Set<ModelProfile>(["fast", "reasoning", "code", "default"]);
-
-/**
- * Select the correct pre-built agent instance based on write permissions.
- *
- * @param allowWrite - Whether write tools should be available.
- * @returns The matching `Agent` instance.
- */
-function createAgent(allowWrite: boolean): Agent {
-  return allowWrite ? writeEnabledAgent : readOnlyAgent;
-}
 
 /* ── HTTP server ─────────────────────────────────────────────────────── */
 
@@ -90,6 +40,11 @@ registerIdeRoutes(app);
 
 /* Register file-upload endpoints (image, audio, PDF). */
 registerUploadRoutes(app);
+
+/* Register OpenAI-compatible endpoints (/v1/models, /v1/chat/completions).
+ * TODO: Remove once the custom Manna frontend ships — this is a temporary
+ *       Open WebUI bridge. See apps/api/openai-compat.ts for details. */
+registerOpenAiRoutes(app);
 
 /**
  * POST /run — submit a task to the agent reasoning loop.

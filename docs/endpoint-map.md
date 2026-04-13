@@ -24,6 +24,9 @@ Manna API  (default port :3001)
 ├── POST /upload/speech-to-text      — Upload: Audio transcription via multipart file upload
 ├── POST /upload/read-pdf            — Upload: PDF text extraction via multipart file upload
 │
+├── GET  /v1/models                  — OpenAI-compat: list available Manna model profiles
+├── POST /v1/chat/completions        — OpenAI-compat: chat request → agent.run() → OpenAI response
+│
 └── (future specialized endpoints — not yet implemented)
     ├── POST /docs-chat              — Fast documentation Q&A
     ├── POST /summarize-file         — Single-file summarization
@@ -441,6 +444,153 @@ Extract text from an uploaded PDF.
 ```bash
 curl -X POST http://localhost:3001/upload/read-pdf \
   -F 'file=@document.pdf'
+```
+
+---
+
+> ⚠ **Temporary — OpenAI compatibility layer**
+>
+> The endpoints in this section (`GET /v1/models` and `POST /v1/chat/completions`) are a stopgap bridge that lets Open WebUI use Manna as a backend without a dedicated frontend.
+> They are implemented in `apps/api/openai-compat.ts` and registered via `registerOpenAiRoutes(app)` in `apps/api/index.ts`.
+> **These endpoints should be removed once the custom Manna frontend is available.**
+
+### `GET /v1/models`
+
+Returns the list of Manna model profiles in [OpenAI `ListModelsResponse`](https://platform.openai.com/docs/api-reference/models/list) format.  Used by Open WebUI and any other OpenAI-compatible client to populate the model picker.
+
+**Rate limit**: 120 requests / minute per client IP.
+
+**Response** `200 OK`
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "id": "manna",           "object": "model", "created": 1700000000, "owned_by": "manna" },
+    { "id": "manna-agent",     "object": "model", "created": 1700000000, "owned_by": "manna" },
+    { "id": "manna-fast",      "object": "model", "created": 1700000000, "owned_by": "manna" },
+    { "id": "manna-reasoning", "object": "model", "created": 1700000000, "owned_by": "manna" },
+    { "id": "manna-code",      "object": "model", "created": 1700000000, "owned_by": "manna" }
+  ]
+}
+```
+
+**Model → profile mapping**
+
+| Model ID | Manna profile | Description |
+|---|---|---|
+| `manna` / `manna-agent` | auto | Router selects the best profile per task |
+| `manna-fast` | `fast` | Forces the `fast` profile |
+| `manna-reasoning` | `reasoning` | Forces the `reasoning` profile |
+| `manna-code` | `code` | Forces the `code` profile |
+
+**curl example**
+
+```bash
+curl http://localhost:3001/v1/models
+```
+
+---
+
+### `POST /v1/chat/completions`
+
+OpenAI-compatible chat completions endpoint.  Translates the incoming OpenAI request into a Manna `agent.run()` call (full agentic loop with tools, memory, and model routing) and returns the result in [OpenAI `ChatCompletion`](https://platform.openai.com/docs/api-reference/chat/object) format.
+
+**Rate limit**: 60 requests / minute per client IP (configurable via `OPENAI_COMPAT_RATE_LIMIT`).
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `model` | `string` | ✅ | One of the Manna model IDs from `GET /v1/models` |
+| `messages` | `ChatMessage[]` | ✅ | Conversation history. Must contain at least one user message. The **last** user message is used as the agent task. |
+| `stream` | `boolean` | — | When `true`, returns a Server-Sent Events stream. Default `false`. |
+| `allowWrite` | `boolean` | — | Manna extension: enable `write_file` and `scaffold_project` tools. Default `false`. |
+| `temperature`, `max_tokens`, … | — | — | Accepted but ignored — Manna controls generation via model profiles. |
+
+**Write permission**
+
+Write tools are enabled if either:
+- `allowWrite: true` is set in the request body, **or**
+- The last user message starts with the `[WRITE]` prefix  
+  e.g. `"[WRITE] Scaffold a new React project in /tmp/app"` (the prefix is stripped before being sent to the agent).
+
+**Non-streaming response** `200 OK`
+
+```json
+{
+  "id": "chatcmpl-<uuid>",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "manna",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "<agent answer>" },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+}
+```
+
+> `usage` values are always `0` — Manna does not track token counts natively.
+
+**Streaming response** (`stream: true`) — Server-Sent Events
+
+```
+data: {"id":"chatcmpl-<uuid>","object":"chat.completion.chunk","created":1700000000,"model":"manna","choices":[{"index":0,"delta":{"role":"assistant","content":"<full answer>"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-<uuid>","object":"chat.completion.chunk","created":1700000000,"model":"manna","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+The agent response is buffered in full before being sent as a single SSE chunk.
+
+**Error responses**
+
+| Status | When |
+|---|---|
+| `400` | Body is invalid, no user message present, or last user message has empty content |
+| `429` | Rate limit exceeded — `Retry-After` header contains seconds to wait |
+| `500` | Unhandled error inside the agent loop |
+
+**Relevant env vars**
+
+| Variable | Default | Effect |
+|---|---|---|
+| `OPENAI_COMPAT_RATE_LIMIT` | `60` | Max requests / minute for `/v1/chat/completions` per client IP |
+| `AGENTS_MAX_STEPS` | `5` | Maximum agent loop iterations |
+
+**curl examples**
+
+```bash
+# Non-streaming
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna",
+    "messages": [{"role": "user", "content": "List files in the current directory"}]
+  }'
+
+# Streaming
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna-reasoning",
+    "stream": true,
+    "messages": [{"role": "user", "content": "Explain how the agent loop works"}]
+  }'
+
+# With write tools enabled via prefix
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna",
+    "messages": [{"role": "user", "content": "[WRITE] Create a file hello.txt with content Hello"}]
+  }'
+```
 ```
 
 ---

@@ -72,6 +72,7 @@ It is NOT a chatbot frontend. It is a **tool-using agent server**.
 Two operational surfaces:
 1. `POST /run` — triggers the full agentic loop (reason → pick tool → execute → repeat).
 2. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
+3. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
 
 ---
 
@@ -293,6 +294,40 @@ Max upload size: 50 MB. Uses `multer` with in-memory storage.
 
 ---
 
+## OpenAI-compatibility endpoints ⚠ TEMPORARY
+
+> **This section describes a temporary Open WebUI bridge.**
+> `apps/api/openai-compat.ts` and the `registerOpenAiRoutes(app)` call in `apps/api/index.ts`
+> should be **deleted** once the custom Manna frontend is available.
+> Do not add new features to this layer.
+
+File: `apps/api/openai-compat.ts`  
+Registered in `apps/api/index.ts` via `registerOpenAiRoutes(app)`.
+
+These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (and any other OpenAI-compatible client) to use Manna as its backend.  Requests pass through the full agentic loop — tools, memory, and model routing are all active.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/models` | Lists all Manna model profiles as OpenAI model entries |
+| `POST /v1/chat/completions` | Translates an OpenAI chat request → `agent.run()` → OpenAI response format |
+
+**Model → profile mapping**
+
+| Model ID | Manna profile |
+|---|---|
+| `manna` / `manna-agent` | auto (router decides) |
+| `manna-fast` | `fast` |
+| `manna-reasoning` | `reasoning` |
+| `manna-code` | `code` |
+
+**Write tools**: disabled by default; enabled when `allowWrite: true` is in the body or when the last user message starts with `[WRITE] `.
+
+**Streaming**: `stream: true` is supported — the agent result is buffered and sent as a single SSE chunk followed by `[DONE]`.
+
+> Full schema, curl examples, and env vars: `docs/endpoint-map.md`.
+
+---
+
 ## Key environment variables
 
 | Variable | Default | Effect |
@@ -313,6 +348,7 @@ Max upload size: 50 MB. Uses `multer` with in-memory storage.
 | `TOOL_DIAGRAM_MODEL` | `AGENT_MODEL_CODE` | Model used to generate Mermaid diagram markup |
 | `DIAGRAM_OUTPUT_DIR` | `data/diagrams` | Output directory for rendered diagrams |
 | `PORT` | `3001` | Express server port |
+| `OPENAI_COMPAT_RATE_LIMIT` | `60` | Max `/v1/chat/completions` requests per minute per client IP |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various | MySQL connection for `mysql_query` |
 | `QDRANT_URL` | `http://localhost:6333` | Qdrant endpoint for semantic memory |
 | `QDRANT_COLLECTION` | — | Qdrant collection name |
@@ -331,8 +367,10 @@ Max upload size: 50 MB. Uses `multer` with in-memory storage.
 ├── apps/
 │   └── api/
 │       ├── index.ts          — Express entry; wires all packages; POST /run, GET /health
+│       ├── agents.ts         — shared agent instances (readOnlyAgent, writeEnabledAgent) + createAgent()
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
-│       └── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
+│       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
+│       └── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
 ├── packages/
 │   ├── agent/
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS
