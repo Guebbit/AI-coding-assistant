@@ -53,6 +53,28 @@ const MAX_STEPS = Number.parseInt(process.env.AGENTS_MAX_STEPS ?? "5", 10);
 const BUDGET_MAX_CONTEXT_CHARS = envInt(process.env.AGENT_BUDGET_MAX_CONTEXT_CHARS, 50_000);
 
 /**
+ * Characters of the most-recent context to include in the overflow condensation
+ * prompt.  We take a trailing window (rather than the full context) because
+ * the summarisation model also has a context limit.  16 % of the budget ceiling
+ * gives ~8000 chars by default, which comfortably fits in any small LLM.
+ */
+const OVERFLOW_SUMMARY_CONTEXT_WINDOW = Math.floor(BUDGET_MAX_CONTEXT_CHARS * 0.16);
+
+/**
+ * Fallback context window used when the overflow summarisation LLM call fails.
+ * Half of the normal window: a more conservative truncation that gives the
+ * caller the most recent context at a smaller size.
+ */
+const OVERFLOW_FALLBACK_CONTEXT_WINDOW = Math.floor(OVERFLOW_SUMMARY_CONTEXT_WINDOW / 2);
+
+/**
+ * Characters of context to send to the max-steps failure-summary LLM.
+ * Slightly smaller than the overflow window: at max_steps the context is
+ * already at its accumulated maximum so we cap to a sane LLM input size.
+ */
+const MAX_STEPS_SUMMARY_CONTEXT_WINDOW = Math.floor(BUDGET_MAX_CONTEXT_CHARS * 0.12);
+
+/**
  * Fast/cheap Ollama model used for summarisation calls (max_steps, context overflow).
  * Resolved from the same env chain as the `fast` profile in `model-router.ts`.
  */
@@ -219,7 +241,7 @@ export class Agent {
         const overflowPrompt =
           `The following accumulated context from an ongoing task has become too large.\n` +
           `Task: ${task}\n\n` +
-          `Context:\n${context.slice(-8000)}\n\n` +
+          `Context:\n${context.slice(-OVERFLOW_SUMMARY_CONTEXT_WINDOW)}\n\n` +
           `Please provide a concise summary (max 2000 characters) of the key findings, ` +
           `decisions made, and current state. This summary will replace the full context.`;
 
@@ -231,7 +253,7 @@ export class Agent {
           condensedContext = summaryResult.response.trim();
         } catch (e) {
           log.warn("agent_context_overflow_summary_failed", { error: String(e) });
-          condensedContext = context.slice(-4000);
+          condensedContext = context.slice(-OVERFLOW_FALLBACK_CONTEXT_WINDOW);
         }
 
         emit({
@@ -571,7 +593,7 @@ export class Agent {
       `An AI agent attempted the following task but exhausted its step limit (${MAX_STEPS} steps) ` +
       `without completing it.\n\n` +
       `Task: ${task}\n\n` +
-      `Accumulated context (what was tried):\n${context.slice(-6000)}\n\n` +
+      `Accumulated context (what was tried):\n${context.slice(-MAX_STEPS_SUMMARY_CONTEXT_WINDOW)}\n\n` +
       `Please provide:\n` +
       `1. A brief summary of what was attempted.\n` +
       `2. Where the agent appears to have gotten stuck.\n` +

@@ -57,6 +57,13 @@ const VERIFICATION_MODEL =
  * Step N — "tool_name" returned: {...}
  * ```
  * Captures the tool name (group 1) and the serialised result (group 2).
+ *
+ * **Coupling note**: This pattern mirrors the string format used in
+ * `packages/agent/agent.ts` when appending tool results to context:
+ * ```typescript
+ * context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
+ * ```
+ * If that format ever changes, this regex must be updated in sync.
  */
 const TOOL_RESULT_PATTERN =
   /Step \d+ — "([^"]+)" returned: ([\s\S]+?)(?=\nStep \d+ —|\n?$)/;

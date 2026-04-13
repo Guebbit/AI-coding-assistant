@@ -25,7 +25,7 @@
  */
 
 import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { envInt } from "../shared";
 import { getLogger } from "../logger/logger";
 import type { DiagnosticEntry } from "./types";
@@ -36,9 +36,11 @@ const log = getLogger("diagnostics");
 
 /**
  * Directory where diagnostic Markdown files are written.
+ * Resolved to an absolute path at module load time to prevent any
+ * path-traversal manipulation through the environment variable.
  * Configurable via `DIAGNOSTIC_LOG_DIR` env var.
  */
-const DIAGNOSTIC_LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? "data/diagnostics";
+const DIAGNOSTIC_LOG_DIR = resolve(process.env.DIAGNOSTIC_LOG_DIR ?? "data/diagnostics");
 
 /**
  * Whether diagnostic logging is enabled at all.
@@ -200,7 +202,14 @@ async function enforceFileLimit(dir: string, maxFiles: number): Promise<void> {
 
     const excess = mdFiles.slice(0, mdFiles.length - maxFiles);
     for (const file of excess) {
-      await unlink(join(dir, file)).catch((e) => {
+      /* Resolve and validate each path stays inside the diagnostics directory
+       * to prevent any unexpected traversal (belt-and-suspenders safety check). */
+      const filePath = resolve(join(dir, file));
+      if (!filePath.startsWith(dir + "/") && filePath !== dir) {
+        log.warn("diagnostic_cleanup_skipped_unsafe_path", { file });
+        continue;
+      }
+      await unlink(filePath).catch((e) => {
         log.warn("diagnostic_cleanup_failed", { file, error: String(e) });
       });
     }

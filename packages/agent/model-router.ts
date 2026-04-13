@@ -205,7 +205,10 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
 function routeWithRules(input: RouteInput): ModelRouteDecision {
   /* ── Budget-ceiling overrides (run before keyword matching) ─────────── */
 
-  /* Context bloat override — upgrade to reasoning for larger num_ctx. */
+  /* Context bloat override — upgrade to reasoning for larger num_ctx.
+   * Threshold at 70 % (not 100 %) so the upgrade happens while there is
+   * still context budget left; waiting until full would risk truncation
+   * on the very next step. */
   if (
     input.contextLength !== undefined &&
     input.contextLength > BUDGET_MAX_CONTEXT_CHARS * 0.7
@@ -218,7 +221,10 @@ function routeWithRules(input: RouteInput): ModelRouteDecision {
     };
   }
 
-  /* Time budget override — downgrade to fast to finish quickly. */
+  /* Time budget override — downgrade to fast to finish quickly.
+   * Threshold at 80 % (not 100 %) leaves a 20 % time buffer for the
+   * remaining steps; the cheapest model is most likely to finish before
+   * the hard ceiling is reached. */
   if (
     input.cumulativeDurationMs !== undefined &&
     input.cumulativeDurationMs > BUDGET_MAX_DURATION_MS * 0.8
