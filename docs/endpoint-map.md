@@ -1,7 +1,7 @@
 # Endpoint Map
 
 ::: tip TL;DR
-`/run` = full agent loop for open-ended tasks. `/autocomplete`, `/lint-conventions`, `/page-review` = fast single-LLM-call endpoints. `/upload/*` = file uploads. `/v1/*` = OpenAI compatibility.
+`/run` = full agent loop for open-ended tasks. `/autocomplete`, `/lint-conventions`, `/page-review` = fast single-LLM-call endpoints. `/upload/*` = file uploads. `/v1/*` = OpenAI compatibility. `/info/*` + `/help` = instance metadata (no LLM).
 :::
 
 This page is the authoritative human-readable reference for every HTTP endpoint exposed by the Manna API server.
@@ -31,6 +31,10 @@ Manna API  (default port :3001)
 ├── GET  /v1/models                  — OpenAI-compat: list available Manna model profiles
 ├── POST /v1/chat/completions        — OpenAI-compat: chat request → agent.run() → OpenAI response
 │
+├── GET  /info/modes                 — Info: list agent routing profiles (modes)
+├── GET  /info/models                — Info: list models available in Ollama
+├── GET  /help                       — Info: structured overview of all API endpoints
+│
 └── (future specialized endpoints — not yet implemented)
     ├── POST /docs-chat              — Fast documentation Q&A
     ├── POST /summarize-file         — Single-file summarization
@@ -57,10 +61,12 @@ flowchart TD
     Client --> Specialized["/autocomplete, /lint, /review"]
     Client --> Upload["/upload/* — File Upload"]
     Client --> OpenAI["/v1/* — OpenAI Compat"]
+    Client --> Info["/info/*, /help — Metadata"]
     Generic --> AgentLoop["Model routing → Tool selection → Multi-step → Answer"]
     Specialized --> SingleLLM["Single LLM call → Structured response"]
     Upload --> ToolDirect["Tool with base64 data → Result"]
     OpenAI --> AgentLoop
+    Info --> Static["Instance metadata — no LLM call"]
 ```
 
 ---
@@ -646,6 +652,108 @@ Benefits:
 - **Predictable schema** — frontend code can be strongly typed against a stable response shape.
 - **Easier integration** — WebStorm plugin, web dashboard, CLI, and mobile apps each call the most appropriate endpoint directly without constructing natural-language prompts.
 - **Independent rate limits and timeouts** — an autocomplete flood doesn't eat into the `/run` capacity.
+
+---
+
+## Informational endpoints
+
+These endpoints return metadata about the running Manna instance. They make **no LLM calls** and have negligible latency.
+
+File: `apps/api/info-endpoints.ts`  
+Registered via `registerInfoRoutes(app)` in `apps/api/index.ts`.
+
+### `GET /info/modes`
+
+Lists all available Manna agent routing profiles (modes), the Ollama model each is currently configured to use, the controlling environment variable, and a human-readable description.
+
+**Response** `200 OK`
+
+```json
+{
+  "count": 4,
+  "modes": [
+    {
+      "profile": "fast",
+      "model": "llama3.1:8b-instruct-q8_0",
+      "envVar": "AGENT_MODEL_FAST",
+      "description": "Low-latency model for simple, quick tasks. Fully GPU-resident for sub-second response."
+    }
+  ]
+}
+```
+
+**curl example**
+
+```bash
+curl http://localhost:3001/info/modes
+```
+
+---
+
+### `GET /info/models`
+
+Proxies Ollama's `GET /api/tags` and returns all locally available models with size, digest, and detail metadata. Returns `502` if Ollama is unreachable.
+
+**Response** `200 OK`
+
+```json
+{
+  "count": 5,
+  "ollamaBaseUrl": "http://localhost:11434",
+  "models": [
+    {
+      "name": "llama3.1:8b-instruct-q8_0",
+      "size": 8538212864,
+      "digest": "a1b2c3...",
+      "modifiedAt": "2024-12-01T10:00:00Z",
+      "details": { "family": "llama", "parameter_size": "8B", "quantization_level": "Q8_0" }
+    }
+  ]
+}
+```
+
+**Error responses**
+
+| Status | When |
+|---|---|
+| `502` | Ollama is unreachable or returned a non-2xx status |
+
+**curl example**
+
+```bash
+curl http://localhost:3001/info/models
+```
+
+---
+
+### `GET /help`
+
+Returns a structured JSON overview of every REST API endpoint — the equivalent of `--help` on a CLI tool. Includes HTTP method, path, one-line summary, and parameter list for each endpoint.
+
+**Response** `200 OK`
+
+```json
+{
+  "description": "Manna AI Agent Platform — REST API quick reference",
+  "endpointCount": 14,
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/run",
+      "summary": "Submit a task to the full agentic loop (reasoning → tool selection → execution).",
+      "params": [
+        { "name": "task", "type": "string", "required": true, "description": "Natural-language task." }
+      ]
+    }
+  ]
+}
+```
+
+**curl example**
+
+```bash
+curl http://localhost:3001/help
+```
 
 ---
 
