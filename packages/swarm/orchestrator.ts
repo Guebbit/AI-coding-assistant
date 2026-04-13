@@ -236,50 +236,35 @@ export class SwarmOrchestrator {
       agent.addProcessor(processor);
     }
 
-    try {
-      const answer = await agent.run(enrichedTask, { profile });
-
-      const durationMs = Date.now() - startedAt;
-      log.info("swarm_subtask_completed", {
-        subtaskId: subtask.id,
-        durationMs,
-        answerLength: answer.length,
+    return agent
+      .run(enrichedTask, { profile })
+      .then((answer) => {
+        const durationMs = Date.now() - startedAt;
+        log.info("swarm_subtask_completed", {
+          subtaskId: subtask.id,
+          durationMs,
+          answerLength: answer.length,
+        });
+        emit({
+          type: "swarm:subtask_done",
+          payload: { subtaskId: subtask.id, durationMs },
+        });
+        return { subtask, answer, durationMs, success: true as const };
+      })
+      .catch((error: unknown) => {
+        const durationMs = Date.now() - startedAt;
+        const errorMessage = String(error);
+        log.warn("swarm_subtask_failed", {
+          subtaskId: subtask.id,
+          durationMs,
+          error: errorMessage,
+        });
+        emit({
+          type: "swarm:subtask_error",
+          payload: { subtaskId: subtask.id, error: errorMessage },
+        });
+        return { subtask, answer: "", durationMs, success: false as const, error: errorMessage };
       });
-
-      emit({
-        type: "swarm:subtask_done",
-        payload: { subtaskId: subtask.id, durationMs },
-      });
-
-      return {
-        subtask,
-        answer,
-        durationMs,
-        success: true,
-      };
-    } catch (error) {
-      const durationMs = Date.now() - startedAt;
-      const errorMessage = String(error);
-
-      log.warn("swarm_subtask_failed", {
-        subtaskId: subtask.id,
-        durationMs,
-        error: errorMessage,
-      });
-
-      emit({
-        type: "swarm:subtask_error",
-        payload: { subtaskId: subtask.id, error: errorMessage },
-      });
-
-      return {
-        subtask,
-        answer: "",
-        durationMs,
-        success: false,
-        error: errorMessage,
-      };
-    }
   }
 
   /**
@@ -360,19 +345,15 @@ export class SwarmOrchestrator {
       successCount: subtaskResults.filter((r) => r.success).length,
     });
 
-    try {
-      const answer = await generate(synthesisPrompt, {
-        model: SYNTHESIS_MODEL,
-        stream: false,
+    return generate(synthesisPrompt, { model: SYNTHESIS_MODEL, stream: false })
+      .then((answer) => answer.trim())
+      .catch((error: unknown) => {
+        log.warn("swarm_synthesis_failed", { error: String(error) });
+        /* Graceful degradation — concatenate subtask answers. */
+        return subtaskResults
+          .filter((r) => r.success)
+          .map((r) => r.answer)
+          .join("\n\n---\n\n");
       });
-      return answer.trim();
-    } catch (error) {
-      log.warn("swarm_synthesis_failed", { error: String(error) });
-      /* Graceful degradation — concatenate subtask answers. */
-      return subtaskResults
-        .filter((r) => r.success)
-        .map((r) => r.answer)
-        .join("\n\n---\n\n");
-    }
   }
 }

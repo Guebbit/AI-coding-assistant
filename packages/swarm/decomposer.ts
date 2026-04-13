@@ -87,46 +87,45 @@ export async function decomposeTask(
 
   log.info("decomposer_started", { taskLength: task.length, maxSubtasks: cap });
 
-  let raw: string;
-  try {
-    raw = await generate(prompt, {
-      model: DECOMPOSER_MODEL,
-      stream: false,
-      format: "json",
+  return generate(prompt, {
+    model: DECOMPOSER_MODEL,
+    stream: false,
+    format: "json",
+  })
+    .then((raw) => {
+      try {
+        const cleaned = raw.replace(/```(?:json)?\n?/g, "").trim();
+        const parsed = JSON.parse(cleaned) as {
+          reasoning?: string;
+          subtasks?: unknown[];
+        };
+
+        if (!Array.isArray(parsed.subtasks) || parsed.subtasks.length === 0) {
+          return buildFallback(task, "Decomposer returned no subtasks.");
+        }
+
+        const subtasks = parsed.subtasks
+          .slice(0, cap)
+          .map((raw, i) => normaliseSubtask(raw, i));
+
+        log.info("decomposer_completed", {
+          subtaskCount: subtasks.length,
+          reasoning: parsed.reasoning?.slice(0, 200),
+        });
+
+        return {
+          reasoning: parsed.reasoning ?? "No reasoning provided by decomposer.",
+          subtasks,
+        };
+      } catch (error) {
+        log.warn("decomposer_parse_failed", { error: String(error) });
+        return buildFallback(task, "Failed to parse decomposer output.");
+      }
+    })
+    .catch((error: unknown) => {
+      log.warn("decomposer_llm_failed", { error: String(error) });
+      return buildFallback(task, "LLM call failed — falling back to single subtask.");
     });
-  } catch (error) {
-    log.warn("decomposer_llm_failed", { error: String(error) });
-    return buildFallback(task, "LLM call failed — falling back to single subtask.");
-  }
-
-  try {
-    const cleaned = raw.replace(/```(?:json)?\n?/g, "").trim();
-    const parsed = JSON.parse(cleaned) as {
-      reasoning?: string;
-      subtasks?: unknown[];
-    };
-
-    if (!Array.isArray(parsed.subtasks) || parsed.subtasks.length === 0) {
-      return buildFallback(task, "Decomposer returned no subtasks.");
-    }
-
-    const subtasks = parsed.subtasks
-      .slice(0, cap)
-      .map((raw, i) => normaliseSubtask(raw, i));
-
-    log.info("decomposer_completed", {
-      subtaskCount: subtasks.length,
-      reasoning: parsed.reasoning?.slice(0, 200),
-    });
-
-    return {
-      reasoning: parsed.reasoning ?? "No reasoning provided by decomposer.",
-      subtasks,
-    };
-  } catch (error) {
-    log.warn("decomposer_parse_failed", { error: String(error) });
-    return buildFallback(task, "Failed to parse decomposer output.");
-  }
 }
 
 /* ── Internal helpers ────────────────────────────────────────────────── */

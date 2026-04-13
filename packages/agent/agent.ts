@@ -165,53 +165,52 @@ export class Agent {
             });
 
             // ── Call the LLM ─────────────────────────────────────────────────
-            let response: string;
-            try {
-                const route = await routeModel({
-                    task: inputArgs.task,
-                    context: inputArgs.context,
-                    step,
-                    forcedProfile: options?.profile,
-                    contextLength: inputArgs.context.length,
-                    cumulativeDurationMs: Date.now() - runStartedAt
-                });
-                emit({
-                    type: 'agent:model_routed',
-                    payload: {
-                        step,
-                        profile: route.profile,
+            const response = await routeModel({
+                task: inputArgs.task,
+                context: inputArgs.context,
+                step,
+                forcedProfile: options?.profile,
+                contextLength: inputArgs.context.length,
+                cumulativeDurationMs: Date.now() - runStartedAt
+            })
+                .then(async (route) => {
+                    emit({
+                        type: 'agent:model_routed',
+                        payload: {
+                            step,
+                            profile: route.profile,
+                            model: route.model,
+                            reason: route.reason
+                        }
+                    });
+                    const llmStartedAt = Date.now();
+                    const llmResult = await generateWithMetadata(prompt, {
                         model: route.model,
-                        reason: route.reason
-                    }
+                        options: route.options
+                    });
+                    log.info('agent_llm_response_received', {
+                        step,
+                        responseLength: llmResult.response.length,
+                        durationMs: Date.now() - llmStartedAt,
+                        routedProfile: route.profile,
+                        routedReason: route.reason,
+                        model: llmResult.model,
+                        done: llmResult.done,
+                        doneReason: llmResult.doneReason,
+                        totalDurationNs: llmResult.totalDurationNs,
+                        loadDurationNs: llmResult.loadDurationNs,
+                        promptEvalCount: llmResult.promptEvalCount,
+                        promptEvalDurationNs: llmResult.promptEvalDurationNs,
+                        evalCount: llmResult.evalCount,
+                        evalDurationNs: llmResult.evalDurationNs
+                    });
+                    return llmResult.response;
+                })
+                .catch((error: unknown) => {
+                    log.error('agent_llm_call_failed', { step, error: String(error) });
+                    emit({ type: 'agent:error', payload: { step, error: String(error) } });
+                    throw error;
                 });
-
-                const llmStartedAt = Date.now();
-                const llmResult = await generateWithMetadata(prompt, {
-                    model: route.model,
-                    options: route.options
-                });
-                response = llmResult.response;
-                log.info('agent_llm_response_received', {
-                    step,
-                    responseLength: response.length,
-                    durationMs: Date.now() - llmStartedAt,
-                    routedProfile: route.profile,
-                    routedReason: route.reason,
-                    model: llmResult.model,
-                    done: llmResult.done,
-                    doneReason: llmResult.doneReason,
-                    totalDurationNs: llmResult.totalDurationNs,
-                    loadDurationNs: llmResult.loadDurationNs,
-                    promptEvalCount: llmResult.promptEvalCount,
-                    promptEvalDurationNs: llmResult.promptEvalDurationNs,
-                    evalCount: llmResult.evalCount,
-                    evalDurationNs: llmResult.evalDurationNs
-                });
-            } catch (error) {
-                log.error('agent_llm_call_failed', { step, error: String(error) });
-                emit({ type: 'agent:error', payload: { step, error: String(error) } });
-                throw error;
-            }
 
             // ── Parse the LLM response with Zod schema validation ────────────
             let parsed: AgentStep;
@@ -311,46 +310,50 @@ export class Agent {
                 continue;
             }
 
-            let result: unknown;
-            try {
-                const toolStartedAt = Date.now();
-                result = await tool.execute(parsed.input);
-                let resultSize = -1;
-                try {
-                    resultSize = JSON.stringify(result).length;
-                } catch {
-                    log.warn('agent_tool_result_not_serializable', {
+            const toolStartedAt = Date.now();
+            const toolResult = await tool
+                .execute(parsed.input)
+                .then((result) => {
+                    let resultSize = -1;
+                    try {
+                        resultSize = JSON.stringify(result).length;
+                    } catch {
+                        log.warn('agent_tool_result_not_serializable', {
+                            step,
+                            tool: parsed.action
+                        });
+                    }
+                    log.info('agent_tool_executed', {
                         step,
-                        tool: parsed.action
+                        tool: parsed.action,
+                        durationMs: Date.now() - toolStartedAt,
+                        resultSize
                     });
-                }
-                log.info('agent_tool_executed', {
-                    step,
-                    tool: parsed.action,
-                    durationMs: Date.now() - toolStartedAt,
-                    resultSize
+                    return { success: true as const, result };
+                })
+                .catch((error: unknown) => {
+                    context += `\nTool "${parsed.action}" failed: ${String(error)}`;
+                    log.warn('agent_tool_failed', {
+                        step,
+                        tool: parsed.action,
+                        error: String(error)
+                    });
+                    emit({
+                        type: 'tool:error',
+                        payload: { tool: parsed.action, error: String(error) }
+                    });
+                    diagnosticEntries.push({
+                        timestamp: new Date().toISOString(),
+                        step,
+                        severity: 'error',
+                        category: 'tool',
+                        message: `Tool "${parsed.action}" failed: ${String(error)}`,
+                        metadata: { tool: parsed.action }
+                    });
+                    return { success: false as const };
                 });
-            } catch (error) {
-                context += `\nTool "${parsed.action}" failed: ${String(error)}`;
-                log.warn('agent_tool_failed', {
-                    step,
-                    tool: parsed.action,
-                    error: String(error)
-                });
-                emit({
-                    type: 'tool:error',
-                    payload: { tool: parsed.action, error: String(error) }
-                });
-                diagnosticEntries.push({
-                    timestamp: new Date().toISOString(),
-                    step,
-                    severity: 'error',
-                    category: 'tool',
-                    message: `Tool "${parsed.action}" failed: ${String(error)}`,
-                    metadata: { tool: parsed.action }
-                });
-                continue;
-            }
+            if (!toolResult.success) continue;
+            const { result } = toolResult;
 
             emit({ type: 'tool:result', payload: { tool: parsed.action, result } });
             context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
@@ -368,41 +371,38 @@ export class Agent {
         });
 
         /* ── Phase 2B: Self-debugging summary ─────────────────────────── */
-        let summary = 'Max steps reached without a conclusive answer.';
-        let diagnosticFile = '';
-        try {
-            const debugPrompt =
-                `You are a debugging assistant.\n` +
-                `The agent loop exhausted its steps without completing the task.\n\n` +
-                `Task:\n${task}\n\n` +
-                `Context (what happened):\n${context}\n\n` +
-                `Summarise concisely:\n` +
-                `1. What was tried.\n` +
-                `2. Where it got stuck.\n` +
-                `3. Suggestions for what to try next.`;
-            const debugResult = await generate(debugPrompt, {
-                model: FAST_MODEL,
-                stream: false
+        const debugPrompt =
+            `You are a debugging assistant.\n` +
+            `The agent loop exhausted its steps without completing the task.\n\n` +
+            `Task:\n${task}\n\n` +
+            `Context (what happened):\n${context}\n\n` +
+            `Summarise concisely:\n` +
+            `1. What was tried.\n` +
+            `2. Where it got stuck.\n` +
+            `3. Suggestions for what to try next.`;
+        const summary = await generate(debugPrompt, { model: FAST_MODEL, stream: false })
+            .then((result) => result.trim() || 'Max steps reached without a conclusive answer.')
+            .catch((error: unknown) => {
+                log.warn('agent_self_debug_failed', { error: String(error) });
+                return 'Max steps reached without a conclusive answer.';
             });
-            summary = debugResult.trim() || summary;
-        } catch (error) {
-            log.warn('agent_self_debug_failed', { error: String(error) });
-        }
 
         /* Persist the dead-end so future runs can avoid repeating it. */
-        try {
-            await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`);
-        } catch (error) {
-            log.warn('agent_memory_add_failed', { error: String(error) });
-        }
+        await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`)
+            .catch((error: unknown) =>
+                log.warn('agent_memory_add_failed', { error: String(error) })
+            );
 
         /* Write the full diagnostic log with the AI commentary. */
-        try {
-            diagnosticFile = await writeDiagnosticLog(diagnosticEntries, task, summary);
-            await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
-        } catch (error) {
-            log.warn('agent_diagnostic_log_failed', { error: String(error) });
-        }
+        let diagnosticFile = '';
+        await writeDiagnosticLog(diagnosticEntries, task, summary)
+            .then(async (logPath) => {
+                diagnosticFile = logPath;
+                await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
+            })
+            .catch((error: unknown) =>
+                log.warn('agent_diagnostic_log_failed', { error: String(error) })
+            );
 
         emit({
             type: 'agent:max_steps',

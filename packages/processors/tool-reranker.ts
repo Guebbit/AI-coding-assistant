@@ -127,8 +127,7 @@ export function createToolRerankerProcessor(
             if (!ENABLED) return;
             if (args.tools.length <= TOP_N) return;
 
-            try {
-                /* Initialise the embedding cache on first call. */
+            const initCache = async (): Promise<void> => {
                 if (!cacheInitialised) {
                     await Promise.all(
                         args.tools.map(async (name) => {
@@ -142,33 +141,31 @@ export function createToolRerankerProcessor(
                     cacheInitialised = true;
                     log.info('tool_reranker_cache_built', { toolCount: args.tools.length });
                 }
+            };
 
-                /* Embed the current task. */
-                const taskVector = await getEmbedding(args.task);
-
-                /* Score each tool. */
-                const scored = args.tools
-                    .filter((name) => embeddingCache.has(name))
-                    .map((name) => ({
-                        name,
-                        score: cosineSimilarity(taskVector, embeddingCache.get(name)!)
-                    }))
-                    .sort((a, b) => b.score - a.score);
-
-                const topTools = scored.slice(0, TOP_N).map((t) => t.name);
-
-                log.info('tool_reranker_filtered', {
-                    step: args.stepNumber,
-                    original: args.tools.length,
-                    retained: topTools.length
+            return initCache()
+                .then(() => getEmbedding(args.task))
+                .then((taskVector) => {
+                    const scored = args.tools
+                        .filter((name) => embeddingCache.has(name))
+                        .map((name) => ({
+                            name,
+                            score: cosineSimilarity(taskVector, embeddingCache.get(name)!)
+                        }))
+                        .sort((a, b) => b.score - a.score);
+                    const topTools = scored.slice(0, TOP_N).map((t) => t.name);
+                    log.info('tool_reranker_filtered', {
+                        step: args.stepNumber,
+                        original: args.tools.length,
+                        retained: topTools.length
+                    });
+                    return { ...args, tools: topTools };
+                })
+                .catch((error: unknown) => {
+                    /* Fail open — return the original tool list if reranking errors. */
+                    log.warn('tool_reranker_failed', { error: String(error) });
+                    return undefined;
                 });
-
-                return { ...args, tools: topTools };
-            } catch (error) {
-                /* Fail open — return the original tool list if reranking errors. */
-                log.warn('tool_reranker_failed', { error: String(error) });
-                return;
-            }
         }
     });
 }

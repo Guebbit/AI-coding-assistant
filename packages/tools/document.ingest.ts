@@ -168,13 +168,13 @@ export const documentIngestTool = createTool({
         }
 
         /* Create the collection if it does not exist. */
-        try {
-            await qdrant.createCollection(targetCollection, {
+        await qdrant
+            .createCollection(targetCollection, {
                 vectors: { size: vectorSize, distance: 'Cosine' }
+            })
+            .catch(() => {
+                /* Collection already exists — ignore. */
             });
-        } catch {
-            /* Collection already exists — ignore. */
-        }
 
         if (points.length > 0) {
             await qdrant.upsert(targetCollection, {

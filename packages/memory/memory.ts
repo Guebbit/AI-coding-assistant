@@ -146,21 +146,18 @@ async function ensureCollection(size: number): Promise<void> {
         return ensureCollectionPromise;
     }
 
-    ensureCollectionPromise = (async () => {
-        try {
-            await qdrant.getCollection(QDRANT_COLLECTION);
-        } catch {
-            await qdrant.createCollection(QDRANT_COLLECTION, {
+    ensureCollectionPromise = qdrant
+        .getCollection(QDRANT_COLLECTION)
+        .catch(() =>
+            qdrant.createCollection(QDRANT_COLLECTION, {
                 vectors: { size, distance: 'Cosine' }
-            });
-        }
-    })();
+            })
+        );
 
-    try {
-        await ensureCollectionPromise;
-    } finally {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    await ensureCollectionPromise!.finally(() => {
         ensureCollectionPromise = null;
-    }
+    });
 }
 
 /* ── Public API ──────────────────────────────────────────────────────── */
@@ -183,36 +180,34 @@ export async function addMemory(entry: string): Promise<void> {
         return;
     }
 
-    try {
-        const vector = await getEmbedding(entry);
-        vectorSize = vector.length;
-        await ensureCollection(vector.length);
-
-        await qdrant.upsert(QDRANT_COLLECTION, {
-            wait: true,
-            points: [
-                {
-                    id: randomUUID(),
-                    vector,
-                    payload: { text: entry, createdAt: new Date().toISOString() }
-                }
-            ]
+    await getEmbedding(entry)
+        .then(async (vector) => {
+            vectorSize = vector.length;
+            await ensureCollection(vector.length);
+            await qdrant.upsert(QDRANT_COLLECTION, {
+                wait: true,
+                points: [
+                    {
+                        id: randomUUID(),
+                        vector,
+                        payload: { text: entry, createdAt: new Date().toISOString() }
+                    }
+                ]
+            });
+            log.info('memory_added', {
+                recentCount: recentMemory.length,
+                vectorSize,
+                durationMs: Date.now() - startedAt
+            });
+        })
+        .catch((error: unknown) => {
+            qdrantEnabled = false;
+            log.warn('memory_qdrant_disabled', {
+                error: String(error),
+                message: 'Falling back to in-memory only'
+            });
+            logMemoryAddedLocalOnly(startedAt);
         });
-    } catch (error) {
-        qdrantEnabled = false;
-        log.warn('memory_qdrant_disabled', {
-            error: String(error),
-            message: 'Falling back to in-memory only'
-        });
-        logMemoryAddedLocalOnly(startedAt);
-        return;
-    }
-
-    log.info('memory_added', {
-        recentCount: recentMemory.length,
-        vectorSize,
-        durationMs: Date.now() - startedAt
-    });
 }
 
 /**
@@ -242,51 +237,52 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
         return recent;
     }
 
-    try {
-        const queryVector = await getEmbedding(query);
-        await ensureCollection(queryVector.length);
+    return getEmbedding(query)
+        .then(async (queryVector) => {
+            await ensureCollection(queryVector.length);
 
-        const results = await qdrant.search(QDRANT_COLLECTION, {
-            vector: queryVector,
-            limit: cappedN,
-            with_payload: true
-        });
+            const results = await qdrant.search(QDRANT_COLLECTION, {
+                vector: queryVector,
+                limit: cappedN,
+                with_payload: true
+            });
 
-        /* Extract text payloads from Qdrant search results. */
-        const semantic = results
-            .map((point) => {
-                const payload = point.payload as { text?: unknown } | null | undefined;
-                return typeof payload?.text === 'string' ? payload.text : null;
-            })
-            .filter((value): value is string => value !== null);
+            /* Extract text payloads from Qdrant search results. */
+            const semantic = results
+                .map((point) => {
+                    const payload = point.payload as { text?: unknown } | null | undefined;
+                    return typeof payload?.text === 'string' ? payload.text : null;
+                })
+                .filter((value): value is string => value !== null);
 
-        /* Merge recent + semantic, de-duplicating by exact text match. */
-        const merged: string[] = [...recent];
-        const seen = new Set(merged);
-        for (const item of semantic) {
-            if (!seen.has(item)) {
-                merged.push(item);
-                seen.add(item);
+            /* Merge recent + semantic, de-duplicating by exact text match. */
+            const merged: string[] = [...recent];
+            const seen = new Set(merged);
+            for (const item of semantic) {
+                if (!seen.has(item)) {
+                    merged.push(item);
+                    seen.add(item);
+                }
             }
-        }
-        const output = merged.slice(0, cappedN);
-        log.info('memory_read_hybrid', {
-            queryLength: query.length,
-            recentCount: recent.length,
-            semanticCount: semantic.length,
-            returnedCount: output.length,
-            durationMs: Date.now() - startedAt
+            const output = merged.slice(0, cappedN);
+            log.info('memory_read_hybrid', {
+                queryLength: query.length,
+                recentCount: recent.length,
+                semanticCount: semantic.length,
+                returnedCount: output.length,
+                durationMs: Date.now() - startedAt
+            });
+            return output;
+        })
+        .catch((error: unknown) => {
+            log.warn('memory_qdrant_search_failed', {
+                error: String(error),
+                queryLength: query.length,
+                returnedCount: recent.length,
+                durationMs: Date.now() - startedAt
+            });
+            return recent;
         });
-        return output;
-    } catch (error) {
-        log.warn('memory_qdrant_search_failed', {
-            error: String(error),
-            queryLength: query.length,
-            returnedCount: recent.length,
-            durationMs: Date.now() - startedAt
-        });
-        return recent;
-    }
 }
 
 /**
@@ -303,19 +299,19 @@ export async function clearMemory(): Promise<void> {
         return;
     }
 
-    try {
-        await qdrant.deleteCollection(QDRANT_COLLECTION);
-        vectorSize = null;
-    } catch (error) {
-        log.warn('memory_clear_failed', {
-            error: String(error),
-            durationMs: Date.now() - startedAt
+    await qdrant
+        .deleteCollection(QDRANT_COLLECTION)
+        .then(() => {
+            vectorSize = null;
+            log.info('memory_cleared', { durationMs: Date.now() - startedAt });
+        })
+        .catch((error: unknown) => {
+            log.warn('memory_clear_failed', {
+                error: String(error),
+                durationMs: Date.now() - startedAt
+            });
+            logMemoryClearedRecentOnly(startedAt);
         });
-        logMemoryClearedRecentOnly(startedAt);
-        return;
-    }
-
-    log.info('memory_cleared', { durationMs: Date.now() - startedAt });
 }
 
 /**
@@ -347,43 +343,41 @@ export async function addStructuredMemory(
         return;
     }
 
-    try {
-        const vector = await getEmbedding(fullEntry.content);
-        vectorSize = vector.length;
-        await ensureCollection(vector.length);
-
-        await qdrant.upsert(QDRANT_COLLECTION, {
-            wait: true,
-            points: [
-                {
-                    id,
-                    vector,
-                    payload: {
-                        text: fullEntry.content,
-                        role: fullEntry.role,
-                        createdAt: timestamp.toISOString(),
-                        ...(fullEntry.metadata ?? {})
+    await getEmbedding(fullEntry.content)
+        .then(async (vector) => {
+            vectorSize = vector.length;
+            await ensureCollection(vector.length);
+            await qdrant.upsert(QDRANT_COLLECTION, {
+                wait: true,
+                points: [
+                    {
+                        id,
+                        vector,
+                        payload: {
+                            text: fullEntry.content,
+                            role: fullEntry.role,
+                            createdAt: timestamp.toISOString(),
+                            ...(fullEntry.metadata ?? {})
+                        }
                     }
-                }
-            ]
+                ]
+            });
+            log.info('memory_structured_added', {
+                id,
+                role: fullEntry.role,
+                recentCount: recentMemory.length,
+                vectorSize,
+                durationMs: Date.now() - startedAt
+            });
+        })
+        .catch((error: unknown) => {
+            qdrantEnabled = false;
+            log.warn('memory_qdrant_disabled', {
+                error: String(error),
+                message: 'Falling back to in-memory only'
+            });
+            logMemoryAddedLocalOnly(startedAt);
         });
-    } catch (error) {
-        qdrantEnabled = false;
-        log.warn('memory_qdrant_disabled', {
-            error: String(error),
-            message: 'Falling back to in-memory only'
-        });
-        logMemoryAddedLocalOnly(startedAt);
-        return;
-    }
-
-    log.info('memory_structured_added', {
-        id,
-        role: fullEntry.role,
-        recentCount: recentMemory.length,
-        vectorSize,
-        durationMs: Date.now() - startedAt
-    });
 }
 
 /**

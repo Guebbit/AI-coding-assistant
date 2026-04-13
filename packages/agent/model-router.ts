@@ -413,14 +413,10 @@ export async function routeModel(input: IRouteInput): Promise<IModelRouteDecisio
     }
 
     /* Model-based routing with fallback. */
-    try {
-        return await routeWithModel(input);
-    } catch {
-        return {
-            profile: 'default',
-            model: resolveModel('default'),
-            reason: 'router_model_failed_fallback_default',
-            options: resolveOptions('default')
-        };
-    }
+    return routeWithModel(input).catch(() => ({
+        profile: 'default' as ModelProfile,
+        model: resolveModel('default'),
+        reason: 'router_model_failed_fallback_default',
+        options: resolveOptions('default')
+    }));
 }

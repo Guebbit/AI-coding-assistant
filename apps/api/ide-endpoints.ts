@@ -817,35 +817,37 @@ export function registerIdeRoutes(application: express.Express): void {
         `File path: ${filePath}\n` +
         `Code:\n${parsed.data.content}`;
 
-      try {
-        const rawLlmResponse = await withTimeout(
-          generate(reviewPrompt, {
-            model: llmModel,
-            stream: false,
-            format: "json",
-            options: {
-              num_predict: LINT_CONVENTIONS_MAX_TOKENS,
-              temperature: 0.15,
-            },
-          }),
-          endpointTimeoutMs["lint-conventions"],
-          "lint-conventions",
-        );
-        const parsedLlmResponse = JSON.parse(rawLlmResponse);
-        const asArray = Array.isArray(parsedLlmResponse)
-          ? parsedLlmResponse
-          : Array.isArray(parsedLlmResponse.findings)
-            ? parsedLlmResponse.findings
-            : [];
-        llmFindings = asArray
-          .map((finding: unknown) => normalizeLlmFinding(finding))
-          .filter((finding: IFinding | null): finding is IFinding => finding !== null)
-          .slice(0, parsed.data.maxFindings);
-      } catch (error) {
-        log.warn("lint_conventions_llm_enrichment_failed", {
-          error: String(error),
+      llmFindings = await withTimeout(
+        generate(reviewPrompt, {
+          model: llmModel,
+          stream: false,
+          format: "json",
+          options: {
+            num_predict: LINT_CONVENTIONS_MAX_TOKENS,
+            temperature: 0.15,
+          },
+        }),
+        endpointTimeoutMs["lint-conventions"],
+        "lint-conventions",
+      )
+        .then((rawLlmResponse) => {
+          const parsedLlmResponse = JSON.parse(rawLlmResponse);
+          const asArray = Array.isArray(parsedLlmResponse)
+            ? parsedLlmResponse
+            : Array.isArray(parsedLlmResponse.findings)
+              ? parsedLlmResponse.findings
+              : [];
+          return (asArray as unknown[])
+            .map((finding: unknown) => normalizeLlmFinding(finding))
+            .filter((finding: IFinding | null): finding is IFinding => finding !== null)
+            .slice(0, parsed.data.maxFindings);
+        })
+        .catch((error: unknown) => {
+          log.warn("lint_conventions_llm_enrichment_failed", {
+            error: String(error),
+          });
+          return [] as IFinding[];
         });
-      }
     }
 
     const findings = [...deterministicFindings, ...llmFindings].slice(0, parsed.data.maxFindings);

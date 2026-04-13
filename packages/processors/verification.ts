@@ -69,27 +69,30 @@ export const verificationProcessor = createProcessor({
             `Did this tool choice correctly address the task?\n` +
             `Reply ONLY with JSON: {"valid": true|false, "issue": "reason if invalid or null"}`;
 
-        let valid = true;
-        let issue: string | null = null;
-
-        try {
-            const raw = await generate(verifyPrompt, {
-                model: VERIFICATION_MODEL,
-                stream: false,
-                format: 'json'
+        const verifyResult = await generate(verifyPrompt, {
+            model: VERIFICATION_MODEL,
+            stream: false,
+            format: 'json'
+        })
+            .then((raw) => {
+                const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+                const parsed = JSON.parse(cleaned) as {
+                    valid?: boolean;
+                    issue?: string | null;
+                };
+                return {
+                    valid: parsed.valid !== false,
+                    issue: typeof parsed.issue === 'string' ? parsed.issue : null
+                };
+            })
+            .catch((error: unknown) => {
+                log.warn('verification_call_failed', { error: String(error) });
+                /* Fail open — do not block the agent on a verification error. */
+                return null;
             });
-            const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
-            const parsed = JSON.parse(cleaned) as {
-                valid?: boolean;
-                issue?: string | null;
-            };
-            valid = parsed.valid !== false;
-            issue = typeof parsed.issue === 'string' ? parsed.issue : null;
-        } catch (error) {
-            log.warn('verification_call_failed', { error: String(error) });
-            /* Fail open — do not block the agent on a verification error. */
-            return;
-        }
+
+        if (verifyResult === null) return;
+        const { valid, issue } = verifyResult;
 
         if (!valid && issue) {
             log.warn('verification_failed', {

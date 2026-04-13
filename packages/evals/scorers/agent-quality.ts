@@ -53,11 +53,7 @@ export const agentQualityScorer = createScorer({
         }
 
         /* Try the LLM judge first; fall back to heuristic on failure. */
-        try {
-            return await scoreWithLlm(run);
-        } catch {
-            return scoreWithHeuristic(run);
-        }
+        return scoreWithLlm(run).catch(() => scoreWithHeuristic(run));
     }
 });
 

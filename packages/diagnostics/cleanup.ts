@@ -22,26 +22,22 @@ import path from 'path';
  * @returns The number of files deleted.
  */
 export async function cleanupOldLogs(dir: string, maxFiles: number): Promise<number> {
-    let entries: { name: string; mtime: number }[] = [];
+    const entries = await fs
+        .readdir(dir, { withFileTypes: true })
+        .then((dirents) =>
+            Promise.all(
+                dirents
+                    .filter((d) => d.isFile())
+                    .map(async (d) => {
+                        const filePath = path.join(dir, d.name);
+                        const stat = await fs.stat(filePath);
+                        return { name: d.name, mtime: stat.mtimeMs };
+                    })
+            )
+        )
+        .catch(() => null);
 
-    try {
-        const dirents = await fs.readdir(dir, { withFileTypes: true });
-        const stats = await Promise.all(
-            dirents
-                .filter((d) => d.isFile())
-                .map(async (d) => {
-                    const filePath = path.join(dir, d.name);
-                    const stat = await fs.stat(filePath);
-                    return { name: d.name, mtime: stat.mtimeMs };
-                })
-        );
-        entries = stats;
-    } catch {
-        /* Directory does not exist yet — nothing to clean up. */
-        return 0;
-    }
-
-    if (entries.length <= maxFiles) return 0;
+    if (!entries || entries.length <= maxFiles) return 0;
 
     /* Sort ascending by mtime so the oldest are first. */
     entries.sort((a, b) => a.mtime - b.mtime);
