@@ -112,19 +112,32 @@ export class Agent {
      * router to use a specific profile for every step, bypassing
      * automatic routing.
      *
+     * Optionally accepts a `maxSteps` override that bounds this specific
+     * run independently of the global `AGENTS_MAX_STEPS` env var.  This
+     * is used by the workflow orchestrator to give each step its own cap.
+     *
      * @param task    - The user's natural-language task description.
-     * @param options - Optional configuration (e.g. `{ profile: "code" }`).
+     * @param options - Optional configuration (e.g. `{ profile: "code", maxSteps: 10 }`).
      * @returns The agent's final answer as a string.
      */
-    async run(task: string, options?: { profile?: ModelProfile }): Promise<string> {
+    async run(
+        task: string,
+        options?: { profile?: ModelProfile; maxSteps?: number }
+    ): Promise<string> {
         const runStartedAt = Date.now();
         let context = '';
         const diagnosticEntries: IDiagnosticEntry[] = [];
 
+        /* Use per-call override when provided; fall back to the global default. */
+        const effectiveMaxSteps =
+            typeof options?.maxSteps === 'number' && options.maxSteps > 0
+                ? options.maxSteps
+                : MAX_STEPS;
+
         log.info('agent_run_started', {
             task,
             taskLength: task.length,
-            maxSteps: MAX_STEPS,
+            maxSteps: effectiveMaxSteps,
             toolCount: this.tools.length
         });
 
@@ -138,7 +151,7 @@ export class Agent {
 
         emit({ type: 'agent:start', payload: { task } });
 
-        for (let step = 0; step < MAX_STEPS; step++) {
+        for (let step = 0; step < effectiveMaxSteps; step++) {
             const stepStartedAt = Date.now();
 
             // ── Run input processors ─────────────────────────────────────────
@@ -388,10 +401,9 @@ export class Agent {
             });
 
         /* Persist the dead-end so future runs can avoid repeating it. */
-        await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`)
-            .catch((error: unknown) =>
-                log.warn('agent_memory_add_failed', { error: String(error) })
-            );
+        await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`).catch((error: unknown) =>
+            log.warn('agent_memory_add_failed', { error: String(error) })
+        );
 
         /* Write the full diagnostic log with the AI commentary. */
         let diagnosticFile = '';

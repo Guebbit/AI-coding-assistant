@@ -74,9 +74,10 @@ Four operational surfaces:
 
 1. `POST /run` — triggers the full agentic loop (reason → pick tool → execute → repeat).
 2. `POST /run/swarm`, `POST /run/swarm/stream` — multi-agent swarm orchestration (decompose → delegate → synthesise).
-3. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
-4. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
-5. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
+3. `POST /workflow`, `POST /workflow/stream` — sequential workflow orchestration (explicit ordered steps, each bounded independently).
+4. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
+5. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
+6. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
 
 ---
 
@@ -419,11 +420,11 @@ Registered in `apps/api/index.ts` via `registerInfoRoutes(app)`.
 
 These are **not** agent-loop routes. They make no LLM calls and return metadata about the running Manna instance.
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /info/modes` | Lists all Manna agent routing profiles with their resolved model, env var, and description |
+| Endpoint           | Purpose                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------ |
+| `GET /info/modes`  | Lists all Manna agent routing profiles with their resolved model, env var, and description             |
 | `GET /info/models` | Proxies Ollama's `GET /api/tags` — returns all locally available models with size, digest, and details |
-| `GET /help` | Structured JSON overview of every REST API endpoint (method, path, summary, parameters) |
+| `GET /help`        | Structured JSON overview of every REST API endpoint (method, path, summary, parameters)                |
 
 > These endpoints are the `--help` equivalent for the HTTP API.
 
@@ -481,34 +482,35 @@ flowchart TD
     Synthesise --> Result["ISwarmResult { answer, subtaskResults, totalDurationMs }"]
 ```
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /run/swarm` | Run swarm, return final result as JSON |
-| `POST /run/swarm/stream` | Run swarm, stream events as SSE |
+| Endpoint                 | Purpose                                |
+| ------------------------ | -------------------------------------- |
+| `POST /run/swarm`        | Run swarm, return final result as JSON |
+| `POST /run/swarm/stream` | Run swarm, stream events as SSE        |
 
 Request body:
+
 ```json
 {
-  "task": "string (required)",
-  "allowWrite": false,
-  "profile": "fast|reasoning|code|default",
-  "maxSubtasks": 6
+    "task": "string (required)",
+    "allowWrite": false,
+    "profile": "fast|reasoning|code|default",
+    "maxSubtasks": 6
 }
 ```
 
 SSE events for `/run/swarm/stream`:
 
-| SSE event | Trigger | Data shape |
-|---|---|---|
-| `decomposed` | `swarm:decomposed` | `{ subtaskCount, reasoning, subtasks }` |
-| `subtask_start` | `swarm:subtask_start` | `{ subtaskId, profile }` |
-| `subtask_done` | `swarm:subtask_done` | `{ subtaskId, durationMs }` |
-| `subtask_error` | `swarm:subtask_error` | `{ subtaskId, error }` |
-| `step` | `agent:step` | `{ step, action, thought }` |
-| `tool` | `tool:result` / `tool:error` | `{ tool, result? }` or `{ tool, error }` |
-| `route` | `agent:model_routed` | `{ profile, model, reason }` |
-| `done` | `swarm:done` | `{ result, totalDurationMs, subtaskCount }` |
-| `error` | swarm run failed | `{ error }` |
+| SSE event       | Trigger                      | Data shape                                  |
+| --------------- | ---------------------------- | ------------------------------------------- |
+| `decomposed`    | `swarm:decomposed`           | `{ subtaskCount, reasoning, subtasks }`     |
+| `subtask_start` | `swarm:subtask_start`        | `{ subtaskId, profile }`                    |
+| `subtask_done`  | `swarm:subtask_done`         | `{ subtaskId, durationMs }`                 |
+| `subtask_error` | `swarm:subtask_error`        | `{ subtaskId, error }`                      |
+| `step`          | `agent:step`                 | `{ step, action, thought }`                 |
+| `tool`          | `tool:result` / `tool:error` | `{ tool, result? }` or `{ tool, error }`    |
+| `route`         | `agent:model_routed`         | `{ profile, model, reason }`                |
+| `done`          | `swarm:done`                 | `{ result, totalDurationMs, subtaskCount }` |
+| `error`         | swarm run failed             | `{ error }`                                 |
 
 ---
 
@@ -561,17 +563,18 @@ SSE events for `/run/swarm/stream`:
 /
 ├── apps/
 │   └── api/
-│       ├── index.ts          — Express entry; wires all packages; POST /run, GET /health
+│       ├── index.ts          — Express entry; wires all packages; POST /run, POST /workflow, GET /health
 │       ├── agents.ts         — shared agent instances (readOnlyAgent, writeEnabledAgent) + createAgent() + createSwarmOrchestrator() + processor registration
 │       ├── stream-endpoints.ts — registerStreamRoutes(); POST /run/stream (SSE)
 │       ├── swarm-endpoints.ts — registerSwarmRoutes(); POST /run/swarm, POST /run/swarm/stream
+│       ├── workflow-endpoints.ts — registerWorkflowRoutes(); POST /workflow, POST /workflow/stream
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
 │       ├── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
 │       └── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
 ├── packages/
 │   ├── agent/
-│   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; diagnostic accumulation; self-debug on max_steps
+│   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; per-run maxSteps override; diagnostic accumulation; self-debug on max_steps
 │   │   ├── model-router.ts   — routeModel(); profile resolution; rules vs model mode; budget-aware heuristics
 │   │   └── schemas.ts        — agentStepSchema (Zod); AgentStep type
 │   ├── swarm/
@@ -679,7 +682,7 @@ SSE events for `/run/swarm/stream`:
 | --------------------------- | --------------------------------------------------------------------------------------- |
 | Change max loop iterations  | `AGENTS_MAX_STEPS` env var, or `MAX_STEPS` default in `packages/agent/agent.ts`         |
 | Add a new model profile     | `packages/agent/model-router.ts` — extend `ModelProfile`, `resolveModel`, routing logic |
-| Add a new HTTP endpoint     | `apps/api/ide-endpoints.ts` or `apps/api/index.ts`                                      |
+| Add a new HTTP endpoint     | `apps/api/ide-endpoints.ts`, `apps/api/workflow-endpoints.ts`, or `apps/api/index.ts`   |
 | Change the prompt structure | `Agent.buildPrompt()` in `packages/agent/agent.ts`                                      |
 | Intercept/modify steps      | Implement `Processor` in `packages/processors/`, register via `agent.addProcessor()`    |
 | Change memory strategy      | `packages/memory/memory.ts`                                                             |

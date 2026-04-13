@@ -26,9 +26,9 @@ export default tseslint.config(
                 ...globals.node
             },
             parserOptions: {
-                    projectService: true,
-                    tsconfigRootDir: import.meta.dirname
-                }
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname
+            }
         },
         rules: {
             'no-console': 'warn',

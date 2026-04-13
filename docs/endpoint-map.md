@@ -1,7 +1,7 @@
 # Endpoint Map
 
 ::: tip TL;DR
-`/run` = full agent loop for open-ended tasks. `/autocomplete`, `/lint-conventions`, `/page-review` = fast single-LLM-call endpoints. `/upload/*` = file uploads. `/v1/*` = OpenAI compatibility. `/info/*` + `/help` = instance metadata (no LLM).
+`/run` = full agent loop for open-ended tasks. `/workflow` = sequential multi-step bounded orchestration. `/autocomplete`, `/lint-conventions`, `/page-review` = fast single-LLM-call endpoints. `/upload/*` = file uploads. `/v1/*` = OpenAI compatibility. `/info/*` + `/help` = instance metadata (no LLM).
 :::
 
 This page is the authoritative human-readable reference for every HTTP endpoint exposed by the Manna API server.
@@ -19,6 +19,16 @@ Manna API  (default port :3001)
 │   ├── Reasoning, tool selection, multi-step execution
 │   ├── Access to ALL registered tools
 │   └── Params: task (required), allowWrite?, profile?
+│
+├── POST /run/stream                 — Streaming variant of /run (SSE)
+│
+├── POST /run/swarm                  — Multi-agent swarm orchestration
+├── POST /run/swarm/stream           — Streaming variant of /run/swarm (SSE)
+│
+├── POST /workflow                   — Sequential multi-step workflow (each step bounded independently)
+│   ├── Accepts: steps[] (required), carry?, allowWrite?, profile?, maxStepsPerStep?
+│   └── carry modes: none | summary (default) | full
+├── POST /workflow/stream            — Streaming variant of /workflow (SSE)
 │
 ├── POST /autocomplete               — Direct: IDE code completion (single LLM call)
 ├── POST /lint-conventions           — Direct: Lint + convention findings (deterministic + LLM)
@@ -260,6 +270,224 @@ data: {"step":1,"action":"none","thought":"Here are all TypeScript files in pack
 
 event: done
 data: {"result":"Here are all TypeScript files in packages/agent/: ..."}
+```
+
+---
+
+### `POST /workflow`
+
+Sequential multi-step workflow orchestration. Accepts an **explicit ordered list of steps** and runs each as a bounded, independent `agent.run()` sub-call. Each step has its own `maxStepsPerStep` iteration cap — a slow or failing step does **not** consume the budget of subsequent steps.
+
+File: `apps/api/workflow-endpoints.ts`  
+Registered via `registerWorkflowRoutes(app)` in `apps/api/index.ts`.
+
+**Request body**
+
+| Field             | Type                                           | Required | Default                  | Description                                                              |
+| ----------------- | ---------------------------------------------- | -------- | ------------------------ | ------------------------------------------------------------------------ |
+| `steps`           | `string[]`                                     | ✅       | —                        | Ordered list of step task strings (1–50 items)                           |
+| `carry`           | `"none" \| "summary" \| "full"`                | —        | `"summary"`              | How prior step outputs are forwarded into subsequent steps               |
+| `allowWrite`      | `boolean`                                      | —        | `false`                  | Unlock write tools (`write_file`, `scaffold_project`, `document_ingest`) |
+| `profile`         | `"fast" \| "reasoning" \| "code" \| "default"` | —        | auto-routed              | Force a model profile for every step                                     |
+| `maxStepsPerStep` | `integer` (1–100)                              | —        | `AGENTS_MAX_STEPS` (≈ 5) | Per-step agent-loop iteration cap                                        |
+
+#### Context carry modes
+
+| Mode      | Behaviour                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| `none`    | Steps are fully isolated — no prior output forwarded.                                                          |
+| `summary` | A compact bullet-list summary of prior step results is prepended to each subsequent step prompt. **(default)** |
+| `full`    | The complete verbatim output of every prior step is appended. Context may grow quickly with many steps.        |
+
+**Response**
+
+```json
+{
+    "steps": [
+        {
+            "index": 0,
+            "task": "List all TypeScript files under packages/",
+            "result": "packages/agent/agent.ts\npackages/agent/model-router.ts\n...",
+            "success": true,
+            "durationMs": 1234
+        },
+        {
+            "index": 1,
+            "task": "Summarise the purpose of each listed file",
+            "result": "agent.ts — core agentic loop ...",
+            "success": true,
+            "durationMs": 3456
+        }
+    ],
+    "allSucceeded": true,
+    "totalDurationMs": 4690
+}
+```
+
+> **Note**: The response is always `200 OK` even if individual steps errored — check each step's `success` field. A `500` is only returned for unexpected server-level failures.
+
+**Error responses**
+
+| Status | When                                                                                   |
+| ------ | -------------------------------------------------------------------------------------- |
+| `400`  | `steps` is missing/empty/invalid, `maxStepsPerStep` out of range, or `profile` invalid |
+| `500`  | Unexpected server error                                                                |
+
+**curl example**
+
+```bash
+curl -X POST http://localhost:3001/workflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "steps": [
+      "List all TypeScript files under packages/agent/",
+      "Summarise what each file does in one sentence"
+    ],
+    "carry": "summary",
+    "maxStepsPerStep": 10
+  }'
+```
+
+**curl example — overnight write workflow**
+
+```bash
+curl -X POST http://localhost:3001/workflow \
+  -H "Content-Type: application/json" \
+  -d '{
+    "steps": [
+      "Read the existing src/index.ts and summarise its structure",
+      "Create a utility module at src/utils/helper.ts with common string helpers",
+      "Write unit tests for src/utils/helper.ts",
+      "Update the README with the new utility module"
+    ],
+    "allowWrite": true,
+    "profile": "code",
+    "carry": "full",
+    "maxStepsPerStep": 15
+  }'
+```
+
+**Env / config notes**
+
+| Variable                         | Default | Effect on `/workflow`                                  |
+| -------------------------------- | ------- | ------------------------------------------------------ |
+| `AGENTS_MAX_STEPS`               | `5`     | Default per-step cap when `maxStepsPerStep` is omitted |
+| `AGENT_BUDGET_MAX_DURATION_MS`   | `60000` | Per-step wall-clock budget ceiling (same as `/run`)    |
+| `AGENT_BUDGET_MAX_CONTEXT_CHARS` | `50000` | Per-step context length ceiling (same as `/run`)       |
+
+---
+
+### `POST /workflow/stream`
+
+Same as `POST /workflow`, but streams lifecycle events as Server-Sent Events. The connection stays open until all steps complete.
+
+**Request body** — identical to `POST /workflow`
+
+**Response headers**
+
+```
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+```
+
+**SSE event types**
+
+| Event type       | When                            | Data shape                                                               |
+| ---------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `workflow_start` | Before first step               | `{ stepCount: number }`                                                  |
+| `step_start`     | Before each step begins         | `{ index: number, task: string }`                                        |
+| `step`           | On inner `agent:step`           | `{ workflowIndex, step, action, thought }` (thought truncated at 300 ch) |
+| `tool`           | On `tool:result` / `tool:error` | `{ workflowIndex, tool, result? \| error? }`                             |
+| `route`          | On `agent:model_routed`         | `{ workflowIndex, profile, model, reason }`                              |
+| `step_done`      | After each step completes       | Full `WorkflowStepResult` object (see above)                             |
+| `done`           | After all steps finish          | Full `WorkflowResponse` object (see above)                               |
+| `error`          | On fatal server error           | `{ error: string }`                                                      |
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant W as POST /workflow/stream
+    participant B as Event Bus
+    participant A as Agent (per step)
+
+    C->>W: POST { steps, carry, allowWrite?, profile?, maxStepsPerStep? }
+    W-->>C: 200 (text/event-stream headers)
+    W->>B: on("*", handler)
+    W-->>C: event: workflow_start\ndata: { stepCount }
+
+    loop For each step i
+        W-->>C: event: step_start\ndata: { index: i, task }
+
+        loop Agent sub-run (up to maxStepsPerStep iterations)
+            A->>B: emit("agent:model_routed")
+            B-->>W: handler fires
+            W-->>C: event: route\ndata: { workflowIndex, profile, model, reason }
+
+            A->>B: emit("agent:step")
+            B-->>W: handler fires
+            W-->>C: event: step\ndata: { workflowIndex, step, action, thought }
+
+            A->>B: emit("tool:result" or "tool:error")
+            B-->>W: handler fires
+            W-->>C: event: tool\ndata: { workflowIndex, tool, result|error }
+        end
+
+        W-->>C: event: step_done\ndata: { index, task, result, success, durationMs }
+    end
+
+    W-->>C: event: done\ndata: { steps, allSucceeded, totalDurationMs }
+    W->>B: off("*", handler)
+    W-->>C: (connection closed)
+```
+
+**curl example**
+
+```bash
+curl -N -X POST http://localhost:3001/workflow/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "steps": [
+      "List all TypeScript files under packages/agent/",
+      "Summarise what each file does in one sentence"
+    ],
+    "carry": "summary",
+    "maxStepsPerStep": 10
+  }'
+```
+
+Example output:
+
+```
+event: workflow_start
+data: {"stepCount":2}
+
+event: step_start
+data: {"index":0,"task":"List all TypeScript files under packages/agent/"}
+
+event: route
+data: {"workflowIndex":0,"profile":"code","model":"qwen2.5-coder:14b-instruct-q8_0","reason":"keyword_match:code"}
+
+event: step
+data: {"workflowIndex":0,"step":0,"action":"shell","thought":"I need to list all TypeScript files..."}
+
+event: tool
+data: {"workflowIndex":0,"tool":"shell","result":"packages/agent/agent.ts\n..."}
+
+event: step_done
+data: {"index":0,"task":"List all TypeScript files under packages/agent/","result":"packages/agent/agent.ts\n...","success":true,"durationMs":1234}
+
+event: step_start
+data: {"index":1,"task":"Summarise what each file does in one sentence"}
+
+event: step
+data: {"workflowIndex":1,"step":0,"action":"none","thought":"agent.ts — core loop ..."}
+
+event: step_done
+data: {"index":1,"task":"Summarise what each file does in one sentence","result":"agent.ts — core loop ...","success":true,"durationMs":2100}
+
+event: done
+data: {"steps":[...],"allSucceeded":true,"totalDurationMs":3334}
 ```
 
 ---
@@ -756,7 +984,7 @@ Specialized endpoints cut straight to the point:
 → single LLM call (TOOL_IDE_MODEL, low temperature)
 → structured JSON response
 
-```
+````
 
 **The design rule**: when a use case is **frequent enough** and has a **well-defined input/output contract** (the caller knows exactly what fields to send and what fields to expect back), carve it out into its own endpoint.
 
@@ -772,7 +1000,7 @@ Benefits:
 
 These endpoints return metadata about the running Manna instance. They make **no LLM calls** and have negligible latency.
 
-File: `apps/api/info-endpoints.ts`  
+File: `apps/api/info-endpoints.ts`
 Registered via `registerInfoRoutes(app)` in `apps/api/index.ts`.
 
 ### `GET /info/modes`
@@ -793,7 +1021,7 @@ Lists all available Manna agent routing profiles (modes), the Ollama model each 
     }
   ]
 }
-```
+````
 
 **curl example**
 
@@ -811,25 +1039,25 @@ Proxies Ollama's `GET /api/tags` and returns all locally available models with s
 
 ```json
 {
-  "count": 5,
-  "ollamaBaseUrl": "http://localhost:11434",
-  "models": [
-    {
-      "name": "llama3.1:8b-instruct-q8_0",
-      "size": 8538212864,
-      "digest": "a1b2c3...",
-      "modifiedAt": "2024-12-01T10:00:00Z",
-      "details": { "family": "llama", "parameter_size": "8B", "quantization_level": "Q8_0" }
-    }
-  ]
+    "count": 5,
+    "ollamaBaseUrl": "http://localhost:11434",
+    "models": [
+        {
+            "name": "llama3.1:8b-instruct-q8_0",
+            "size": 8538212864,
+            "digest": "a1b2c3...",
+            "modifiedAt": "2024-12-01T10:00:00Z",
+            "details": { "family": "llama", "parameter_size": "8B", "quantization_level": "Q8_0" }
+        }
+    ]
 }
 ```
 
 **Error responses**
 
-| Status | When |
-|---|---|
-| `502` | Ollama is unreachable or returned a non-2xx status |
+| Status | When                                               |
+| ------ | -------------------------------------------------- |
+| `502`  | Ollama is unreachable or returned a non-2xx status |
 
 **curl example**
 
@@ -847,18 +1075,23 @@ Returns a structured JSON overview of every REST API endpoint — the equivalent
 
 ```json
 {
-  "description": "Manna AI Agent Platform — REST API quick reference",
-  "endpointCount": 14,
-  "endpoints": [
-    {
-      "method": "POST",
-      "path": "/run",
-      "summary": "Submit a task to the full agentic loop (reasoning → tool selection → execution).",
-      "params": [
-        { "name": "task", "type": "string", "required": true, "description": "Natural-language task." }
-      ]
-    }
-  ]
+    "description": "Manna AI Agent Platform — REST API quick reference",
+    "endpointCount": 14,
+    "endpoints": [
+        {
+            "method": "POST",
+            "path": "/run",
+            "summary": "Submit a task to the full agentic loop (reasoning → tool selection → execution).",
+            "params": [
+                {
+                    "name": "task",
+                    "type": "string",
+                    "required": true,
+                    "description": "Natural-language task."
+                }
+            ]
+        }
+    ]
 }
 ```
 
@@ -874,11 +1107,11 @@ curl http://localhost:3001/help
 
 The following endpoints are **planned / proposed** — they are not implemented yet. They follow the same specialized-endpoint pattern described above.
 
-| Endpoint | Purpose | Implementation notes |
-|---|---|---|
-| `POST /docs-chat` | Question about Manna documentation → fast answer | Single LLM call with docs pre-loaded as context; uses `AGENT_MODEL_FAST` for sub-second responses |
-| `POST /summarize-file` | File path → structured summary | Wraps `read_file` tool + single LLM summarization call |
-| `POST /query-database` | Natural language → SQL → results + explanation | Wraps `mysql_query` tool; returns `{ sql, rows, explanation }` |
+| Endpoint               | Purpose                                          | Implementation notes                                                                              |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `POST /docs-chat`      | Question about Manna documentation → fast answer | Single LLM call with docs pre-loaded as context; uses `AGENT_MODEL_FAST` for sub-second responses |
+| `POST /summarize-file` | File path → structured summary                   | Wraps `read_file` tool + single LLM summarization call                                            |
+| `POST /query-database` | Natural language → SQL → results + explanation   | Wraps `mysql_query` tool; returns `{ sql, rows, explanation }`                                    |
 
 This list will grow as use cases become frequent enough to justify a dedicated endpoint. The pattern is intentionally extensible.
 
@@ -899,4 +1132,7 @@ Follow these steps to add a new direct endpoint (the same pattern used by `/auto
 5. **Document it here** — add a section to this page following the same structure (request body table, response shape, env vars, curl example). Update the visual tree at the top.
 
 6. **Update `AI_README.md`** — per the update protocol: add a row to the IDE direct endpoints table, add any new env vars to the Key Environment Variables table, and add the file to the Directory map if you created a new file.
+
+```
+
 ```

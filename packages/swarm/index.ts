@@ -7,6 +7,6 @@
  * @module swarm
  */
 
-export * from "./orchestrator";
-export * from "./decomposer";
-export * from "./types";
+export * from './orchestrator';
+export * from './decomposer';
+export * from './types';

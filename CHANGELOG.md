@@ -11,25 +11,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
-- **`openapi.yaml` — `/upload/read-pdf` section placement**: Moved `/upload/read-pdf` from under the misplaced `# ── Library endpoints ──` comment to sit with the other upload endpoints (after `/upload/speech-to-text`), where it belongs.
+- **`packages/memory/memory.ts` — `ensureCollection()` type error**: The `ensureCollectionPromise` assignment now correctly resolves to `Promise<void>` by chaining `.then(() => undefined)` after the Qdrant client call, eliminating a TypeScript type mismatch (`Promise<boolean | CollectionInfo>` is not assignable to `Promise<void>`).
+
+### Added
+
+- **Workflow orchestration** (`apps/api/workflow-endpoints.ts`): New `POST /workflow` and `POST /workflow/stream` endpoints for sequential multi-step agent orchestration.
+    - Accepts `steps: string[]` — an explicit ordered list of task strings.
+    - Each step is executed as a **bounded independent `agent.run()` sub-call**; a slow or failing step does not consume the budget of subsequent steps.
+    - **Per-step iteration cap** (`maxStepsPerStep`: 1–100, default `AGENTS_MAX_STEPS`): each step gets its own loop budget, independently of all other steps.
+    - **Context carry modes** (`carry: "none" | "summary" | "full"`, default `"summary"`):
+        - `none` — steps are fully isolated.
+        - `summary` — a compact bullet-list summary of prior results is prepended to each subsequent step prompt.
+        - `full` — complete verbatim output of every prior step is appended.
+    - Forwards `allowWrite` and `profile` consistently with existing `/run` endpoints.
+    - Zod-validated request schema with clear 400 errors (`details` array of validation messages).
+    - Non-streaming response returns `{ steps, allSucceeded, totalDurationMs }` with per-step `{ index, task, result, success, durationMs, error? }`.
+    - Streaming response (`POST /workflow/stream`) emits SSE events: `workflow_start`, `step_start`, `step`, `tool`, `route`, `step_done`, `done`, `error`.
+    - Reuses `createAgent()`, `VALID_PROFILES`, and the global event bus from existing infrastructure; no agent code duplication.
+- **`Agent.run()` — `maxSteps` option**: The `options` parameter now accepts an optional `maxSteps: number` field that overrides the global `AGENTS_MAX_STEPS` env var for that specific run. Fully backward-compatible — existing callers that omit `maxSteps` are unaffected.
 - **`openapi.yaml` — `RunRequest.allowWrite` description**: Updated to mention all three tools unlocked by `allowWrite: true` — `write_file`, `scaffold_project`, and `document_ingest` (the third was previously omitted).
 - **`openapi.yaml` — `/health` response schema**: Added missing `timestamp` field (`type: string, format: date-time`) to match the actual implementation which returns `{ status: "ok", timestamp: new Date().toISOString() }`.
 - **`openapi.yaml` — `/upload/image-classify` model description**: Replaced the hardcoded and inaccurate `llava:13b` default with a generic reference to the `TOOL_VISION_MODEL` environment variable, consistent with `AI_README.md`.
 
 ### Added
+
 - **Swarm orchestration** (`packages/swarm/`): Multi-agent task decomposition and execution. Complex tasks are broken into subtasks by an LLM decomposer, each delegated to a specialised `Agent` with its own model profile, then synthesised into a final answer.
-  - `packages/swarm/types.ts` — `ISubtask`, `IDecomposition`, `ISubtaskResult`, `ISwarmResult`, `ISwarmConfig`
-  - `packages/swarm/decomposer.ts` — `decomposeTask()` with fallback to single-subtask plan
-  - `packages/swarm/orchestrator.ts` — `SwarmOrchestrator` class with dependency-aware execution and synthesis
+    - `packages/swarm/types.ts` — `ISubtask`, `IDecomposition`, `ISubtaskResult`, `ISwarmResult`, `ISwarmConfig`
+    - `packages/swarm/decomposer.ts` — `decomposeTask()` with fallback to single-subtask plan
+    - `packages/swarm/orchestrator.ts` — `SwarmOrchestrator` class with dependency-aware execution and synthesis
 - **Swarm HTTP endpoints** (`apps/api/swarm-endpoints.ts`):
-  - `POST /run/swarm` — run a swarm and return the final result as JSON
-  - `POST /run/swarm/stream` — run a swarm and stream lifecycle events as SSE
+    - `POST /run/swarm` — run a swarm and return the final result as JSON
+    - `POST /run/swarm/stream` — run a swarm and stream lifecycle events as SSE
 - New env vars: `SWARM_DECOMPOSER_MODEL`, `SWARM_SYNTHESIS_MODEL`
 - New event types: `swarm:start`, `swarm:decomposed`, `swarm:subtask_start`, `swarm:subtask_done`, `swarm:subtask_error`, `swarm:done`
 - **Informational endpoints** (`apps/api/info-endpoints.ts`): three new lightweight `GET` endpoints that require no LLM call:
-  - `GET /info/modes` — lists all Manna agent routing profiles (modes) with their resolved Ollama models, controlling env vars, and descriptions.
-  - `GET /info/models` — proxies Ollama's `GET /api/tags` and returns all locally available models with size, digest, and detail metadata.
-  - `GET /help` — structured JSON overview of every REST API endpoint (method, path, summary, parameters) — the `--help` equivalent for the HTTP API.
+    - `GET /info/modes` — lists all Manna agent routing profiles (modes) with their resolved Ollama models, controlling env vars, and descriptions.
+    - `GET /info/models` — proxies Ollama's `GET /api/tags` and returns all locally available models with size, digest, and detail metadata.
+    - `GET /help` — structured JSON overview of every REST API endpoint (method, path, summary, parameters) — the `--help` equivalent for the HTTP API.
 - **Phase 1A — `packages/diagnostics/`**: New persistent diagnostic logs package with `IDiagnosticEntry` type, `writeDiagnosticLog()` writer (timestamped Markdown files), and `cleanupOldLogs()` pruner. Controlled by `DIAGNOSTIC_LOG_ENABLED`, `DIAGNOSTIC_LOG_DIR`, `DIAGNOSTIC_LOG_MAX_FILES` env vars.
 - **Phase 1B — Budget-ceiling model router**: `routeModel()` now accepts `contextLength` and `cumulativeDurationMs`; `routeWithRules()` applies budget-aware heuristics (context > 80 % ceiling → `reasoning`; duration > 70 % ceiling → `fast`). New env vars: `AGENT_BUDGET_MAX_DURATION_MS` (default 60 000) and `AGENT_BUDGET_MAX_CONTEXT_CHARS` (default 50 000).
 - **Phase 2A — Verification gate processor** (`packages/processors/verification.ts`): optional post-tool-choice LLM check; emits `tool:verification_failed`; controlled by `AGENT_VERIFICATION_ENABLED` / `AGENT_VERIFICATION_MODEL`.
@@ -39,6 +57,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Phase 4A — Tool reranker processor** (`packages/processors/tool-reranker.ts`): embeds tool descriptions once, then per-step selects the top-N most relevant tools by cosine similarity. Controlled by `TOOL_RERANKER_ENABLED` / `TOOL_RERANKER_TOP_N`.
 
 ### Changed
+
 - `apps/api/agents.ts`: extracted `buildProcessors()` helper; added `createSwarmOrchestrator()` factory; imports `SwarmOrchestrator` and `Processor` types.
 - `apps/api/index.ts`: registers swarm routes via `registerSwarmRoutes(app)` and info routes via `registerInfoRoutes(app)`.
 - `apps/api/agents.ts`: now imports and registers verification and tool-reranker processors; includes all new document reader tools in `readOnlyTools`; adds `document_ingest` to `writeTools`.

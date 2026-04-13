@@ -3,8 +3,11 @@
  *
  * Endpoints:
  * - `POST /run`                    — submit a task to the agent loop.
+ * - `POST /run/stream`             — streaming variant of `/run` (SSE).
  * - `POST /run/swarm`              — submit a task to the swarm orchestrator.
  * - `POST /run/swarm/stream`       — swarm orchestrator with SSE streaming.
+ * - `POST /workflow`               — run an explicit ordered list of steps sequentially.
+ * - `POST /workflow/stream`        — streaming variant of `/workflow` (SSE).
  * - `GET  /health`                 — liveness check for monitoring / Docker.
  * - `GET  /v1/models`              — OpenAI-compatible model list.
  * - `POST /v1/chat/completions`    — OpenAI-compatible chat completions.
@@ -16,6 +19,7 @@
  * `/page-review`) are registered from `ide-endpoints.ts`.
  * OpenAI-compatible routes are registered from `openai-compat.ts`.
  * Swarm routes are registered from `swarm-endpoints.ts`.
+ * Workflow routes are registered from `workflow-endpoints.ts`.
  * Informational routes (`/info/modes`, `/info/models`, `/help`) are
  * registered from `info-endpoints.ts`.
  *
@@ -32,6 +36,7 @@ import { registerOpenAiRoutes } from "./openai-compat";
 import { registerStreamRoutes } from "./stream-endpoints";
 import { registerSwarmRoutes } from "./swarm-endpoints";
 import { registerInfoRoutes } from "./info-endpoints";
+import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { createAgent, VALID_PROFILES } from "./agents";
 
 const log = getLogger("api");
@@ -62,6 +67,9 @@ registerStreamRoutes(app);
 
 /* Register swarm endpoints (POST /run/swarm, POST /run/swarm/stream). */
 registerSwarmRoutes(app);
+
+/* Register workflow endpoints (POST /workflow, POST /workflow/stream). */
+registerWorkflowRoutes(app);
 
 /* Register informational endpoints (/info/modes, /info/models, /help). */
 registerInfoRoutes(app);

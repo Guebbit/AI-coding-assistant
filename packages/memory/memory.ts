@@ -146,16 +146,15 @@ async function ensureCollection(size: number): Promise<void> {
         return ensureCollectionPromise;
     }
 
-    ensureCollectionPromise = qdrant
-        .getCollection(QDRANT_COLLECTION)
-        .catch(() =>
+    ensureCollectionPromise = (
+        qdrant.getCollection(QDRANT_COLLECTION).catch(() =>
             qdrant.createCollection(QDRANT_COLLECTION, {
                 vectors: { size, distance: 'Cosine' }
             })
-        );
+        ) as Promise<unknown>
+    ).then(() => undefined);
 
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    await ensureCollectionPromise!.finally(() => {
+    await ensureCollectionPromise.finally(() => {
         ensureCollectionPromise = null;
     });
 }
