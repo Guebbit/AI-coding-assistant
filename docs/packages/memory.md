@@ -1,5 +1,9 @@
 # memory -- Short-term Storage
 
+::: tip TL;DR
+Hybrid memory: local ring buffer (20 entries) + Qdrant vector search. Falls back to local-only if Qdrant is down.
+:::
+
 ## What
 
 Stores recent context with a hybrid strategy so the agent can remember things across runs.
@@ -148,3 +152,17 @@ If Qdrant is not running, the app continues using only the local ring buffer.
 ## Where in code
 
 - `packages/memory/memory.ts`
+
+```mermaid
+flowchart LR
+    subgraph addMemory
+        Entry[Task + Result] --> Ring["Ring Buffer (20 max)"]
+        Entry --> Embed["Ollama Embed"]
+        Embed --> Qdrant["Qdrant Vector DB"]
+    end
+    subgraph getMemory
+        Query[Query text] --> QSearch["Qdrant similarity search"]
+        QSearch --> TopN["Top N results"]
+        Query -.->|fallback| Ring
+    end
+```
