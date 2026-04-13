@@ -10,29 +10,14 @@ The API app wires small focused packages. Each package has a single responsibili
 
 ## Fast mental map
 
-```text
-                          ┌────────────────┐
-  POST /run  -----------> │   apps/api     │
-  { task: "..." }         └───────┬────────┘
-                                  |
-                     creates and wires:
-                                  |
-          ┌───────────────────────┼───────────────────────┐
-          |                       |                       |
-    ┌─────v──────┐         ┌──────v──────┐        ┌──────v──────┐
-    │   agent    │         │   memory    │        │   events    │
-    │  (loop)    │         │  (context)  │        │   (logs)    │
-    └─────┬──────┘         └─────────────┘        └─────────────┘
-          |
-    ┌─────v──────┐
-    │    llm     │  <-- agent asks llm what to do
-    │  (Ollama)  │
-    └────────────┘
-          |
-    ┌─────v──────┐
-    │   tools    │  <-- agent runs tools
-    │  (actions) │
-    └────────────┘
+```mermaid
+flowchart TD
+    POST["POST /run\n{ task: '...' }"] --> API["apps/api"]
+    API -->|creates and wires| Agent["agent\n(loop)"]
+    API -->|creates and wires| Memory["memory\n(context)"]
+    API -->|creates and wires| Events["events\n(logs)"]
+    Agent -->|asks what to do| LLM["llm\n(Ollama)"]
+    Agent -->|runs| Tools["tools\n(actions)"]
 ```
 
 ---
@@ -90,26 +75,40 @@ All the actions the agent can take. Each tool is `{ name, description, execute(i
 
 ## How they interact (sequence for one run)
 
-```
-1. API receives POST /run { task: "List npm scripts" }
-2. API creates: agent(llm, memory, tools, events)
-3. API subscribes: events.on("*", logger.info)
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as apps/api
+    participant Agent
+    participant Memory
+    participant Router
+    participant LLM
+    participant Tools
+    participant Events
 
-4. agent.run(task):
-   a. events.emit(agent:start)
-   b. context = memory.getMemory(task)
-   c. prompt = build(task, context, tools)
-   d. profile = router.route(task)
-   e. response = llm.generate(prompt, { model: profile.model })
-   f. { action, input } = JSON.parse(response)
-   g. result = tools[action].execute(input)
-   h. events.emit(tool:result)
-   i. context.append(result)
-   j. repeat b-i until action:"none" or max steps
+    Client->>API: POST /run { task }
+    API->>Agent: create(llm, memory, tools, events)
+    API->>Events: on("*", logger.info)
+    API->>Agent: agent.run(task)
+    Agent->>Events: emit(agent:start)
 
-5. memory.addMemory({ task, result: finalAnswer })
-6. events.emit(agent:done)
-7. API returns finalAnswer
+    loop Each step (max 5)
+        Agent->>Memory: getMemory(task)
+        Memory-->>Agent: context
+        Agent->>Agent: buildPrompt(task, context, tools)
+        Agent->>Router: route(task)
+        Router-->>Agent: profile
+        Agent->>LLM: generate(prompt, { model })
+        LLM-->>Agent: { action, input }
+        Agent->>Tools: tools[action].execute(input)
+        Tools-->>Agent: result
+        Agent->>Events: emit(tool:result)
+        Agent->>Agent: context.append(result)
+    end
+
+    Agent->>Memory: addMemory({ task, result })
+    Agent->>Events: emit(agent:done)
+    API-->>Client: finalAnswer
 ```
 
 ---

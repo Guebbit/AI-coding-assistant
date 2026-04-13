@@ -30,16 +30,12 @@ Rejects any path that tries to escape the project root (for example `../../etc/p
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "What npm scripts are available?"
-             ↓
-Agent thinks: "I need to look at package.json first"
-             ↓
-Agent calls:  read_file  →  { "path": "package.json" }
-             ↓
-Tool reads the file from disk and returns the full text
-             ↓
-Agent reads the JSON, finds the "scripts" block, and answers you
+```mermaid
+flowchart TD
+    A["You ask: 'What npm scripts are available?'"] --> B["Agent thinks: 'I need to look at package.json first'"]
+    B --> C["Agent calls: read_file → { path: 'package.json' }"]
+    C --> D["Tool reads the file from disk and returns full text"]
+    D --> E["Agent reads the JSON, finds the scripts block, and answers you"]
 ```
 
 ## Real-life use cases

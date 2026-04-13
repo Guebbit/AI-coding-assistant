@@ -50,18 +50,13 @@ The tool splits the command on spaces and checks the **first word** only.
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "What modules exist under packages/?"
-             ↓
-Agent thinks: "I should list the directory"
-             ↓
-Agent calls:  shell  →  { "command": "ls -la packages" }
-             ↓
-Tool runs `ls -la packages` in the process working directory
-             ↓
-stdout comes back: agent/  events/  llm/  memory/  tools/
-             ↓
-Agent lists the modules for you
+```mermaid
+flowchart TD
+    A["You ask: 'What modules exist under packages/?'"] --> B["Agent thinks: 'I should list the directory'"]
+    B --> C["Agent calls: shell → { command: 'ls -la packages' }"]
+    C --> D["Tool runs ls -la packages"]
+    D --> E["stdout: agent/ events/ llm/ memory/ tools/"]
+    E --> F["Agent lists the modules for you"]
 ```
 
 ## Real-life use cases

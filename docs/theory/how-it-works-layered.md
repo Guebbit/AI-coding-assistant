@@ -15,27 +15,27 @@ This page is designed for **progressive depth** — stop at any layer when you h
 
 ## Layer 1 -- 30-second view
 
-```text
-You                 API                  Agent Loop              Tools
- |                   |                       |                      |
- |-- POST /run ------>|                       |                      |
- |  { task: "..." }  |                       |                      |
- |                   |-- agent.run(task) ---->|                      |
- |                   |                       |                      |
- |                   |               [Step 1-5 loop]               |
- |                   |                       |-- build prompt        |
- |                   |                       |-- route to model      |
- |                   |                       |-- ask LLM             |
- |                   |                       |   -> { thought,       |
- |                   |                       |        action,        |
- |                   |                       |        input }        |
- |                   |                       |-- run tool ----------->|
- |                   |                       |<-- tool result --------|
- |                   |                       |-- append to context   |
- |                   |                       |-- repeat or done      |
- |                   |                       |                      |
- |                   |<-- return answer ------|                      |
- |<-- response -------|                       |                      |
+```mermaid
+sequenceDiagram
+    participant You
+    participant API
+    participant AgentLoop as Agent Loop
+    participant Tools
+
+    You->>API: POST /run { task: "..." }
+    API->>AgentLoop: agent.run(task)
+
+    loop Step 1–5
+        AgentLoop->>AgentLoop: build prompt
+        AgentLoop->>AgentLoop: route to model
+        AgentLoop->>AgentLoop: ask LLM → { thought, action, input }
+        AgentLoop->>Tools: run tool
+        Tools-->>AgentLoop: tool result
+        AgentLoop->>AgentLoop: append to context
+    end
+
+    AgentLoop-->>API: return answer
+    API-->>You: response
 ```
 
 If this is enough to get started, stop here and go run a task.

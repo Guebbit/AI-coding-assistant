@@ -43,18 +43,13 @@ A ranked list of results with similarity scores:
 
 ## How it works internally
 
-```text
-Your query: "how does the agent stop?"
-    ↓
-Tool embeds query using Ollama (OLLAMA_EMBED_MODEL = nomic-embed-text)
-    ↓
-Each document/file is also embedded
-    ↓
-Cosine similarity is computed: query vector vs each document vector
-    ↓
-Results are sorted by score (highest = most relevant)
-    ↓
-Top K results returned to agent
+```mermaid
+flowchart TD
+    A["Your query: 'how does the agent stop?'"] --> B["Tool embeds query using Ollama\n(OLLAMA_EMBED_MODEL = nomic-embed-text)"]
+    B --> C["Each document/file is also embedded"]
+    C --> D["Cosine similarity: query vector vs each document vector"]
+    D --> E["Results sorted by score (highest = most relevant)"]
+    E --> F["Top K results returned to agent"]
 ```
 
 ## Why this beats keyword search

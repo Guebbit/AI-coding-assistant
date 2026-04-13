@@ -14,22 +14,16 @@ A synchronous in-process event bus. Components emit named events; subscribers re
 
 ## Visual: how events flow
 
-```text
-packages/agent/agent.ts             packages/events/bus.ts
-        |                                    |
-        | emit({ type: "agent:step", ... })  |
-        |----------------------------------->|
-        |                                    |
-        |                                    | notifies all handlers for "agent:step"
-        |                                    | notifies all handlers for "*"
-        |                                    |
-        |                           apps/api/index.ts
-        |                                    |
-        |                              logger.info(event)
-        |                                    |
-        |                           your custom handler
-        |                                    |
-        |                              alerting / metrics
+```mermaid
+sequenceDiagram
+    participant Agent as agent.ts
+    participant Bus as events/bus.ts
+    participant API as apps/api/index.ts
+    participant Custom as Custom Handler
+
+    Agent->>Bus: emit({ type: "agent:step", ... })
+    Bus->>API: logger.info(event)
+    Bus->>Custom: alerting / metrics
 ```
 
 ---

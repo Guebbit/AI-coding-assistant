@@ -14,22 +14,17 @@ Stores recent context with a hybrid strategy so the agent can remember things ac
 
 ## Two-layer architecture
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│                    MEMORY PACKAGE                        │
-│                                                          │
-│  ┌────────────────────┐    ┌────────────────────────┐    │
-│  │  LOCAL RING BUFFER │    │      QDRANT (vector DB) │    │
-│  │                    │    │                         │    │
-│  │  Last 20 entries   │    │  All entries embedded   │    │
-│  │  (oldest evicted)  │    │  Semantic similarity    │    │
-│  │  Always available  │    │  search with Ollama     │    │
-│  │                    │    │  embeddings             │    │
-│  └────────────────────┘    └────────────────────────┘    │
-│                                        |                 │
-│              If Qdrant unavailable: falls back to        │
-│              local ring buffer only                      │
-└──────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph MEMORY["MEMORY PACKAGE"]
+        subgraph Ring["LOCAL RING BUFFER"]
+            R1["Last 20 entries\n(oldest evicted)\nAlways available"]
+        end
+        subgraph Qdrant["QDRANT (vector DB)"]
+            Q1["All entries embedded\nSemantic similarity\nsearch with Ollama\nembeddings"]
+        end
+    end
+    Qdrant -.->|"If Qdrant unavailable:\nfalls back to local ring buffer only"| Ring
 ```
 
 ---

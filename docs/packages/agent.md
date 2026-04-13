@@ -12,8 +12,10 @@ The agent is the orchestration loop. It makes decisions in a loop and routes eac
 
 ## Role
 
-```text
-Think -> Pick a tool -> Run the tool -> Think again (repeat up to 5x)
+```mermaid
+flowchart LR
+    Think["Think"] --> Pick["Pick a tool"] --> Run["Run the tool"] --> Again["Think again"]
+    Again -->|"repeat up to 5x"| Think
 ```
 
 ## Where in code
@@ -25,31 +27,19 @@ Think -> Pick a tool -> Run the tool -> Think again (repeat up to 5x)
 
 ## Visual: what happens on each loop step
 
-```text
-┌───────────────────────────────────────────────────────┐
-│  AGENT STEP                                           │
-│                                                       │
-│  1. Build prompt                                      │
-│     task + memory (from past runs)                    │
-│     + context (results from this run so far)          │
-│     + tool descriptions                               │
-│                                                       │
-│  2. Route to model profile                            │
-│     fast | reasoning | code | default                 │
-│                                                       │
-│  3. Ask LLM                                           │
-│     -> must return strict JSON:                       │
-│        {                                              │
-│          "thought": "why I am doing this",            │
-│          "action":  "tool_name or none",              │
-│          "input":   { ...tool input... }              │
-│        }                                              │
-│                                                       │
-│  4. Execute tool (if action != "none")                │
-│     result -> append to context                       │
-│                                                       │
-│  5. Check: done? or loop again?                       │
-└───────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Step["AGENT STEP"]
+        S1["1. Build prompt\ntask + memory + context + tool descriptions"]
+        S2["2. Route to model profile\nfast | reasoning | code | default"]
+        S3["3. Ask LLM → strict JSON\n{ thought, action, input }"]
+        S4{"action = none?"}
+        S5["4. Execute tool\nresult → append to context"]
+        S6["5. Loop again"]
+    end
+    S1 --> S2 --> S3 --> S4
+    S4 -->|Yes| Done["✅ Return thought as answer"]
+    S4 -->|No| S5 --> S6 --> S1
 ```
 
 ---
@@ -106,15 +96,15 @@ A final answer string returned to the API caller.
 
 ## Events emitted
 
-```text
-agent:start         -- before the first step
-agent:step          -- after each model decision
-agent:model_routed  -- after router picks a profile
-tool:result         -- after a tool runs successfully
-tool:error          -- after a tool fails
-agent:done          -- when action:"none" reached
-agent:max_steps     -- when step limit hit
-agent:error         -- on unrecoverable failure
+```mermaid
+flowchart LR
+    start["agent:start"] --- step["agent:step"]
+    step --- routed["agent:model_routed"]
+    routed --- tresult["tool:result"]
+    tresult --- terror["tool:error"]
+    terror --- done["agent:done"]
+    done --- max["agent:max_steps"]
+    max --- err["agent:error"]
 ```
 
 ---

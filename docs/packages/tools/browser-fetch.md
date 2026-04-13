@@ -41,20 +41,14 @@ This is different from a plain HTTP GET — it actually **renders JavaScript**, 
 
 ## How the agent uses it (step-by-step)
 
-```text
-You ask:  "What does the Ollama homepage say about its features?"
-             ↓
-Agent thinks: "I should fetch that page"
-             ↓
-Agent calls:  browser_fetch  →  { "url": "https://ollama.com" }
-             ↓
-Playwright launches Chromium (headless), navigates to the URL
-             ↓
-Page renders fully (JS executes, dynamic content appears)
-             ↓
-Tool extracts: title + innerText of the body
-             ↓
-Agent reads the content and summarises the features for you
+```mermaid
+flowchart TD
+    A["You ask: 'What does the Ollama homepage say about its features?'"] --> B["Agent thinks: 'I should fetch that page'"]
+    B --> C["Agent calls: browser_fetch → { url: 'https://ollama.com' }"]
+    C --> D["Playwright launches Chromium (headless), navigates to URL"]
+    D --> E["Page renders fully (JS executes, dynamic content appears)"]
+    E --> F["Tool extracts: title + innerText of the body"]
+    F --> G["Agent reads the content and summarises the features for you"]
 ```
 
 ## Real-life use cases

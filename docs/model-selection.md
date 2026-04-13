@@ -12,17 +12,14 @@ Each agent step is routed to the best model profile (fast / reasoning / code / d
 
 ## Agent vs model -- what is the difference?
 
-```text
-AGENT                           MODEL
-  |                               |
-  | orchestration loop            | Ollama runtime
-  | (packages/agent/agent.ts)     | (chosen by router per step)
-  |                               |
-  | asks: "what should I do?"     |
-  |------------------------------> model processes prompt
-  |<------------------------------ returns JSON decision
-  |                               |
-  | runs tool, loops...           |
+```mermaid
+sequenceDiagram
+    participant Agent as AGENT<br/>(orchestration loop)
+    participant Model as MODEL<br/>(Ollama runtime)
+
+    Agent->>Model: "what should I do?" (prompt)
+    Model-->>Agent: JSON decision { thought, action, input }
+    Note over Agent: runs tool, loops...
 ```
 
 - **Agent** = the loop that runs up to 5 steps
@@ -46,25 +43,17 @@ At each step, the router assigns the current task to one of four profiles:
 
 ### Visual: how routing works
 
-```text
-Each agent loop step:
-
-  task/context
-       |
-       v
-  ┌─────────────┐
-  │   ROUTER    │
-  │             │
-  │  rules mode │ -- keyword check -- "debug", "refactor", "implement"
-  │     OR      │                          |
-  │  model mode │ -- tiny LLM classifies --+
-  └──────┬──────┘
-         |
-    ┌────┴────┬──────────┬────────────┐
-    v         v          v            v
-  fast    reasoning    code       default
-    |         |          |            |
-  qwen3:4b  deepseek  qwen3-coder  llama3.1
+```mermaid
+flowchart TD
+    Input["task / context"] --> Router{"ROUTER"}
+    Router -->|"rules mode\nkeyword check"| Rules["Match: 'debug', 'refactor', 'implement', ..."]
+    Router -->|"model mode\ntiny LLM classifies"| Classify["ROUTER_MODEL classifies"]
+    Rules --> Select{"Select profile"}
+    Classify --> Select
+    Select --> Fast["⚡ fast\nqwen3:4b"]
+    Select --> Reasoning["🧠 reasoning\ndeepseek"]
+    Select --> Code["💻 code\nqwen3-coder"]
+    Select --> Default["📦 default\nllama3.1"]
 ```
 
 ---
