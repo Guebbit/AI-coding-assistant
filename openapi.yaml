@@ -23,6 +23,8 @@ tags:
       description: File-upload helpers (image, audio, PDF)
     - name: openai-compat
       description: OpenAI-compatible endpoints for Open WebUI integration (temporary)
+    - name: info
+      description: Informational endpoints — metadata about the Manna instance (no LLM calls)
     - name: library
       description: |
           Multi-library PDF ingestion and semantic search.
@@ -322,6 +324,158 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '500':
                     $ref: '#/components/responses/InternalError'
+
+    # ── Info endpoints ──────────────────────────────────────────────────────────
+
+    /info/modes:
+        get:
+            tags: [info]
+            summary: List available Manna agent routing profiles (modes)
+            description: |
+                Returns all recognised agent routing profiles, the Ollama model
+                currently configured for each, the controlling environment variable,
+                and a human-readable description. No LLM call is made.
+            operationId: getInfoModes
+            responses:
+                '200':
+                    description: Mode list with count
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    count:
+                                        type: integer
+                                        description: Number of available modes.
+                                        example: 4
+                                    modes:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                profile:
+                                                    type: string
+                                                    description: Profile name.
+                                                    example: fast
+                                                model:
+                                                    type: string
+                                                    description: Resolved Ollama model for this profile.
+                                                    example: 'llama3.1:8b-instruct-q8_0'
+                                                envVar:
+                                                    type: string
+                                                    description: Environment variable that configures this profile's model.
+                                                    example: AGENT_MODEL_FAST
+                                                description:
+                                                    type: string
+                                                    description: Human-readable summary.
+
+    /info/models:
+        get:
+            tags: [info]
+            summary: List models currently available in the connected Ollama instance
+            description: |
+                Proxies Ollama's `GET /api/tags` endpoint and returns the list of
+                locally available models with size, digest, and detail metadata.
+                Returns 502 if Ollama is unreachable.
+            operationId: getInfoModels
+            responses:
+                '200':
+                    description: Model list from Ollama
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    count:
+                                        type: integer
+                                        description: Number of models available.
+                                    ollamaBaseUrl:
+                                        type: string
+                                        description: The Ollama base URL queried.
+                                        example: 'http://localhost:11434'
+                                    models:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                name:
+                                                    type: string
+                                                    example: 'llama3.1:8b-instruct-q8_0'
+                                                size:
+                                                    type: integer
+                                                    nullable: true
+                                                    description: Model file size in bytes.
+                                                digest:
+                                                    type: string
+                                                    nullable: true
+                                                modifiedAt:
+                                                    type: string
+                                                    nullable: true
+                                                    description: ISO 8601 timestamp of last modification.
+                                                details:
+                                                    type: object
+                                                    nullable: true
+                                                    description: Ollama model metadata (family, parameter_size, quantization_level, etc.).
+                '502':
+                    description: Ollama unreachable or returned an error.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    error:
+                                        type: string
+
+    /help:
+        get:
+            tags: [info]
+            summary: Quick reference of all available REST API endpoints
+            description: |
+                Returns a structured JSON overview of every endpoint exposed by the Manna
+                API — equivalent to `--help` on a CLI tool. Includes HTTP method, path,
+                summary, and parameter list for each endpoint. No LLM call.
+            operationId: getHelp
+            responses:
+                '200':
+                    description: Structured help output
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    description:
+                                        type: string
+                                        example: 'Manna AI Agent Platform — REST API quick reference'
+                                    endpointCount:
+                                        type: integer
+                                    endpoints:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                method:
+                                                    type: string
+                                                    example: GET
+                                                path:
+                                                    type: string
+                                                    example: /health
+                                                summary:
+                                                    type: string
+                                                params:
+                                                    type: array
+                                                    items:
+                                                        type: object
+                                                        properties:
+                                                            name:
+                                                                type: string
+                                                            type:
+                                                                type: string
+                                                            required:
+                                                                type: boolean
+                                                            description:
+                                                                type: string
+
+    # ── Library endpoints ──────────────────────────────────────────────────────
 
     /upload/read-pdf:
         post:

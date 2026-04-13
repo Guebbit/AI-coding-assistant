@@ -70,11 +70,12 @@
 A **local-first agentic loop** that wraps Ollama-hosted LLMs and exposes them via a small Express HTTP API.
 It is NOT a chatbot frontend. It is a **tool-using agent server**.
 
-Two operational surfaces:
+Four operational surfaces:
 
 1. `POST /run` — triggers the full agentic loop (reason → pick tool → execute → repeat).
 2. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
 3. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
+4. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
 
 ---
 
@@ -404,6 +405,23 @@ These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (an
 
 ---
 
+## Informational endpoints
+
+File: `apps/api/info-endpoints.ts`  
+Registered in `apps/api/index.ts` via `registerInfoRoutes(app)`.
+
+These are **not** agent-loop routes. They make no LLM calls and return metadata about the running Manna instance.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /info/modes` | Lists all Manna agent routing profiles with their resolved model, env var, and description |
+| `GET /info/models` | Proxies Ollama's `GET /api/tags` — returns all locally available models with size, digest, and details |
+| `GET /help` | Structured JSON overview of every REST API endpoint (method, path, summary, parameters) |
+
+> These endpoints are the `--help` equivalent for the HTTP API.
+
+---
+
 ## SSE streaming endpoint
 
 File: `apps/api/stream-endpoints.ts`  
@@ -478,7 +496,8 @@ The stream closes automatically when the agent run completes (done / error / max
 │       ├── stream-endpoints.ts — registerStreamRoutes(); POST /run/stream (SSE)
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
-│       └── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
+│       ├── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
+│       └── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
 ├── packages/
 │   ├── agent/
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; diagnostic accumulation; self-debug on max_steps

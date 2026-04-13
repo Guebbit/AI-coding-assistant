@@ -10,7 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-
+- **Informational endpoints** (`apps/api/info-endpoints.ts`): three new lightweight `GET` endpoints that require no LLM call:
+  - `GET /info/modes` — lists all Manna agent routing profiles (modes) with their resolved Ollama models, controlling env vars, and descriptions.
+  - `GET /info/models` — proxies Ollama's `GET /api/tags` and returns all locally available models with size, digest, and detail metadata.
+  - `GET /help` — structured JSON overview of every REST API endpoint (method, path, summary, parameters) — the `--help` equivalent for the HTTP API.
 - **Phase 1A — `packages/diagnostics/`**: New persistent diagnostic logs package with `IDiagnosticEntry` type, `writeDiagnosticLog()` writer (timestamped Markdown files), and `cleanupOldLogs()` pruner. Controlled by `DIAGNOSTIC_LOG_ENABLED`, `DIAGNOSTIC_LOG_DIR`, `DIAGNOSTIC_LOG_MAX_FILES` env vars.
 - **Phase 1B — Budget-ceiling model router**: `routeModel()` now accepts `contextLength` and `cumulativeDurationMs`; `routeWithRules()` applies budget-aware heuristics (context > 80 % ceiling → `reasoning`; duration > 70 % ceiling → `fast`). New env vars: `AGENT_BUDGET_MAX_DURATION_MS` (default 60 000) and `AGENT_BUDGET_MAX_CONTEXT_CHARS` (default 50 000).
 - **Phase 2A — Verification gate processor** (`packages/processors/verification.ts`): optional post-tool-choice LLM check; emits `tool:verification_failed`; controlled by `AGENT_VERIFICATION_ENABLED` / `AGENT_VERIFICATION_MODEL`.
