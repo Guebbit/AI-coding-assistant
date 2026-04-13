@@ -1,5 +1,9 @@
 # Ollama Notes — Brief but Complete
 
+::: tip TL;DR
+Quick reference for Ollama setup: GPU drivers, container runtime, model management, VRAM expectations.
+:::
+
 This page is a compact reference for running Ollama locally, understanding key LLM concepts, and avoiding common setup mistakes.
 
 ## Core concepts in plain words

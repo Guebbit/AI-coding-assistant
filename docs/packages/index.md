@@ -1,5 +1,9 @@
 # Packages Overview
 
+::: tip TL;DR
+5 packages: agent (loop), llm (Ollama), memory (Qdrant + buffer), events (pub/sub), tools (actions). API wires them together.
+:::
+
 The API app wires small focused packages. Each package has a single responsibility.
 
 ---
@@ -117,3 +121,15 @@ All the actions the agent can take. Each tool is `{ name, description, execute(i
 - [memory -- Short-term Storage](/packages/memory)
 - [events -- Notifications](/packages/events)
 - [tools -- Toolbox](/packages/tools/)
+
+```mermaid
+flowchart TD
+    API[apps/api] -->|creates| Agent
+    Agent -->|asks| LLM[llm / Ollama]
+    Agent -->|runs| Tools
+    Agent -->|reads/writes| Memory
+    Agent -->|emits| Events
+    LLM -->|JSON decision| Agent
+    Tools -->|result| Agent
+    Memory -->|past context| Agent
+```

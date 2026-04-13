@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
+import { withMermaid } from "vitepress-plugin-mermaid";
 
-export default defineConfig({
+export default withMermaid(defineConfig({
     title: "AI Coding Assistant Docs",
     description: "Practical and theory-driven docs for the local-first agent system",
     cleanUrls: true,
@@ -66,4 +67,4 @@ export default defineConfig({
             provider: "local",
         },
     },
-});
+}));

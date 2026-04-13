@@ -1,5 +1,9 @@
 # AI Coding Assistant Documentation
 
+::: tip TL;DR
+Local-first AI agent API — send a task, get an answer. Ollama models, tool execution, semantic memory.
+:::
+
 This documentation is now organized into **5 clear tracks**:
 
 1. **Getting Started** → [/use-the-application](/use-the-application)
@@ -15,6 +19,22 @@ This documentation is now organized into **5 clear tracks**:
 - Local-first TypeScript agent API (`POST /run`)
 - Agentic loop with tool execution and memory
 - Ollama backend with per-step model routing profiles
+
+### System overview
+
+```mermaid
+flowchart LR
+    User -->|POST /run| API
+    API --> Agent
+    Agent --> LLM[LLM / Ollama]
+    Agent --> Tools[Tools]
+    Agent --> Memory
+    LLM -->|JSON decision| Agent
+    Tools -->|result| Agent
+    Memory -->|past context| Agent
+    Agent -->|final answer| API
+    API -->|response| User
+```
 
 ## If you only read one flow
 

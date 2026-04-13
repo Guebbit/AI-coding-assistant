@@ -1,5 +1,9 @@
 # Model Selection & Routing
 
+::: tip TL;DR
+Each agent step is routed to the best model profile (fast / reasoning / code / default) via keyword rules or a small classifier model.
+:::
+
 ## The one-sentence version
 
 > Instead of using one model for everything, this project picks the best model for each step of the agent loop based on what kind of task it is.
@@ -161,7 +165,7 @@ Each agent routing profile supports fine-grained generation parameter control vi
 | `AGENT_MODEL_DEFAULT_NUM_CTX` | `8192` | Context window size (tokens) |
 | `AGENT_MODEL_DEFAULT_REPEAT_PENALTY` | `1.2` | Repetition penalty |
 
-These options are resolved at startup from env vars and passed through to Ollama's `/api/generate` endpoint on every call. Runtime options take priority over any Modelfile defaults — see [modelfile-example.md](../infra/modelfile-example.md) for the relationship between the two approaches.
+These options are resolved at startup from env vars and passed through to Ollama's `/api/generate` endpoint on every call. Runtime options take priority over any Modelfile defaults — see [Modelfile Example](/infra/modelfile-example) for the relationship between the two approaches.
 
 ---
 
@@ -183,6 +187,22 @@ These options are resolved at startup from env vars and passed through to Ollama
 1. Profile-specific var (e.g. AGENT_MODEL_CODE)
 2. OLLAMA_MODEL (global fallback)
 3. "llama3" (hardcoded final fallback)
+```
+
+### How the router selects a profile
+
+```mermaid
+flowchart TD
+    Task[Current Task/Step] --> Router{Router}
+    Router -->|rules mode| Keywords[Keyword heuristics]
+    Router -->|model mode| Classifier[Small LLM classifies]
+    Keywords --> Profile
+    Classifier --> Profile
+    Profile{Profile Selected}
+    Profile --> Fast["⚡ fast → small model"]
+    Profile --> Reasoning["🧠 reasoning → deep model"]
+    Profile --> Code["💻 code → coder model"]
+    Profile --> Default["📦 default → balanced"]
 ```
 
 ---

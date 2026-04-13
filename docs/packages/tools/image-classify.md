@@ -1,5 +1,9 @@
 # Tool: `image_classify`
 
+::: tip TL;DR
+Sends an image to a vision model (llava) and gets back a text description.
+:::
+
 ## What it does in plain English
 
 > "Look at this image and tell me what you see."

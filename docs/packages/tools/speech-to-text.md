@@ -1,5 +1,9 @@
 # Tool: `speech_to_text`
 
+::: tip TL;DR
+Transcribes audio files using Whisper. Accepts file path or base64 upload.
+:::
+
 ## What it does in plain English
 
 > "Listen to this audio file and write down everything that was said."

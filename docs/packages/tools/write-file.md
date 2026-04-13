@@ -1,5 +1,9 @@
 # Tool: `write_file`
 
+::: tip TL;DR
+Writes files inside PROJECT_OUTPUT_ROOT only. Requires `allowWrite: true`. Modes: create, overwrite, append.
+:::
+
 ## Purpose
 
 Write UTF-8 file content for generated projects.

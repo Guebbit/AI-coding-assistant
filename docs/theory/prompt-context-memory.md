@@ -1,5 +1,9 @@
 # Theory: Prompt, Context, and Memory
 
+::: tip TL;DR
+Each LLM call sees: task + memory (past runs) + context (current run) + tool list → returns JSON decision.
+:::
+
 ## The one-sentence version
 
 > Every time the model is asked "what should I do?", it sees a prompt assembled from four blocks — and the quality of that prompt determines the quality of the decision.
@@ -146,4 +150,16 @@ Run 2 (different task, same topic):
        → Qdrant finds similar past entries
        → injects into prompt as "memory" block
        → agent benefits from previous work
+```
+
+```mermaid
+flowchart TD
+    subgraph "Prompt Assembly"
+        Task["📋 Task"] --> Prompt
+        Mem["🧠 Memory (past runs)"] --> Prompt
+        Ctx["📝 Context (this run)"] --> Prompt
+        ToolList["🔧 Tool List"] --> Prompt
+    end
+    Prompt["Assembled Prompt"] --> LLM["LLM"]
+    LLM --> JSON["{ thought, action, input }"]
 ```

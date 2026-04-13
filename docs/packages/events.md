@@ -1,5 +1,9 @@
 # events -- The Notification System
 
+::: tip TL;DR
+In-process event bus: components emit events, API subscribes for logging. Loose coupling, zero dependencies.
+:::
+
 ## What
 
 A synchronous in-process event bus. Components emit named events; subscribers react without being coupled to each other.
@@ -130,3 +134,12 @@ events.on("*", (event) => {
 ## Where in code
 
 - `packages/events/bus.ts`
+
+```mermaid
+flowchart LR
+    Agent -->|emit| Bus[Event Bus]
+    Tools -->|emit| Bus
+    Bus -->|notify| Logger["API Logger"]
+    Bus -->|notify| Custom["Your Handler"]
+    Bus -->|notify| Metrics["Metrics / Alerts"]
+```

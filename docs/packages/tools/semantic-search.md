@@ -1,5 +1,9 @@
 # Tool: `semantic_search`
 
+::: tip TL;DR
+Ranks text/files by meaning using Ollama embeddings. Finds relevant content even with different wording.
+:::
+
 ## What it does in plain English
 
 > "Find the most relevant pieces of text from this list, ranked by meaning — not just keyword matching."

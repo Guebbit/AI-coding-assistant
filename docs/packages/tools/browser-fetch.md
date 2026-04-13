@@ -1,5 +1,9 @@
 # Tool: `browser_fetch`
 
+::: tip TL;DR
+Opens a URL in headless Chromium, waits for JS to render, returns title + visible text.
+:::
+
 ## Purpose
 
 Fetch title and visible page text using Playwright (Chromium, headless).

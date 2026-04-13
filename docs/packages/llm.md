@@ -1,5 +1,9 @@
 # llm -- The AI Model Connection
 
+::: tip TL;DR
+Thin HTTP wrapper around Ollama. Sends prompts, gets text. Forces JSON format for reliable parsing.
+:::
+
 ## What
 
 Talks to Ollama via HTTP. Sends a prompt and gets a model response.
@@ -132,3 +136,15 @@ const response = await llm.generate(
 ## Where in code
 
 - `packages/llm/ollama.ts`
+
+```mermaid
+sequenceDiagram
+    participant Agent as agent.ts
+    participant LLM as llm/ollama.ts
+    participant Ollama as Ollama Server
+    Agent->>LLM: generate(prompt, { model, format: "json" })
+    LLM->>Ollama: POST /api/generate
+    Ollama-->>LLM: { response: "..." }
+    LLM-->>Agent: raw text string
+    Agent->>Agent: JSON.parse → { thought, action, input }
+```

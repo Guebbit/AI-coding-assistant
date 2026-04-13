@@ -1,5 +1,9 @@
 # Theory: Agent Loop Mental Model
 
+::: tip TL;DR
+The agent is a loop: ask the model → run the tool → repeat (max 5 steps) → return answer.
+:::
+
 ## The one-sentence version
 
 > The agent is a loop that asks the model "what should I do next?", runs the suggested tool, and repeats — until either the task is done or the step limit is hit.
@@ -105,4 +109,17 @@ The loop is built to **recover and continue** whenever possible.
 1. action: "none"   → model says it is done  → returns answer
 2. step count >= 5  → step limit reached      → returns fallback
 3. Unrecoverable error                        → emits agent:error
+```
+
+```mermaid
+flowchart TD
+    Start[Build Prompt] --> Route[Route to Model Profile]
+    Route --> Ask[Ask LLM → JSON response]
+    Ask --> Decision{action = none?}
+    Decision -->|Yes| Done[✅ Return answer]
+    Decision -->|No| RunTool[Run Tool]
+    RunTool --> Append[Append result to context]
+    Append --> Check{Step count ≥ 5?}
+    Check -->|Yes| Fallback[⚠️ Return fallback message]
+    Check -->|No| Start
 ```

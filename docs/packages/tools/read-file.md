@@ -1,5 +1,9 @@
 # Tool: `read_file`
 
+::: tip TL;DR
+Reads UTF-8 files from disk. Path must stay inside the project root.
+:::
+
 ## Purpose
 
 Read UTF-8 file content from disk.

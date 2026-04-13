@@ -1,5 +1,9 @@
 # Tool: `scaffold_project`
 
+::: tip TL;DR
+Copies a boilerplate template into generated-projects. Requires `allowWrite: true`.
+:::
+
 ## Purpose
 
 Create a new project by copying one boilerplate template.

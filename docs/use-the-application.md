@@ -1,5 +1,9 @@
 # Use the Application
 
+::: tip TL;DR
+Install → start Ollama → start Qdrant → start API → POST /run with a task → get an answer.
+:::
+
 This is the shortest path from zero to first successful agent run.
 
 ## 1) Install dependencies
@@ -80,6 +84,30 @@ curl -X POST http://localhost:3001/run \
 - LLM returns JSON with `thought`, `action`, `input`
 - Tool executes (if `action` is not `none`)
 - Loop repeats until done or max 5 steps
+
+### Agent loop visualized
+
+```mermaid
+sequenceDiagram
+    participant You
+    participant API
+    participant Agent
+    participant LLM
+    participant Tool
+    You->>API: POST /run { task }
+    API->>Agent: agent.run(task)
+    loop Up to 5 steps
+        Agent->>LLM: prompt (task + context + tools)
+        LLM-->>Agent: { thought, action, input }
+        alt action != "none"
+            Agent->>Tool: execute(input)
+            Tool-->>Agent: result
+            Agent->>Agent: append to context
+        end
+    end
+    Agent-->>API: final answer
+    API-->>You: { result }
+```
 
 ## 6) Browser tool is enabled by default
 

@@ -1,5 +1,9 @@
 # Ollama Models — Current Local List
 
+::: tip TL;DR
+16 locally installed Ollama models. Key picks: qwen3:32b (general), qwen2.5-coder:32b (code), deepseek-r1:32b (reasoning).
+:::
+
 This page reflects the current locally installed models for this project.
 
 ## Installed models (current)

@@ -45,10 +45,12 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.5.0",
     "jiti": "^2.6.1",
+    "mermaid": "^11.14.0",
     "prettier": "^3.8.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.58.1",
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
   }
 }

@@ -1,5 +1,9 @@
 # Ollama Modelfile Example
 
+::: tip TL;DR
+Modelfiles bake parameters into a model. Runtime env vars override them. Runtime always wins.
+:::
+
 This is a practical template for creating custom Ollama Modelfiles in this project.
 
 ```text

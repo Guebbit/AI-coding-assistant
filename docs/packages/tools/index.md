@@ -1,5 +1,9 @@
 # tools — The Toolbox
 
+::: tip TL;DR
+11 tools the agent can use. Read-only by default; write tools require `allowWrite: true`.
+:::
+
 ## What
 
 Tools are the things the agent can **do**, not just think about.
@@ -93,3 +97,12 @@ Each tool has a dedicated page with input/output spec, how-it-works diagram, and
 | Get code completion at cursor | `code_autocomplete` |
 | Create/edit a file in generated-projects | `write_file` |
 | Scaffold a new project from template | `scaffold_project` |
+
+```mermaid
+flowchart LR
+    Agent -->|decides| Tool[Selected Tool]
+    Tool --> Execute["execute(input)"]
+    Execute --> Result["Result string"]
+    Result --> Context["Appended to context"]
+    Context --> Agent
+```

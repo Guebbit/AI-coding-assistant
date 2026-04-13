@@ -1,5 +1,9 @@
 # How It Works (Layered)
 
+::: tip TL;DR
+Progressive depth: Layer 1 = 30-second overview, Layer 2 = clickable step map, Layer 3 = what each block does.
+:::
+
 This page is designed for **progressive depth** — stop at any layer when you have enough.
 
 - **Layer 1**: broad mental model (30 seconds)
@@ -109,6 +113,20 @@ If this is enough to get started, stop here and go run a task.
 - In-process pub/sub
 - `emit(event)` -> `on(type, handler)` -> handler runs synchronously
 - API subscribes with `on("*", ...)` to log everything
+
+```mermaid
+flowchart TD
+    API["apps/api/index.ts"] -->|creates| Agent["packages/agent"]
+    API -->|creates| Memory["packages/memory"]
+    API -->|creates| Events["packages/events"]
+    Agent -->|calls| LLM["packages/llm"]
+    Agent -->|calls| Tools["packages/tools"]
+    Agent -->|reads/writes| Memory
+    Agent -->|emits| Events
+    LLM -->|HTTP| Ollama["Ollama Server"]
+    Memory -->|vectors| Qdrant["Qdrant DB"]
+    Memory -->|embeddings| Ollama
+```
 
 ---
 

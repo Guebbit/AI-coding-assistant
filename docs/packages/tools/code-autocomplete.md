@@ -1,5 +1,9 @@
 # Tool: `code_autocomplete`
 
+::: tip TL;DR
+IDE-style code completion. Sends prefix + suffix to a code model, gets the middle filled in.
+:::
+
 ## What it does in plain English
 
 > "I am typing code and my cursor is here — continue this for me."

@@ -1,5 +1,9 @@
 # agent -- The Brain
 
+::: tip TL;DR
+The orchestration loop — builds prompt, routes to model, asks LLM, runs tool, repeats up to 5 times.
+:::
+
 ## What
 
 The agent is the orchestration loop. It makes decisions in a loop and routes each step to the most appropriate model profile.
@@ -132,4 +136,17 @@ Prompt: task + [] memory + [package.json text] context + tool list
 LLM:    { thought: "I see typescript 5.4.5", action: "none", input: {} }
 Event:  agent:done
 Answer: "This project uses TypeScript version 5.4.5 (defined in devDependencies)."
+```
+
+```mermaid
+flowchart TD
+    Build["1. Build prompt"] --> Route["2. Route to model"]
+    Route --> Ask["3. Ask LLM → JSON"]
+    Ask --> Check{action = none?}
+    Check -->|Yes| Done["✅ Return answer"]
+    Check -->|No| Tool["4. Run tool"]
+    Tool --> Append["5. Append to context"]
+    Append --> Max{Steps ≥ 5?}
+    Max -->|Yes| Fallback["⚠️ Fallback answer"]
+    Max -->|No| Build
 ```

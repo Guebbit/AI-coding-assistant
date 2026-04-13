@@ -1,5 +1,9 @@
 # Tool: `mysql_query`
 
+::: tip TL;DR
+Runs read-only SELECT queries against MySQL. All other SQL statements are rejected.
+:::
+
 ## Purpose
 
 Execute read-only SQL against MySQL.

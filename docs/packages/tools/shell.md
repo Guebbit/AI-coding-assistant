@@ -1,5 +1,9 @@
 # Tool: `shell`
 
+::: tip TL;DR
+Runs allowlisted shell commands (ls, git, npm, node, etc). Everything else is rejected.
+:::
+
 ## Purpose
 
 Run a shell command when direct command execution is needed.

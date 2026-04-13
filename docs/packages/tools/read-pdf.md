@@ -1,5 +1,9 @@
 # Tool: `read_pdf`
 
+::: tip TL;DR
+Extracts text from PDF files using pdf-parse. Returns text + page count.
+:::
+
 ## What it does in plain English
 
 > "Extract all the text from this PDF so I can read and reason about it."

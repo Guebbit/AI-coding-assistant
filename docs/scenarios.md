@@ -1,5 +1,9 @@
 # Scenarios: Learn by Doing
 
+::: tip TL;DR
+10 hands-on scenarios — run one, check logs, note one insight, move on. Start with Scenario 1.
+:::
+
 Use these as practical drills. Run one scenario at a time and inspect logs.
 
 > **ADHD tip**: timebox each scenario to 10 minutes.
@@ -30,6 +34,21 @@ Useful events while debugging:
 - `tool:result` -- what the tool returned
 - `tool:error` -- what went wrong
 - `agent:max_steps` -- loop hit the limit
+
+### Tool execution flow
+
+```mermaid
+flowchart TD
+    A[Agent picks a tool] --> B{Tool exists?}
+    B -->|No| C[Error + valid tool list → retry]
+    B -->|Yes| D[Execute tool]
+    D --> E{Success?}
+    E -->|No| F[Error appended to context → next step]
+    E -->|Yes| G[Result appended to context → next step]
+    C --> H[Next loop step]
+    F --> H
+    G --> H
+```
 
 ---
 

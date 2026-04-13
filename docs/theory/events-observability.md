@@ -1,5 +1,9 @@
 # Theory: Event-Driven Observability
 
+::: tip TL;DR
+Components emit named events → API subscribes and logs them. Loose coupling, full observability.
+:::
+
 ## The one-sentence version
 
 > Instead of logging directly everywhere, components emit named events, and the API subscribes to all of them — making the system observable without coupling logic to logging.
@@ -114,4 +118,21 @@ events.on("tool:error", (event) => {
 
 // Unsubscribe
 events.off("tool:error", myHandler);
+```
+
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant EventBus
+    participant Logger
+    participant Custom as Custom Handler
+    Agent->>EventBus: emit(agent:start)
+    EventBus->>Logger: log(agent:start)
+    Agent->>EventBus: emit(agent:step)
+    EventBus->>Logger: log(agent:step)
+    EventBus->>Custom: handle(agent:step)
+    Agent->>EventBus: emit(tool:result)
+    EventBus->>Logger: log(tool:result)
+    Agent->>EventBus: emit(agent:done)
+    EventBus->>Logger: log(agent:done)
 ```
