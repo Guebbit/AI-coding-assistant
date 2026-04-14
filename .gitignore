@@ -25,6 +25,8 @@ data/*
 !data/.gitkeep
 !data/diagnostics/
 !data/diagnostics/.gitkeep
+# Diagnostic log files written by the agent (test or production runs)
+data/diagnostics/*.md
 
 .idea
 docs/.vitepress/cache/
