@@ -70,10 +70,34 @@ services:
             retries: 5
             start_period: 10s
 
+    neo4j:
+        image: neo4j:5-community
+        ports:
+            # Neo4j Browser UI (HTTP)
+            - '7474:7474'
+            # Bolt protocol — used by the Manna neo4j-driver client
+            - '7687:7687'
+        environment:
+            # Set initial credentials.  Must match NEO4J_USER / NEO4J_PASSWORD in .env.
+            NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-manna}
+            # Disable unnecessary plugins for a lighter footprint.
+            NEO4J_PLUGINS: '[]'
+        volumes:
+            - neo4j-data:/data:Z
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -qO- http://localhost:7474 || exit 1']
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+
 volumes:
     ollama-data:
         driver: local
     qdrant-data:
         driver: local
     postgres-data:
+        driver: local
+    neo4j-data:
         driver: local

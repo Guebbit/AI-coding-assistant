@@ -26,7 +26,27 @@ export default tseslint.config(
                 ...globals.node
             },
             parserOptions: {
-                projectService: true,
+                projectService: {
+                    /*
+                     * Allow test files, vitest configs, and eslint config to
+                     * use a default TypeScript project (they are intentionally
+                     * excluded from tsconfig.json to avoid polluting the build).
+                     *
+                     * The count limit is raised to accommodate all current test
+                     * files plus headroom for future additions.
+                     */
+                    allowDefaultProject: [
+                        'tests/unit/*/*.test.ts',
+                        'tests/unit/*/*/*.test.ts',
+                        'tests/integration/*.test.ts',
+                        'tests/evals/*.test.ts',
+                        'tests/evals/*.eval.ts',
+                        'vitest.config.ts',
+                        'vitest.eval.config.ts'
+                    ],
+
+                    maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 50
+                },
                 tsconfigRootDir: import.meta.dirname
             }
         },

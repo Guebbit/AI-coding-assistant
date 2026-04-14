@@ -232,6 +232,7 @@ npm run test:coverage
 ```
 
 These tests cover:
+
 - Core logic: chunker, path-safety, env helpers, event bus
 - Agent schemas (Zod validation)
 - Model router (rules-based routing, forced profiles, budget heuristics)

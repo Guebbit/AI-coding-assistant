@@ -11,6 +11,7 @@ It is implemented as a **LangGraph `StateGraph`** — an explicit, inspectable s
 replacing the earlier imperative `SwarmOrchestrator` class.
 
 Key advantages over the legacy orchestrator:
+
 - Graph topology is **explicit and declarative** (nodes + edges).
 - **Cyclic review→retry loops** are first-class citizens.
 - Future features (human-in-the-loop, checkpointing, streaming steps) are supported by LangGraph's built-in primitives.
@@ -40,12 +41,12 @@ flowchart TD
 
 ## Nodes
 
-| Node | File | Responsibility |
-|---|---|---|
-| `decompose` | `packages/orchestrator/nodes.ts` | Calls `decomposeTask()`, emits `swarm:start` + `swarm:decomposed` |
+| Node               | File                             | Responsibility                                                                                            |
+| ------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `decompose`        | `packages/orchestrator/nodes.ts` | Calls `decomposeTask()`, emits `swarm:start` + `swarm:decomposed`                                         |
 | `execute_subtasks` | `packages/orchestrator/nodes.ts` | Runs each pending subtask in topological order via a fresh `Agent`; on retry re-runs only failed subtasks |
-| `review` | `packages/orchestrator/nodes.ts` | Checks success rate; triggers retry if failures exist and retries remain; sets `reviewPassed` |
-| `synthesize` | `packages/orchestrator/nodes.ts` | Merges all subtask results into a final answer via a single LLM call; emits `swarm:done` |
+| `review`           | `packages/orchestrator/nodes.ts` | Checks success rate; triggers retry if failures exist and retries remain; sets `reviewPassed`             |
+| `synthesize`       | `packages/orchestrator/nodes.ts` | Merges all subtask results into a final answer via a single LLM call; emits `swarm:done`                  |
 
 ---
 
@@ -93,9 +94,9 @@ SWARM_MAX_REVIEW_RETRIES=2   # default: 1
 import { LangGraphSwarmOrchestrator } from './packages/orchestrator/graph';
 
 const orchestrator = new LangGraphSwarmOrchestrator(tools, processors);
-const result = await orchestrator.run("Build a REST API with auth and tests", {
-  maxSubtasks: 5,
-  allowWrite: false,
+const result = await orchestrator.run('Build a REST API with auth and tests', {
+    maxSubtasks: 5,
+    allowWrite: false
 });
 // result: { answer, subtaskResults, totalDurationMs, decomposition }
 ```
@@ -106,33 +107,33 @@ const result = await orchestrator.run("Build a REST API with auth and tests", {
 
 The endpoints are **backward-compatible** — no request or response shape changes.
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /run/swarm` | Run swarm, return final JSON result |
+| Endpoint                 | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
+| `POST /run/swarm`        | Run swarm, return final JSON result       |
 | `POST /run/swarm/stream` | Run swarm, stream lifecycle events as SSE |
 
 ---
 
 ## Events emitted
 
-| Event | Emitted by | Payload |
-|---|---|---|
-| `swarm:start` | `decompose` node | `{ task }` |
-| `swarm:decomposed` | `decompose` node | `{ subtaskCount, reasoning, subtasks }` |
-| `swarm:subtask_start` | `execute_subtasks` node | `{ subtaskId, profile }` |
-| `swarm:subtask_done` | `execute_subtasks` node | `{ subtaskId, durationMs }` |
-| `swarm:subtask_error` | `execute_subtasks` node | `{ subtaskId, error }` |
-| `swarm:done` | `synthesize` node | `{ answer, totalDurationMs }` |
+| Event                 | Emitted by              | Payload                                 |
+| --------------------- | ----------------------- | --------------------------------------- |
+| `swarm:start`         | `decompose` node        | `{ task }`                              |
+| `swarm:decomposed`    | `decompose` node        | `{ subtaskCount, reasoning, subtasks }` |
+| `swarm:subtask_start` | `execute_subtasks` node | `{ subtaskId, profile }`                |
+| `swarm:subtask_done`  | `execute_subtasks` node | `{ subtaskId, durationMs }`             |
+| `swarm:subtask_error` | `execute_subtasks` node | `{ subtaskId, error }`                  |
+| `swarm:done`          | `synthesize` node       | `{ answer, totalDurationMs }`           |
 
 ---
 
 ## Environment variables
 
-| Variable | Default | Effect |
-|---|---|---|
-| `SWARM_MAX_REVIEW_RETRIES` | `1` | Max review→retry cycles before forcing synthesis |
-| `SWARM_DECOMPOSER_MODEL` | `AGENT_MODEL_REASONING` | LLM for task decomposition |
-| `SWARM_SYNTHESIS_MODEL` | `AGENT_MODEL_REASONING` | LLM for final answer synthesis |
+| Variable                   | Default                 | Effect                                           |
+| -------------------------- | ----------------------- | ------------------------------------------------ |
+| `SWARM_MAX_REVIEW_RETRIES` | `1`                     | Max review→retry cycles before forcing synthesis |
+| `SWARM_DECOMPOSER_MODEL`   | `AGENT_MODEL_REASONING` | LLM for task decomposition                       |
+| `SWARM_SYNTHESIS_MODEL`    | `AGENT_MODEL_REASONING` | LLM for final answer synthesis                   |
 
 ---
 
@@ -178,10 +179,10 @@ To add a new node (e.g., an `enrich` step between `decompose` and `execute_subta
 
 ```typescript
 export function createEnrichNode() {
-  return async (state: ISwarmGraphState): Promise<Partial<ISwarmGraphState>> => {
-    // ... enrich decomposition with extra context
-    return { decomposition: enrichedDecomposition };
-  };
+    return async (state: ISwarmGraphState): Promise<Partial<ISwarmGraphState>> => {
+        // ... enrich decomposition with extra context
+        return { decomposition: enrichedDecomposition };
+    };
 }
 ```
 
@@ -189,13 +190,13 @@ export function createEnrichNode() {
 
 ```typescript
 const graph = new StateGraph(swarmStateAnnotation)
-  .addNode('decompose', createDecomposeNode())
-  .addNode('enrich', createEnrichNode())           // ← new
-  .addNode('execute_subtasks', createExecuteSubtasksNode(tools, processors))
-  // ...
-  .addEdge('decompose', 'enrich')                  // ← new
-  .addEdge('enrich', 'execute_subtasks')           // ← new (replaces old edge)
-  // ...
+    .addNode('decompose', createDecomposeNode())
+    .addNode('enrich', createEnrichNode()) // ← new
+    .addNode('execute_subtasks', createExecuteSubtasksNode(tools, processors))
+    // ...
+    .addEdge('decompose', 'enrich') // ← new
+    .addEdge('enrich', 'execute_subtasks'); // ← new (replaces old edge)
+// ...
 ```
 
 No other changes are needed — the graph is self-contained.

@@ -59,20 +59,35 @@ const embeddingOk = { embedding: [0.1, 0.2, 0.3, 0.4] };
 const qdrantOk = { vectors: { size: 4 }, status: 'green' };
 
 const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
-    const urlStr = url.toString();
-    if (urlStr.includes('/api/generate')) {
+    const urlString = url.toString();
+    if (urlString.includes('/api/generate')) {
         const body = fetchQueue.shift();
         if (body === undefined) throw new Error('fetchQueue exhausted');
         if (body === FETCH_FAIL) {
-            return { ok: false, status: 500, statusText: 'Internal Server Error',
-                text: async () => 'error', json: async () => ({}) };
+            return {
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+                text: async () => 'error',
+                json: async () => ({})
+            };
         }
-        return { ok: true, status: 200, text: async () => JSON.stringify(body), json: async () => body };
+        return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify(body),
+            json: async () => body
+        };
     }
-    if (urlStr.includes('/api/embeddings')) {
+    if (urlString.includes('/api/embeddings')) {
         return { ok: true, status: 200, text: async () => '{}', json: async () => embeddingOk };
     }
-    return { ok: true, status: 200, text: async () => JSON.stringify(qdrantOk), json: async () => qdrantOk };
+    return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(qdrantOk),
+        json: async () => qdrantOk
+    };
 });
 
 beforeEach(() => {

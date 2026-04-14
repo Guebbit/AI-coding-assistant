@@ -5,11 +5,11 @@ They are intentionally excluded from `npm test` (CI) because they are slow and r
 
 ## Prerequisites
 
-| Service | Default address | Notes |
-|---------|----------------|-------|
-| **Ollama** | `http://localhost:11434` | At least one model must be pulled |
-| **Qdrant** _(optional)_ | `http://localhost:6333` | Falls back to in-memory if unavailable |
-| **PostgreSQL** _(optional)_ | `postgresql://manna:@localhost:5432/manna` | Set `MANNA_DB_ENABLED=false` to skip |
+| Service                     | Default address                            | Notes                                  |
+| --------------------------- | ------------------------------------------ | -------------------------------------- |
+| **Ollama**                  | `http://localhost:11434`                   | At least one model must be pulled      |
+| **Qdrant** _(optional)_     | `http://localhost:6333`                    | Falls back to in-memory if unavailable |
+| **PostgreSQL** _(optional)_ | `postgresql://manna:@localhost:5432/manna` | Set `MANNA_DB_ENABLED=false` to skip   |
 
 ### Minimum setup
 
@@ -36,10 +36,10 @@ OLLAMA_BASE_URL=http://192.168.1.10:11434 npm run test:eval
 
 ## Eval files
 
-| File | What it tests |
-|------|--------------|
+| File                 | What it tests                                    |
+| -------------------- | ------------------------------------------------ |
 | `agent-loop.eval.ts` | Full single-agent run: task → tool call → answer |
-| `swarm.eval.ts` | Swarm decompose → execute → synthesise flow |
+| `swarm.eval.ts`      | Swarm decompose → execute → synthesise flow      |
 
 ## Writing new evals
 
@@ -51,11 +51,15 @@ import { describe, it, expect } from 'vitest';
 import { Agent } from '../../packages/agent/agent.js';
 import { readFileTool } from '../../packages/tools/fs.read.js';
 
-describe('agent end-to-end', () => {
-    it('reads a file and answers a question about it', async () => {
-        const agent = new Agent([readFileTool]);
-        const answer = await agent.run('How many lines does README.md have?');
-        expect(answer.length).toBeGreaterThan(0);
-    });
-}, { timeout: 120_000 });
+describe(
+    'agent end-to-end',
+    () => {
+        it('reads a file and answers a question about it', async () => {
+            const agent = new Agent([readFileTool]);
+            const answer = await agent.run('How many lines does README.md have?');
+            expect(answer.length).toBeGreaterThan(0);
+        });
+    },
+    { timeout: 120_000 }
+);
 ```

@@ -48,10 +48,7 @@ const SYNTHESIS_MODEL =
  * Maximum number of review→retry cycles before forcing a synthesize.
  * Can be overridden via the `SWARM_MAX_REVIEW_RETRIES` environment variable.
  */
-const MAX_REVIEW_RETRIES = Number.parseInt(
-    process.env.SWARM_MAX_REVIEW_RETRIES ?? '1',
-    10
-);
+const MAX_REVIEW_RETRIES = Number.parseInt(process.env.SWARM_MAX_REVIEW_RETRIES ?? '1', 10);
 
 /* ── decompose node ──────────────────────────────────────────────────── */
 
@@ -433,8 +430,6 @@ async function synthesise(task: string, subtaskResults: ISubtaskResult[]): Promi
         .catch((error: unknown) => {
             log.warn('graph_synthesis_failed', { error: String(error) });
             /* Graceful degradation — concatenate subtask answers. */
-            return successfulResults
-                .map((r) => r.answer)
-                .join('\n\n---\n\n');
+            return successfulResults.map((r) => r.answer).join('\n\n---\n\n');
         });
 }

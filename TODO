@@ -40,3 +40,18 @@ DEFERRED: MCP bridge integration (Phase 4B)
 Add MCP (Model Context Protocol) server support so Manna can consume tools from the growing
 MCP ecosystem (GitHub, Slack, databases, etc.) without building each integration from scratch.
 See AnythingLLM's server/utils/MCP/ for a reference implementation.
+
+TODO (PR5): Auth gateway wrapper
+Add a thin authentication gateway service that sits in front of Manna and handles all auth
+concerns without touching the core agent server.
+  - Create apps/gateway/ (or a single-file gateway service) that:
+    • Validates API keys from the Authorization: Bearer <key> header against env vars.
+    • Proxies all authenticated requests to MANNA_URL (default http://manna:3001).
+    • Adds rate-limiting, CORS, and request logging at the gateway level.
+  - Register as a separate docker-compose service (gateway service on port 8080).
+  - New env vars: GATEWAY_API_KEYS (comma-separated), MANNA_URL, GATEWAY_PORT.
+  - Manna itself stays completely untouched (no auth logic in the agent server).
+  - Pattern: Client → [Gateway :8080] → [Manna :3001]
+  - Reference: Express http-proxy-middleware + express-rate-limit.
+  - Priority: LOW — local-only Manna does not need auth. Implement when deploying publicly.
+  - Reference discussion: see prior conversation context (auth middleware Q&A).

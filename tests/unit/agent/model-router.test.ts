@@ -65,13 +65,21 @@ describe('routeModel — rules mode', () => {
 
     it('routes to code profile for task containing "debug"', async () => {
         const { routeModel } = await import('../../../packages/agent/model-router.js');
-        const result = await routeModel({ task: 'debug this bug in the code', context: '', step: 0 });
+        const result = await routeModel({
+            task: 'debug this bug in the code',
+            context: '',
+            step: 0
+        });
         expect(result.profile).toBe('code');
     });
 
     it('routes to code profile for task containing "sql"', async () => {
         const { routeModel } = await import('../../../packages/agent/model-router.js');
-        const result = await routeModel({ task: 'write a SQL query for the users table', context: '', step: 0 });
+        const result = await routeModel({
+            task: 'write a SQL query for the users table',
+            context: '',
+            step: 0
+        });
         expect(result.profile).toBe('code');
     });
 
@@ -148,9 +156,9 @@ describe('routeModel — rules mode', () => {
             step: 0
         });
         expect(result.options).toBeDefined();
-        const opts = result.options!;
-        expect(opts).toHaveProperty('temperature');
-        expect(opts).toHaveProperty('top_p');
-        expect(opts).toHaveProperty('num_ctx');
+        const options = result.options!;
+        expect(options).toHaveProperty('temperature');
+        expect(options).toHaveProperty('top_p');
+        expect(options).toHaveProperty('num_ctx');
     });
 });

@@ -11,7 +11,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **LangGraph swarm orchestrator** (`packages/orchestrator/`): Replaced the custom imperative `SwarmOrchestrator` with a declarative LangGraph `StateGraph`-based orchestrator. The new graph runs: `decompose → execute_subtasks → review → (retry loop?) → synthesize → END`.
+- **Knowledge graph layer (GraphRAG)** (`packages/graph/`, `packages/tools/knowledge.graph*.ts`):
+  Added a Neo4j-backed knowledge graph as a complementary memory/retrieval channel alongside Qdrant vector search.
+  If Neo4j is unreachable, all graph operations fail open (log warning, return safe defaults) and never crash the agent.
+    - `packages/graph/types.ts` — `IGraphEntity`, `IGraphRelationship`, `IExtractionResult`, `IGraphQueryResult`, `IKnowledgeGraphIngestResult` types; `EntityType` union.
+    - `packages/graph/client.ts` — `getDriver()`, `runCypher()`, `isGraphAvailable()`, `ensureConstraints()`, `closeDriver()`; fail-open Neo4j driver wrapper.
+    - `packages/graph/extractor.ts` — `extractEntitiesAndRelationships(text)`; Ollama NER prompt → validated `IExtractionResult`; fail-open.
+    - `packages/graph/index.ts` — re-exports all graph symbols.
+    - `packages/tools/knowledge.graph.ts` — `knowledge_graph` write tool (requires `allowWrite: true`): extracts entities/relationships from text or a file, MERGEs them into Neo4j.
+    - `packages/tools/knowledge.graph.query.ts` — `query_knowledge_graph` read-only tool: entity lookup, relationship listing, and raw read-only Cypher; blocks write operations at the tool level.
+    - `apps/api/agents.ts` — `knowledge_graph` added to `writeTools`; `query_knowledge_graph` added to `readOnlyTools`.
+    - `packages/tools/index.ts` — exports `knowledgeGraphTool` and `queryKnowledgeGraphTool`.
+    - `docker-compose.yml` — Neo4j 5 Community service (`neo4j`) with Bolt (`:7687`) and Browser UI (`:7474`) ports; `neo4j-data` named volume.
+    - `.env.example` — `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`, `GRAPH_NER_MODEL` documented.
+    - `neo4j-driver@6.0.1` added as a runtime dependency.
+    - `docs/packages/graph.md` — full documentation page with entity/relationship schema (Mermaid ER diagram), tool reference, 2 example Cypher query chains, graph-vs-vector comparison table, configuration reference, and fail-open guarantee notes.
+    - `tests/unit/graph/extractor.test.ts` — 10 unit tests covering happy-path extraction, entity-type coercion, code-fence stripping, schema mismatch, and fail-open scenarios.
+    - `tests/unit/graph/client.test.ts` — 7 unit tests covering `isGraphAvailable`, `runCypher` row mapping, and `ensureConstraints` fail-open.
+
+- **LangGraph swarm orchestrator**
     - `packages/orchestrator/state.ts` — `swarmStateAnnotation` (LangGraph `Annotation.Root`) defining the full typed run state.
     - `packages/orchestrator/nodes.ts` — node factory functions: `createDecomposeNode`, `createExecuteSubtasksNode`, `createReviewNode`, `createSynthesizeNode`, and `reviewRouter` conditional edge.
     - `packages/orchestrator/graph.ts` — `buildSwarmGraph(tools, processors)` graph builder and `LangGraphSwarmOrchestrator` class (drop-in replacement for the legacy class).

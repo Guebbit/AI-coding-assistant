@@ -43,39 +43,39 @@ describe('resolveSafePath', () => {
 });
 
 describe('resolveInsideRoot', () => {
-    let tmpRoot: string;
+    let temporaryRoot: string;
 
     beforeAll(() => {
-        tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'manna-test-'));
+        temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'manna-test-'));
     });
 
     afterAll(() => {
-        fs.rmSync(tmpRoot, { recursive: true, force: true });
+        fs.rmSync(temporaryRoot, { recursive: true, force: true });
     });
 
     it('resolves a relative path inside the provided root', () => {
-        const result = resolveInsideRoot(tmpRoot, 'subdir/file.txt');
-        expect(result).toBe(path.resolve(tmpRoot, 'subdir/file.txt'));
+        const result = resolveInsideRoot(temporaryRoot, 'subdir/file.txt');
+        expect(result).toBe(path.resolve(temporaryRoot, 'subdir/file.txt'));
     });
 
     it('resolves the root directory itself without throwing', () => {
-        expect(resolveInsideRoot(tmpRoot, '.')).toBe(tmpRoot);
+        expect(resolveInsideRoot(temporaryRoot, '.')).toBe(temporaryRoot);
     });
 
     it('throws when a path traverses outside the root', () => {
-        expect(() => resolveInsideRoot(tmpRoot, '../outside.txt')).toThrow(
+        expect(() => resolveInsideRoot(temporaryRoot, '../outside.txt')).toThrow(
             'Access denied: path is outside the allowed root'
         );
     });
 
     it('throws for deeply nested traversal', () => {
-        expect(() => resolveInsideRoot(tmpRoot, 'a/b/../../../../outside.txt')).toThrow(
+        expect(() => resolveInsideRoot(temporaryRoot, 'a/b/../../../../outside.txt')).toThrow(
             'Access denied: path is outside the allowed root'
         );
     });
 
     it('throws when an absolute path escapes the root', () => {
-        expect(() => resolveInsideRoot(tmpRoot, '/etc/hosts')).toThrow(
+        expect(() => resolveInsideRoot(temporaryRoot, '/etc/hosts')).toThrow(
             'Access denied: path is outside the allowed root'
         );
     });

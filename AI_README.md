@@ -206,28 +206,30 @@ interface Tool {
 
 Tools registered per request in `apps/api/agents.ts`:
 
-| Tool name           | File                   | Write?  | Notes                                                                                                 |
-| ------------------- | ---------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `read_file`         | `fs.read.ts`           | no      | Sandboxed to project root                                                                             |
-| `write_file`        | `fs.write.ts`          | **yes** | Writes under `PROJECT_OUTPUT_ROOT`                                                                    |
-| `shell`             | `shell.ts`             | no      | Allowlist-enforced; rejects unsafe commands                                                           |
-| `mysql_query`       | `mysql.query.ts`       | no      | SELECT-only; rejects non-SELECT SQL                                                                   |
-| `browser_fetch`     | `browser.ts`           | no      | Playwright Chromium; truncates content to 5000 chars                                                  |
-| `image_classify`    | `image.classify.ts`    | no      | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`); accepts `path` (disk) or `data` (base64) |
-| `semantic_search`   | `semantic.search.ts`   | no      | Embeds query via Ollama; scores files via cosine similarity                                           |
-| `speech_to_text`    | `speech.to.text.ts`    | no      | Calls `TOOL_STT_MODEL` (default `whisper`); accepts `path` (disk) or `data` (base64)                  |
-| `read_pdf`          | `pdf.read.ts`          | no      | Returns `{ text, pages }`; accepts `path` (disk) or `data` (base64)                                   |
-| `code_autocomplete` | `code.autocomplete.ts` | no      | IDE-style completion via `TOOL_IDE_MODEL` (default `starcoder2`)                                      |
-| `generate_diagram`  | `diagram.generate.ts`  | no      | Generates Mermaid diagrams from descriptions; renders to SVG/PNG via mmdc                             |
-| `scaffold_project`  | `project.scaffold.ts`  | **yes** | Copies boilerplate from `BOILERPLATE_ROOT`                                                            |
-| `read_docx`         | `docx.read.ts`         | no      | Extracts text from `.docx` via ZIP/XML parsing; sandboxed to project root                             |
-| `read_csv`          | `csv.read.ts`          | no      | Parses CSV/TSV; returns `{ text, headers, rowCount }`                                                 |
-| `read_html`         | `html.read.ts`         | no      | Strips HTML tags; returns `{ text, title? }`                                                          |
-| `read_json`         | `json.read.ts`         | no      | Reads and parses a JSON file; returns `{ data: unknown }`                                             |
-| `read_markdown`     | `markdown.read.ts`     | no      | Reads a Markdown file; returns `{ text }`                                                             |
-| `document_ingest`   | `document.ingest.ts`   | **yes** | Detects format, chunks, embeds, and upserts into Qdrant                                               |
+| Tool name               | File                       | Write?  | Notes                                                                                                                                  |
+| ----------------------- | -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `read_file`             | `fs.read.ts`               | no      | Sandboxed to project root                                                                                                              |
+| `write_file`            | `fs.write.ts`              | **yes** | Writes under `PROJECT_OUTPUT_ROOT`                                                                                                     |
+| `shell`                 | `shell.ts`                 | no      | Allowlist-enforced; rejects unsafe commands                                                                                            |
+| `mysql_query`           | `mysql.query.ts`           | no      | SELECT-only; rejects non-SELECT SQL                                                                                                    |
+| `browser_fetch`         | `browser.ts`               | no      | Playwright Chromium; truncates content to 5000 chars                                                                                   |
+| `image_classify`        | `image.classify.ts`        | no      | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`); accepts `path` (disk) or `data` (base64)                                  |
+| `semantic_search`       | `semantic.search.ts`       | no      | Embeds query via Ollama; scores files via cosine similarity                                                                            |
+| `speech_to_text`        | `speech.to.text.ts`        | no      | Calls `TOOL_STT_MODEL` (default `whisper`); accepts `path` (disk) or `data` (base64)                                                   |
+| `read_pdf`              | `pdf.read.ts`              | no      | Returns `{ text, pages }`; accepts `path` (disk) or `data` (base64)                                                                    |
+| `code_autocomplete`     | `code.autocomplete.ts`     | no      | IDE-style completion via `TOOL_IDE_MODEL` (default `starcoder2`)                                                                       |
+| `generate_diagram`      | `diagram.generate.ts`      | no      | Generates Mermaid diagrams from descriptions; renders to SVG/PNG via mmdc                                                              |
+| `scaffold_project`      | `project.scaffold.ts`      | **yes** | Copies boilerplate from `BOILERPLATE_ROOT`                                                                                             |
+| `read_docx`             | `docx.read.ts`             | no      | Extracts text from `.docx` via ZIP/XML parsing; sandboxed to project root                                                              |
+| `read_csv`              | `csv.read.ts`              | no      | Parses CSV/TSV; returns `{ text, headers, rowCount }`                                                                                  |
+| `read_html`             | `html.read.ts`             | no      | Strips HTML tags; returns `{ text, title? }`                                                                                           |
+| `read_json`             | `json.read.ts`             | no      | Reads and parses a JSON file; returns `{ data: unknown }`                                                                              |
+| `read_markdown`         | `markdown.read.ts`         | no      | Reads a Markdown file; returns `{ text }`                                                                                              |
+| `document_ingest`       | `document.ingest.ts`       | **yes** | Detects format, chunks, embeds, and upserts into Qdrant                                                                                |
+| `knowledge_graph`       | `knowledge.graph.ts`       | **yes** | Extracts entities + relationships via Ollama NER and MERGEs them into Neo4j; fails open if Neo4j is unreachable                        |
+| `query_knowledge_graph` | `knowledge.graph.query.ts` | no      | Traverses the Neo4j knowledge graph; supports entity lookup, relationship listing, and raw read-only Cypher; fails open if unreachable |
 
-Write tools (`write_file`, `scaffold_project`, `document_ingest`) are only registered when the request body contains `"allowWrite": true`.
+Write tools (`write_file`, `scaffold_project`, `document_ingest`, `knowledge_graph`) are only registered when the request body contains `"allowWrite": true`.
 
 ---
 
@@ -515,6 +517,11 @@ SSE events for `/run/swarm/stream`:
 | `SWARM_DECOMPOSER_MODEL`                 | `AGENT_MODEL_REASONING`   | Model used for task decomposition in the swarm                                                                                                        |
 | `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                                                                                                    |
 | `SWARM_MAX_REVIEW_RETRIES`               | `1`                       | Max review→retry cycles in the LangGraph orchestrator before forcing synthesis with partial results                                                   |
+| `NEO4J_URI`                              | `bolt://localhost:7687`   | Neo4j Bolt endpoint for the knowledge graph                                                                                                           |
+| `NEO4J_USER`                             | `neo4j`                   | Neo4j username                                                                                                                                        |
+| `NEO4J_PASSWORD`                         | `manna`                   | Neo4j password (must match `NEO4J_AUTH` in docker-compose)                                                                                            |
+| `NEO4J_DATABASE`                         | `neo4j`                   | Neo4j database name                                                                                                                                   |
+| `GRAPH_NER_MODEL`                        | `AGENT_MODEL_FAST`        | Ollama model used for NER entity/relationship extraction (defaults to the fast profile model)                                                         |
 | `PORT`                                   | `3001`                    | Express server port                                                                                                                                   |
 | `CORS_ORIGIN`                            | `*`                       | Allowed CORS origin(s) for the Express API. Set to a specific origin in production (e.g. `https://manna.example.com`). Defaults to `*` (all origins). |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                                                                                                    |
@@ -590,7 +597,14 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── html.read.ts      — read_html (read-only)
 │   │   ├── json.read.ts      — read_json (read-only)
 │   │   ├── markdown.read.ts  — read_markdown (read-only)
-│   │   └── document.ingest.ts — document_ingest (write; chunks + embeds + upserts to Qdrant)
+│   │   ├── document.ingest.ts — document_ingest (write; chunks + embeds + upserts to Qdrant)
+│   │   ├── knowledge.graph.ts — knowledge_graph (write; extracts entities/rels via NER → Neo4j)
+│   │   └── knowledge.graph.query.ts — query_knowledge_graph (read; entity/relationship/Cypher traversal)
+│   ├── graph/
+│   │   ├── types.ts          — IGraphEntity; IGraphRelationship; IExtractionResult; IGraphQueryResult; IKnowledgeGraphIngestResult
+│   │   ├── client.ts         — getDriver(); runCypher(); isGraphAvailable(); ensureConstraints(); closeDriver()
+│   │   ├── extractor.ts      — extractEntitiesAndRelationships(); Ollama NER prompt; fail-open
+│   │   └── index.ts          — re-exports all graph types and helpers
 │   ├── processors/
 │   │   ├── types.ts          — Processor interface; ProcessInputStepArgs; ProcessOutputStepArgs
 │   │   ├── processor-builder.ts — helper
@@ -619,7 +633,7 @@ SSE events for `/run/swarm/stream`:
 │   │       └── 001_initial.sql — agent_runs, swarm_runs, eval_results schema
 │   └── logger/
 │       └── logger.ts         — getLogger(name); winston wrapper
-├── docker-compose.yml        — compose stack for Ollama + Qdrant + PostgreSQL
+├── docker-compose.yml        — compose stack for Ollama + Qdrant + PostgreSQL + Neo4j
 ├── .env.example              — compose env template
 ├── vitest.config.ts          — Vitest config for unit + integration tests (`npm test`)
 ├── vitest.eval.config.ts     — Vitest config for slow eval tests (`npm run test:eval`)
@@ -630,6 +644,7 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── memory/           — memory.test.ts (optimizeContextWindow)
 │   │   ├── shared/           — chunker.test.ts, env.test.ts, path-safety.test.ts
 │   │   ├── swarm/            — decomposer.test.ts
+│   │   ├── graph/            — client.test.ts, extractor.test.ts
 │   │   └── tools/            — tool-builder.test.ts
 │   ├── integration/          — Integration tests (mocked HTTP via global fetch stub)
 │   │   ├── agent.test.ts     — full agent loop: happy path, retries, max steps, processors
@@ -659,6 +674,8 @@ SSE events for `/run/swarm/stream`:
 - `read_file` tool: paths are resolved relative to the project root; path traversal outside the root is blocked.
 - `write_file` / `scaffold_project`: only accessible when the HTTP request body sets `"allowWrite": true`; these tools are not registered at all in the default agent instance.
 - `document_ingest`: only accessible when `allowWrite: true`; paths sandboxed to project root via `resolveSafePath`.
+- `knowledge_graph`: only accessible when `allowWrite: true`; fails open if Neo4j is unreachable (logs warning, returns `persisted: false`, never crashes the agent or blocks ingestion).
+- `query_knowledge_graph`: always available (read-only); blocks write Cypher keywords (`CREATE`, `MERGE`, `DELETE`, `SET`, `REMOVE`, `DROP`) at the tool level; fails open if Neo4j is unreachable (returns empty rows + `warning` field).
 - Reader tools (`read_docx`, `read_csv`, `read_html`, `read_json`, `read_markdown`): paths are sandboxed to the project root.
 - LLM response parsing: invalid JSON or schema mismatch causes a self-correction prompt to be appended to context; it does not crash the loop.
 - Unknown tool names: the agent appends an error listing valid tools and retries; no crash.
@@ -681,24 +698,26 @@ SSE events for `/run/swarm/stream`:
 
 ## Common modification patterns
 
-| Goal                        | Files to touch                                                                          |
-| --------------------------- | --------------------------------------------------------------------------------------- |
-| Change max loop iterations  | `AGENTS_MAX_STEPS` env var, or `MAX_STEPS` default in `packages/agent/agent.ts`         |
-| Add a new model profile     | `packages/agent/model-router.ts` — extend `ModelProfile`, `resolveModel`, routing logic |
-| Add a new HTTP endpoint     | `apps/api/ide-endpoints.ts`, `apps/api/workflow-endpoints.ts`, or `apps/api/index.ts`   |
-| Change the prompt structure | `Agent.buildPrompt()` in `packages/agent/agent.ts`                                      |
-| Intercept/modify steps      | Implement `Processor` in `packages/processors/`, register via `agent.addProcessor()`    |
-| Change memory strategy      | `packages/memory/memory.ts`                                                             |
-| Add an eval scorer          | `packages/evals/scorers/`                                                               |
-| Score + persist an eval     | `scoreAndPersist(scorer, input)` from `packages/evals/persist.ts`                       |
-| Query recent runs from DB   | `fetchRecentRuns({ type, limit })` from `packages/persistence/db.ts`                    |
-| Run DB migrations           | `tsx packages/persistence/migrate.ts` or call `runMigrations()` on startup              |
-| Add a diagnostic category   | `packages/diagnostics/types.ts` — extend `IDiagnosticEntry.category` documentation      |
-| Change budget thresholds    | `AGENT_BUDGET_MAX_DURATION_MS` / `AGENT_BUDGET_MAX_CONTEXT_CHARS` env vars              |
-| Add a swarm graph node      | `packages/orchestrator/nodes.ts` (add factory) + `packages/orchestrator/graph.ts` (wire edge) |
-| Change review/retry logic   | `createReviewNode()` in `packages/orchestrator/nodes.ts`; adjust `SWARM_MAX_REVIEW_RETRIES` env var |
-| Enable verification         | Set `AGENT_VERIFICATION_ENABLED=true`; optionally set `AGENT_VERIFICATION_MODEL`        |
-| Enable tool reranking       | Set `TOOL_RERANKER_ENABLED=true`; optionally set `TOOL_RERANKER_TOP_N`                  |
+| Goal                        | Files to touch                                                                                        |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Change max loop iterations  | `AGENTS_MAX_STEPS` env var, or `MAX_STEPS` default in `packages/agent/agent.ts`                       |
+| Add a new model profile     | `packages/agent/model-router.ts` — extend `ModelProfile`, `resolveModel`, routing logic               |
+| Add a new HTTP endpoint     | `apps/api/ide-endpoints.ts`, `apps/api/workflow-endpoints.ts`, or `apps/api/index.ts`                 |
+| Change the prompt structure | `Agent.buildPrompt()` in `packages/agent/agent.ts`                                                    |
+| Intercept/modify steps      | Implement `Processor` in `packages/processors/`, register via `agent.addProcessor()`                  |
+| Change memory strategy      | `packages/memory/memory.ts`                                                                           |
+| Add an eval scorer          | `packages/evals/scorers/`                                                                             |
+| Score + persist an eval     | `scoreAndPersist(scorer, input)` from `packages/evals/persist.ts`                                     |
+| Query recent runs from DB   | `fetchRecentRuns({ type, limit })` from `packages/persistence/db.ts`                                  |
+| Run DB migrations           | `tsx packages/persistence/migrate.ts` or call `runMigrations()` on startup                            |
+| Add a diagnostic category   | `packages/diagnostics/types.ts` — extend `IDiagnosticEntry.category` documentation                    |
+| Change budget thresholds    | `AGENT_BUDGET_MAX_DURATION_MS` / `AGENT_BUDGET_MAX_CONTEXT_CHARS` env vars                            |
+| Add a swarm graph node      | `packages/orchestrator/nodes.ts` (add factory) + `packages/orchestrator/graph.ts` (wire edge)         |
+| Change review/retry logic   | `createReviewNode()` in `packages/orchestrator/nodes.ts`; adjust `SWARM_MAX_REVIEW_RETRIES` env var   |
+| Enable verification         | Set `AGENT_VERIFICATION_ENABLED=true`; optionally set `AGENT_VERIFICATION_MODEL`                      |
+| Enable tool reranking       | Set `TOOL_RERANKER_ENABLED=true`; optionally set `TOOL_RERANKER_TOP_N`                                |
+| Query the knowledge graph   | Use `query_knowledge_graph` tool (entity, relationship, or Cypher mode); see `docs/packages/graph.md` |
+| Change NER extraction model | Set `GRAPH_NER_MODEL` env var; default is `AGENT_MODEL_FAST`                                          |
 
 ---
 
@@ -799,12 +818,12 @@ After any of the above triggers, the AI must:
 
 ## Test architecture
 
-| Tier | Command | What runs | External services required |
-|------|---------|-----------|---------------------------|
-| Unit | `npm test` | `tests/unit/**/*.test.ts` | None |
-| Integration | `npm test` | `tests/integration/**/*.test.ts` | None (HTTP mocked via `vi.stubGlobal('fetch', ...)`) |
-| Eval (slow) | `npm run test:eval` | `tests/evals/**/*.eval.ts` | Ollama (required), Qdrant + PostgreSQL (optional) |
-| Coverage | `npm run test:coverage` | Unit + integration | None |
+| Tier        | Command                 | What runs                        | External services required                           |
+| ----------- | ----------------------- | -------------------------------- | ---------------------------------------------------- |
+| Unit        | `npm test`              | `tests/unit/**/*.test.ts`        | None                                                 |
+| Integration | `npm test`              | `tests/integration/**/*.test.ts` | None (HTTP mocked via `vi.stubGlobal('fetch', ...)`) |
+| Eval (slow) | `npm run test:eval`     | `tests/evals/**/*.eval.ts`       | Ollama (required), Qdrant + PostgreSQL (optional)    |
+| Coverage    | `npm run test:coverage` | Unit + integration               | None                                                 |
 
 ### Key design choices
 

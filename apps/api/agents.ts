@@ -32,6 +32,8 @@ import {
   readJsonTool,
   readMarkdownTool,
   documentIngestTool,
+  knowledgeGraphTool,
+  queryKnowledgeGraphTool,
 } from "../../packages/tools/index";
 import { verificationProcessor } from "../../packages/processors/verification";
 import { createToolRerankerProcessor } from "../../packages/processors/tool-reranker";
@@ -55,10 +57,11 @@ const readOnlyTools = [
   readHtmlTool,
   readJsonTool,
   readMarkdownTool,
+  queryKnowledgeGraphTool,
 ];
 
 /** Tools that mutate the filesystem or data stores — only enabled when `allowWrite` is `true`. */
-const writeTools = [writeFileTool, scaffoldProjectTool, documentIngestTool];
+const writeTools = [writeFileTool, scaffoldProjectTool, documentIngestTool, knowledgeGraphTool];
 
 /* ── Tool description map for the reranker ───────────────────────────── */
 

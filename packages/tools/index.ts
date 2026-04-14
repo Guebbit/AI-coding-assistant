@@ -28,5 +28,7 @@ export * from './html.read';
 export * from './json.read';
 export * from './markdown.read';
 export * from './document.ingest';
+export * from './knowledge.graph';
+export * from './knowledge.graph.query';
 export * from './types';
 export * from './tool-builder';
