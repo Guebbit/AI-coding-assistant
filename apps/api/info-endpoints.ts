@@ -90,13 +90,13 @@ interface IHelpEntry {
   /** One-line summary. */
   summary: string;
   /** Request body fields (empty array for GET endpoints). */
-  params: IHelpParam[];
+  params: IHelpParameter[];
 }
 
 /**
  * A single request parameter described in the help output.
  */
-interface IHelpParam {
+interface IHelpParameter {
   /** Field name. */
   name: string;
   /** Expected type (e.g. `"string"`, `"boolean"`). */

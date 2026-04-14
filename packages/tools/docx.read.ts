@@ -50,10 +50,10 @@ async function extractZipEntry(buffer: Buffer, entryName: string): Promise<strin
         }
         const compression = buffer.readUInt16LE(offset + 8);
         const compressedSize = buffer.readUInt32LE(offset + 18);
-        const fileNameLen = buffer.readUInt16LE(offset + 26);
-        const extraLen = buffer.readUInt16LE(offset + 28);
-        const name = buffer.slice(offset + 30, offset + 30 + fileNameLen).toString('utf-8');
-        const dataStart = offset + 30 + fileNameLen + extraLen;
+        const fileNameLength = buffer.readUInt16LE(offset + 26);
+        const extraLength = buffer.readUInt16LE(offset + 28);
+        const name = buffer.slice(offset + 30, offset + 30 + fileNameLength).toString('utf-8');
+        const dataStart = offset + 30 + fileNameLength + extraLength;
 
         if (name === entryName) {
             const compressed = buffer.slice(dataStart, dataStart + compressedSize);
@@ -89,7 +89,7 @@ function stripXml(xml: string): string {
         .replace(/<w:p[\s/>]/gi, '\n')
         .replace(/<w:br[^>]*\/>/gi, '\n')
         /* Remove all XML/HTML tags — use [\s\S]*? to handle multi-line tag content. */
-        .replace(/<[\s\S]*?>/g, '')
+        .replace(/<[\S\s]*?>/g, '')
         /* Collapse excessive blank lines. */
         .replace(/\n{3,}/g, '\n\n')
         .trim();

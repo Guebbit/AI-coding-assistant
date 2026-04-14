@@ -27,7 +27,7 @@ const MAX_DOCUMENTS = 50;
 const MAX_DOC_CHARS = 12_000;
 
 /** Internal type for a ranked search result. */
-interface IRankedDoc {
+interface IRankedDocument {
     /** Identifies the source: `"document:N"` or `"file:path"`. */
     source: string;
     /** Cosine similarity score (−1 to 1, higher = more relevant). */
@@ -139,12 +139,12 @@ export const semanticSearchTool: ITool = {
         const docs: Array<{ source: string; text: string }> = [];
 
         if (Array.isArray(documents)) {
-            for (const [idx, value] of documents.entries()) {
+            for (const [index, value] of documents.entries()) {
                 if (typeof value !== 'string' || value.trim() === '') {
                     continue;
                 }
                 docs.push({
-                    source: `document:${idx + 1}`,
+                    source: `document:${index + 1}`,
                     text: value.slice(0, MAX_DOC_CHARS)
                 });
             }
@@ -175,13 +175,13 @@ export const semanticSearchTool: ITool = {
         /* Embed the query and each document, then rank by similarity. */
         const queryEmbedding = await getEmbedding(query);
 
-        const ranked: IRankedDoc[] = [];
-        for (const doc of docs) {
-            const embedding = await getEmbedding(doc.text);
+        const ranked: IRankedDocument[] = [];
+        for (const document of docs) {
+            const embedding = await getEmbedding(document.text);
             ranked.push({
-                source: doc.source,
+                source: document.source,
                 score: cosineSimilarity(queryEmbedding, embedding),
-                snippet: doc.text.slice(0, 500)
+                snippet: document.text.slice(0, 500)
             });
         }
 

@@ -48,7 +48,7 @@ export const mysqlQueryTool: ITool = {
         }
 
         /* Safety: only allow SELECT statements to prevent mutations. */
-        if (!/^\s*SELECT\b/i.test(sql)) {
+        if (!/^\s*select\b/i.test(sql)) {
             throw new Error('Only SELECT queries are permitted. Received: ' + sql.slice(0, 80));
         }
 
@@ -63,8 +63,8 @@ export const mysqlQueryTool: ITool = {
         });
 
         try {
-            const queryParams = Array.isArray(params) ? params : [];
-            const [rows] = await connection.execute(sql, queryParams);
+            const queryParameters = Array.isArray(params) ? params : [];
+            const [rows] = await connection.execute(sql, queryParameters);
             return rows;
         } finally {
             await connection.end();

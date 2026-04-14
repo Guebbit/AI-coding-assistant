@@ -492,7 +492,7 @@ function getConventionFindings(content: string, language: string): IFinding[] {
       });
     }
 
-    if (/\bvar\s+[a-zA-Z_$]/.test(line)) {
+    if (/\bvar\s+[$A-Z_a-z]/.test(line)) {
       findings.push({
         source: "convention",
         severity: "warning",

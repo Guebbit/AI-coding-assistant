@@ -134,11 +134,11 @@ Manna exposes dedicated HTTP endpoints designed for IDE integration. These endpo
 
 ### Available IDE endpoints
 
-| Endpoint               | Purpose                              | Typical latency |
-| ---------------------- | ------------------------------------ | --------------- |
-| `POST /autocomplete`   | Inline code completion at cursor     | < 200 ms        |
-| `POST /lint-conventions` | Lint findings + convention checks  | < 500 ms        |
-| `POST /page-review`    | Full-file review with categorised suggestions | 1–3 s  |
+| Endpoint                 | Purpose                                       | Typical latency |
+| ------------------------ | --------------------------------------------- | --------------- |
+| `POST /autocomplete`     | Inline code completion at cursor              | < 200 ms        |
+| `POST /lint-conventions` | Lint findings + convention checks             | < 500 ms        |
+| `POST /page-review`      | Full-file review with categorised suggestions | 1–3 s           |
 
 ### WebStorm setup
 
@@ -148,26 +148,26 @@ WebStorm supports external HTTP-based tools through its **HTTP Client** and **Ex
 
 1. Open **Settings → Tools → External Tools → Add**.
 2. Set **Program** to `curl` and **Arguments** to:
-   ```
-   -s -X POST http://localhost:3001/autocomplete -H "Content-Type: application/json" -d "{\"prefix\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
-   ```
+    ```
+    -s -X POST http://localhost:3001/autocomplete -H "Content-Type: application/json" -d "{\"prefix\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+    ```
 3. Assign a keyboard shortcut (e.g. `Ctrl+Alt+A`).
 4. When triggered, the selected text (or text before cursor) is sent as the prefix, and the model returns a completion suggestion.
 
 #### Lint and convention checks
 
 1. Add another external tool with:
-   ```
-   -s -X POST http://localhost:3001/lint-conventions -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
-   ```
+    ```
+    -s -X POST http://localhost:3001/lint-conventions -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+    ```
 2. This returns deterministic findings (TypeScript checks, convention rules) followed by optional LLM-enriched suggestions.
 
 #### Full page review
 
 1. Add another external tool with:
-   ```
-   -s -X POST http://localhost:3001/page-review -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
-   ```
+    ```
+    -s -X POST http://localhost:3001/page-review -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+    ```
 2. This analyses the entire file and returns categorised suggestions (readability, performance, bugs, style).
 
 ### VS Code setup
@@ -176,21 +176,21 @@ For VS Code, you can use the **REST Client** extension or create a task in `.vsc
 
 ```json
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Manna: Autocomplete",
-      "type": "shell",
-      "command": "curl -s -X POST http://localhost:3001/autocomplete -H 'Content-Type: application/json' -d '{\"prefix\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
-      "presentation": { "reveal": "always", "panel": "dedicated" }
-    },
-    {
-      "label": "Manna: Page Review",
-      "type": "shell",
-      "command": "curl -s -X POST http://localhost:3001/page-review -H 'Content-Type: application/json' -d '{\"content\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
-      "presentation": { "reveal": "always", "panel": "dedicated" }
-    }
-  ]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Manna: Autocomplete",
+            "type": "shell",
+            "command": "curl -s -X POST http://localhost:3001/autocomplete -H 'Content-Type: application/json' -d '{\"prefix\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        },
+        {
+            "label": "Manna: Page Review",
+            "type": "shell",
+            "command": "curl -s -X POST http://localhost:3001/page-review -H 'Content-Type: application/json' -d '{\"content\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
+            "presentation": { "reveal": "always", "panel": "dedicated" }
+        }
+    ]
 }
 ```
 
@@ -283,6 +283,7 @@ curl -X POST http://localhost:3001/run \
 ```
 
 The agent will:
+
 1. Copy the `react-ts` boilerplate into `data/generated-projects/my-portfolio/`
 2. Read the existing structure to understand the code
 3. Create the dark mode toggle component
@@ -298,19 +299,23 @@ Place a `LIBRARY_DOCS.md` or `AI_CONTEXT.md` file in your boilerplate that descr
 
 ```markdown
 <!-- data/boilerplates/my-stack/AI_CONTEXT.md -->
+
 # Custom Library Reference
 
 ## @my-org/ui-kit
+
 - `<Button variant="primary|ghost|danger">` — Standard button component
 - `<Card elevation={1|2|3}>` — Card container with shadow levels
 - `<FormField label="..." error="...">` — Form field wrapper with validation display
 
 ## @my-org/api-client
+
 - `createClient({ baseUrl, token })` — Initialize API client
 - `client.get<T>(path)` — Type-safe GET request
 - `client.post<T>(path, body)` — Type-safe POST request
 
 ## Conventions
+
 - All components use CSS Modules (`.module.css`)
 - State management via Zustand stores in `src/stores/`
 - API calls only in `src/api/` directory
@@ -347,10 +352,10 @@ For comprehensive coverage, ingest your library's documentation PDFs or markdown
 
 ### Environment variables
 
-| Variable              | Default                    | Description                              |
-| --------------------- | -------------------------- | ---------------------------------------- |
-| `BOILERPLATE_ROOT`    | `data/boilerplates`        | Where your boilerplate templates live    |
-| `PROJECT_OUTPUT_ROOT` | `data/generated-projects`  | Where generated projects are written     |
+| Variable              | Default                   | Description                           |
+| --------------------- | ------------------------- | ------------------------------------- |
+| `BOILERPLATE_ROOT`    | `data/boilerplates`       | Where your boilerplate templates live |
+| `PROJECT_OUTPUT_ROOT` | `data/generated-projects` | Where generated projects are written  |
 
 ---
 
@@ -430,16 +435,16 @@ The response is a ranked list of articles with metadata and PDF paths:
 
 ```json
 [
-  {
-    "score": 0.91,
-    "title": "The Oceans' Tipping Point",
-    "summary": "Examines how rising CO₂ is dissolving coral structures...",
-    "topics": ["ocean", "climate", "CO2"],
-    "year": 2025,
-    "month": "March",
-    "startPage": 42,
-    "pdfPath": "/storage/my-library/2025/03.pdf"
-  }
+    {
+        "score": 0.91,
+        "title": "The Oceans' Tipping Point",
+        "summary": "Examines how rising CO₂ is dissolving coral structures...",
+        "topics": ["ocean", "climate", "CO2"],
+        "year": 2025,
+        "month": "March",
+        "startPage": 42,
+        "pdfPath": "/storage/my-library/2025/03.pdf"
+    }
 ]
 ```
 
@@ -453,23 +458,23 @@ The response is a ranked list of articles with metadata and PDF paths:
 
 ### When to use this vs full RAG
 
-| Question type                                      | Best approach    |
-| -------------------------------------------------- | ---------------- |
-| "Which articles cover topic X?"                    | Summary index ✅ |
-| "What did article Y say about Z?"                  | Read the PDF directly |
-| "Summarise 10 years of coverage on topic X"        | Full RAG (not yet supported) |
-| "Find all mentions of a specific term"             | Keyword search / grep |
+| Question type                               | Best approach                |
+| ------------------------------------------- | ---------------------------- |
+| "Which articles cover topic X?"             | Summary index ✅             |
+| "What did article Y say about Z?"           | Read the PDF directly        |
+| "Summarise 10 years of coverage on topic X" | Full RAG (not yet supported) |
+| "Find all mentions of a specific term"      | Keyword search / grep        |
 
 For a deeper dive into the architecture, see [Library Ingestion & Search](/library-ingestion), [RAG Theory](/theory/RAG), and [Vector Databases](/theory/VECTOR_DATABASES).
 
 ### API reference
 
-| Endpoint                            | Method | Description                            |
-| ----------------------------------- | ------ | -------------------------------------- |
-| `/library`                          | GET    | List all libraries                     |
-| `/library/{id}/import`              | POST   | Import PDFs into a library             |
-| `/library/{id}/search`              | POST   | Semantic search over articles          |
-| `/library/{id}/export`              | GET    | Export full article index as JSON      |
+| Endpoint               | Method | Description                       |
+| ---------------------- | ------ | --------------------------------- |
+| `/library`             | GET    | List all libraries                |
+| `/library/{id}/import` | POST   | Import PDFs into a library        |
+| `/library/{id}/search` | POST   | Semantic search over articles     |
+| `/library/{id}/export` | GET    | Export full article index as JSON |
 
 ---
 
@@ -510,16 +515,16 @@ sequenceDiagram
 
 ## Common Troubleshooting
 
-| Problem                         | Solution                                                        |
-| ------------------------------- | --------------------------------------------------------------- |
-| Ollama not reachable            | Check `OLLAMA_BASE_URL` (default `http://localhost:11434`)      |
-| Router selects wrong profile    | Tune `AGENT_MODEL_ROUTER_MODE` and `AGENT_MODEL_*` env vars    |
-| Qdrant not reachable            | Check `QDRANT_URL` (default `http://localhost:6333`)            |
-| Empty or invalid request        | Ensure request body includes a non-empty `"task"`               |
-| MySQL tool fails                | Verify `MYSQL_*` env vars and database availability             |
-| IDE endpoints slow              | Check `TOOL_IDE_MODEL` — use a smaller model for lower latency  |
-| Write tools not available       | Set `"allowWrite": true` in the request body                    |
-| Library import fails            | Check PDF paths exist and Qdrant is running                     |
+| Problem                      | Solution                                                       |
+| ---------------------------- | -------------------------------------------------------------- |
+| Ollama not reachable         | Check `OLLAMA_BASE_URL` (default `http://localhost:11434`)     |
+| Router selects wrong profile | Tune `AGENT_MODEL_ROUTER_MODE` and `AGENT_MODEL_*` env vars    |
+| Qdrant not reachable         | Check `QDRANT_URL` (default `http://localhost:6333`)           |
+| Empty or invalid request     | Ensure request body includes a non-empty `"task"`              |
+| MySQL tool fails             | Verify `MYSQL_*` env vars and database availability            |
+| IDE endpoints slow           | Check `TOOL_IDE_MODEL` — use a smaller model for lower latency |
+| Write tools not available    | Set `"allowWrite": true` in the request body                   |
+| Library import fails         | Check PDF paths exist and Qdrant is running                    |
 
 ---
 

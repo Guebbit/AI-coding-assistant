@@ -36,7 +36,7 @@ const LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? 'data/diagnostics';
 function slugify(task: string): string {
     const raw = task
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/[^\da-z]+/g, '-')
         .slice(0, 60);
     /* Trim leading/trailing hyphens without a regex to avoid ReDoS. */
     let start = 0;
@@ -88,12 +88,12 @@ export async function writeDiagnosticLog(
     const absDir = path.resolve(process.cwd(), LOG_DIR);
     await fs.mkdir(absDir, { recursive: true });
 
-    const iso = new Date().toISOString().replace(/[:.]/g, '-');
+    const iso = new Date().toISOString().replace(/[.:]/g, '-');
     const slug = slugify(taskSlug);
     /* Sanitise the filename: keep only alphanumeric, hyphens, and dots.
      * This removes any residual characters that could be used for path
      * injection even after slugify. */
-    const safeFilename = `${iso}_${slug}.md`.replace(/[^a-zA-Z0-9_\-. ]/g, '_');
+    const safeFilename = `${iso}_${slug}.md`.replace(/[^\w .\-]/g, '_');
 
     /* resolveInsideRoot ensures the file stays inside absDir. */
     const filePath = resolveInsideRoot(absDir, safeFilename);

@@ -72,11 +72,11 @@ async function embedText(text: string): Promise<number[]> {
  * @returns Extracted plain text.
  * @throws {Error} When the file format is not supported.
  */
-async function extractText(filePath: string, ext: string): Promise<string> {
+async function extractText(filePath: string, extension: string): Promise<string> {
     /* Use relative path for tools that call resolveSafePath internally. */
     const rel = path.relative(process.cwd(), filePath);
 
-    switch (ext) {
+    switch (extension) {
         case '.docx': {
             const r = (await readDocxTool.execute({ path: rel })) as { text: string };
             return r.text;
@@ -136,13 +136,13 @@ export const documentIngestTool = createTool({
      * @param input.collection - Target Qdrant collection (defaults to `QDRANT_COLLECTION`).
      * @returns `{ chunksIngested, collection }`.
      */
-    async execute({ path: docPath, collection }) {
+    async execute({ path: documentPath, collection }) {
         const targetCollection = collection ?? QDRANT_COLLECTION;
-        const safePath = resolveSafePath(docPath);
-        const ext = path.extname(safePath).toLowerCase();
+        const safePath = resolveSafePath(documentPath);
+        const extension = path.extname(safePath).toLowerCase();
         const filename = path.basename(safePath);
 
-        const text = await extractText(safePath, ext);
+        const text = await extractText(safePath, extension);
         const chunks = chunkText(text, { chunkSize: 500, overlap: 50 });
 
         /* Ensure collection exists — create with a placeholder vector size
@@ -162,7 +162,7 @@ export const documentIngestTool = createTool({
                     text: chunk.content,
                     chunkIndex: chunk.index,
                     filename,
-                    sourcePath: docPath
+                    sourcePath: documentPath
                 }
             });
         }
