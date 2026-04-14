@@ -13,11 +13,15 @@
  * reaches the database.  Multi-statement execution is disabled at
  * the connection level for defence-in-depth.
  *
+ * Implements the {@link createDbTool} pattern from `base-db-tool.ts`.
+ * See that module for instructions on adding new database engines.
+ *
  * @module tools/mysql.query
  */
 
 import mysql from 'mysql2/promise';
-import type { ITool } from './types';
+import type { ExecuteValues } from 'mysql2';
+import { createDbTool, validateSqlInput } from './base-db-tool';
 
 /**
  * Tool instance for executing read-only MySQL queries.
@@ -27,31 +31,24 @@ import type { ITool } from './types';
  * { "sql": "SELECT id, name FROM users WHERE active = ?", "params": [true] }
  * ```
  */
-export const mysqlQueryTool: ITool = {
+export const mysqlQueryTool = createDbTool({
     name: 'mysql_query',
     description:
         'Execute a read-only SELECT query against MySQL. ' +
         'Input: { sql: string, params?: unknown[] }',
 
+    validateInput: validateSqlInput,
+
     /**
      * Open a connection, execute the SELECT query, and return the result rows.
      *
-     * @param input        - Tool input object.
-     * @param input.sql    - SQL query string (must begin with `SELECT`).
-     * @param input.params - Optional array of bind-parameter values for prepared statements.
+     * @param input        - Validated tool input.
+     * @param input.sql    - SQL query string (begins with `SELECT`).
+     * @param input.params - Bind-parameter values for prepared statements.
      * @returns The result rows from the query.
-     * @throws {Error} When the SQL is empty, not a SELECT, or the connection fails.
+     * @throws {Error} When the connection fails or the query errors.
      */
-    async execute({ sql, params }) {
-        if (typeof sql !== 'string' || sql.trim() === '') {
-            throw new Error('"sql" must be a non-empty string');
-        }
-
-        /* Safety: only allow SELECT statements to prevent mutations. */
-        if (!/^\s*select\b/i.test(sql)) {
-            throw new Error('Only SELECT queries are permitted. Received: ' + sql.slice(0, 80));
-        }
-
+    async run({ sql, params }) {
         const connection = await mysql.createConnection({
             host: process.env.MYSQL_HOST ?? 'localhost',
             port: Number.parseInt(process.env.MYSQL_PORT ?? '3306', 10),
@@ -63,11 +60,10 @@ export const mysqlQueryTool: ITool = {
         });
 
         try {
-            const queryParameters = Array.isArray(params) ? params : [];
-            const [rows] = await connection.execute(sql, queryParameters);
+            const [rows] = await connection.execute(sql, params as ExecuteValues[]);
             return rows;
         } finally {
             await connection.end();
         }
     }
-};
+});

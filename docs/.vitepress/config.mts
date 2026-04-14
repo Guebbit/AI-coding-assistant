@@ -60,9 +60,15 @@ export default withMermaid(
                             text: 'tools — Toolbox',
                             items: [
                                 { text: 'Overview', link: '/packages/tools/' },
+                                {
+                                    text: 'Database Adapters',
+                                    link: '/packages/tools/db-adapters'
+                                },
+                                { text: 'mysql_query', link: '/packages/tools/mysql-query' },
+                                { text: 'pg_query', link: '/packages/tools/pg-query' },
+                                { text: 'mongo_query', link: '/packages/tools/mongo-query' },
                                 { text: 'read_file', link: '/packages/tools/read-file' },
                                 { text: 'shell', link: '/packages/tools/shell' },
-                                { text: 'mysql_query', link: '/packages/tools/mysql-query' },
                                 { text: 'browser_fetch', link: '/packages/tools/browser-fetch' },
                                 { text: 'image_classify', link: '/packages/tools/image-classify' },
                                 {
