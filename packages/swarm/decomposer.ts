@@ -135,24 +135,26 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
  * @returns A validated {@link ISubtask}.
  */
 function normaliseSubtask(raw: unknown, index: number): ISubtask {
-    const obj = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+    const object = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
 
     const id =
-        typeof obj.id === 'string' && obj.id.trim() !== '' ? obj.id.trim() : `subtask-${index}`;
+        typeof object.id === 'string' && object.id.trim() !== ''
+            ? object.id.trim()
+            : `subtask-${index}`;
 
     const description =
-        typeof obj.description === 'string' && obj.description.trim() !== ''
-            ? obj.description.trim()
+        typeof object.description === 'string' && object.description.trim() !== ''
+            ? object.description.trim()
             : `Subtask ${index}`;
 
     const validProfiles = new Set(['fast', 'code', 'reasoning', 'default']);
     const profile =
-        typeof obj.profile === 'string' && validProfiles.has(obj.profile)
-            ? (obj.profile as ISubtask['profile'])
+        typeof object.profile === 'string' && validProfiles.has(object.profile)
+            ? (object.profile as ISubtask['profile'])
             : 'default';
 
-    const dependsOn = Array.isArray(obj.dependsOn)
-        ? obj.dependsOn.filter((d): d is string => typeof d === 'string')
+    const dependsOn = Array.isArray(object.dependsOn)
+        ? object.dependsOn.filter((d): d is string => typeof d === 'string')
         : [];
 
     return { id, description, profile, dependsOn };

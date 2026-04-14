@@ -47,14 +47,14 @@ function htmlToText(html: string): string {
     return decodeEntities(
         html
             /* Remove <script>…</script> blocks including closing tags with spaces/attributes. */
-            .replace(/<script[\s\S]*?<\/script[^>]*>/gi, ' ')
-            .replace(/<style[\s\S]*?<\/style[^>]*>/gi, ' ')
+            .replace(/<script[\S\s]*?<\/script[^>]*>/gi, ' ')
+            .replace(/<style[\S\s]*?<\/style[^>]*>/gi, ' ')
             /* Insert newlines at block-level boundaries. */
             .replace(/<\/(p|div|li|h[1-6]|tr|br)[^>]*>/gi, '\n')
             /* Strip remaining tags. */
             .replace(/<[^>]+>/g, ' ')
             /* Collapse runs of whitespace. */
-            .replace(/[ \t]+/g, ' ')
+            .replace(/[\t ]+/g, ' ')
             .replace(/\n{3,}/g, '\n\n')
             .trim()
     );
@@ -67,7 +67,7 @@ function htmlToText(html: string): string {
  * @returns The title text, or `undefined` when not found.
  */
 function extractTitle(html: string): string | undefined {
-    const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+    const match = /<title[^>]*>([\S\s]*?)<\/title>/i.exec(html);
     return match ? decodeEntities(match[1]).trim() : undefined;
 }
 

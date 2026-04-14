@@ -214,8 +214,8 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
 function routeWithRules(input: IRouteInput): IModelRouteDecision {
     /* ── Budget-aware heuristics (highest priority) ───────────────────── */
 
-    const contextLen = input.contextLength ?? input.context.length;
-    if (contextLen > BUDGET_MAX_CONTEXT_CHARS * BUDGET_CONTEXT_THRESHOLD) {
+    const contextLength = input.contextLength ?? input.context.length;
+    if (contextLength > BUDGET_MAX_CONTEXT_CHARS * BUDGET_CONTEXT_THRESHOLD) {
         return {
             profile: 'reasoning',
             model: resolveModel('reasoning'),
