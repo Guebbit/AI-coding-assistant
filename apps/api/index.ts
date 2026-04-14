@@ -27,6 +27,7 @@
  */
 
 import express from "express";
+import cors from "cors";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
@@ -49,6 +50,7 @@ on("*", (event) => {
 /* ── HTTP server ─────────────────────────────────────────────────────── */
 
 const app = express();
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
 app.use(express.json());
 
 /* Register IDE-specific direct-LLM endpoints. */

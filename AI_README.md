@@ -516,44 +516,45 @@ SSE events for `/run/swarm/stream`:
 
 ## Key environment variables
 
-| Variable                                 | Default                   | Effect                                                                        |
-| ---------------------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
-| `OLLAMA_BASE_URL`                        | `http://localhost:11434`  | Ollama API endpoint                                                           |
-| `OLLAMA_MODEL`                           | `llama3`                  | Base model (fallback for all profiles)                                        |
-| `OLLAMA_EMBED_MODEL`                     | `nomic-embed-text`        | Embedding model for semantic search & memory                                  |
-| `AGENT_MODEL_ROUTER_MODE`                | `rules`                   | `rules` or `model`                                                            |
-| `AGENT_MODEL_ROUTER_MODEL`               | `phi4-mini:latest`        | Model used when mode=model; also default router when mode=rules falls through |
-| `AGENT_MODEL_FAST`                       | `OLLAMA_MODEL`            | Model for fast/simple tasks                                                   |
-| `AGENT_MODEL_REASONING`                  | `OLLAMA_MODEL`            | Model for multi-step reasoning                                                |
-| `AGENT_MODEL_CODE`                       | `OLLAMA_MODEL`            | Model for code tasks                                                          |
-| `AGENT_MODEL_DEFAULT`                    | `OLLAMA_MODEL`            | Final fallback profile                                                        |
-| `AGENTS_MAX_STEPS`                       | `5`                       | Maximum loop iterations per run                                               |
-| `AGENT_BUDGET_MAX_DURATION_MS`           | `60000`                   | Max wall-clock time per run (ms); router downgrades to `fast` at 70%          |
-| `AGENT_BUDGET_MAX_CONTEXT_CHARS`         | `50000`                   | Max context length (chars); router upgrades to `reasoning` at 80%             |
-| `AGENT_VERIFICATION_ENABLED`             | `false`                   | Enable post-tool verification gate processor                                  |
-| `AGENT_VERIFICATION_MODEL`               | `AGENT_MODEL_FAST`        | Model for the verification LLM call                                           |
-| `TOOL_VISION_MODEL`                      | `llava-llama3`            | Vision model for `image_classify`                                             |
-| `TOOL_STT_MODEL`                         | `whisper`                 | Speech-to-text model                                                          |
-| `TOOL_IDE_MODEL`                         | `starcoder2`              | Completion model for IDE endpoints                                            |
-| `TOOL_DIAGRAM_MODEL`                     | `AGENT_MODEL_CODE`        | Model used to generate Mermaid diagram markup                                 |
-| `TOOL_RERANKER_ENABLED`                  | `false`                   | Enable tool reranker processor                                                |
-| `TOOL_RERANKER_TOP_N`                    | `10`                      | Max tools passed to agent per step when reranker is on                        |
-| `DIAGRAM_OUTPUT_DIR`                     | `data/diagrams`           | Output directory for rendered diagrams                                        |
-| `DIAGNOSTIC_LOG_ENABLED`                 | `true`                    | Toggle diagnostic Markdown file output                                        |
-| `DIAGNOSTIC_LOG_DIR`                     | `data/diagnostics`        | Output folder for diagnostic logs                                             |
-| `DIAGNOSTIC_LOG_MAX_FILES`               | `100`                     | Auto-prune threshold for diagnostic log files                                 |
-| `SWARM_DECOMPOSER_MODEL`                 | `AGENT_MODEL_REASONING`   | Model used for task decomposition in the swarm                                |
-| `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                            |
-| `PORT`                                   | `3001`                    | Express server port                                                           |
-| `OPENAI_COMPAT_RATE_LIMIT`               | `60`                      | Max `/v1/chat/completions` requests per minute per client IP                  |
-| `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                            |
-| `QDRANT_URL`                             | `http://localhost:6333`   | Qdrant endpoint for semantic memory                                           |
-| `QDRANT_COLLECTION`                      | —                         | Qdrant collection name                                                        |
-| `BOILERPLATE_ROOT`                       | `data/boilerplates`       | Source directory for `scaffold_project`                                       |
-| `PROJECT_OUTPUT_ROOT`                    | `data/generated-projects` | Output directory for `write_file` / `scaffold_project`                        |
-| `LOG_ENABLED`                            | `true`                    | Toggle logging                                                                |
-| `LOG_LEVEL`                              | `info`                    | `error` / `warn` / `info` / `debug`                                           |
-| `LOG_PRETTY`                             | `false`                   | `true` = human-readable; `false` = JSON lines                                 |
+| Variable                                 | Default                   | Effect                                                                                                                                                |
+| ---------------------------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OLLAMA_BASE_URL`                        | `http://localhost:11434`  | Ollama API endpoint                                                                                                                                   |
+| `OLLAMA_MODEL`                           | `llama3`                  | Base model (fallback for all profiles)                                                                                                                |
+| `OLLAMA_EMBED_MODEL`                     | `nomic-embed-text`        | Embedding model for semantic search & memory                                                                                                          |
+| `AGENT_MODEL_ROUTER_MODE`                | `rules`                   | `rules` or `model`                                                                                                                                    |
+| `AGENT_MODEL_ROUTER_MODEL`               | `phi4-mini:latest`        | Model used when mode=model; also default router when mode=rules falls through                                                                         |
+| `AGENT_MODEL_FAST`                       | `OLLAMA_MODEL`            | Model for fast/simple tasks                                                                                                                           |
+| `AGENT_MODEL_REASONING`                  | `OLLAMA_MODEL`            | Model for multi-step reasoning                                                                                                                        |
+| `AGENT_MODEL_CODE`                       | `OLLAMA_MODEL`            | Model for code tasks                                                                                                                                  |
+| `AGENT_MODEL_DEFAULT`                    | `OLLAMA_MODEL`            | Final fallback profile                                                                                                                                |
+| `AGENTS_MAX_STEPS`                       | `5`                       | Maximum loop iterations per run                                                                                                                       |
+| `AGENT_BUDGET_MAX_DURATION_MS`           | `60000`                   | Max wall-clock time per run (ms); router downgrades to `fast` at 70%                                                                                  |
+| `AGENT_BUDGET_MAX_CONTEXT_CHARS`         | `50000`                   | Max context length (chars); router upgrades to `reasoning` at 80%                                                                                     |
+| `AGENT_VERIFICATION_ENABLED`             | `false`                   | Enable post-tool verification gate processor                                                                                                          |
+| `AGENT_VERIFICATION_MODEL`               | `AGENT_MODEL_FAST`        | Model for the verification LLM call                                                                                                                   |
+| `TOOL_VISION_MODEL`                      | `llava-llama3`            | Vision model for `image_classify`                                                                                                                     |
+| `TOOL_STT_MODEL`                         | `whisper`                 | Speech-to-text model                                                                                                                                  |
+| `TOOL_IDE_MODEL`                         | `starcoder2`              | Completion model for IDE endpoints                                                                                                                    |
+| `TOOL_DIAGRAM_MODEL`                     | `AGENT_MODEL_CODE`        | Model used to generate Mermaid diagram markup                                                                                                         |
+| `TOOL_RERANKER_ENABLED`                  | `false`                   | Enable tool reranker processor                                                                                                                        |
+| `TOOL_RERANKER_TOP_N`                    | `10`                      | Max tools passed to agent per step when reranker is on                                                                                                |
+| `DIAGRAM_OUTPUT_DIR`                     | `data/diagrams`           | Output directory for rendered diagrams                                                                                                                |
+| `DIAGNOSTIC_LOG_ENABLED`                 | `true`                    | Toggle diagnostic Markdown file output                                                                                                                |
+| `DIAGNOSTIC_LOG_DIR`                     | `data/diagnostics`        | Output folder for diagnostic logs                                                                                                                     |
+| `DIAGNOSTIC_LOG_MAX_FILES`               | `100`                     | Auto-prune threshold for diagnostic log files                                                                                                         |
+| `SWARM_DECOMPOSER_MODEL`                 | `AGENT_MODEL_REASONING`   | Model used for task decomposition in the swarm                                                                                                        |
+| `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                                                                                                    |
+| `PORT`                                   | `3001`                    | Express server port                                                                                                                                   |
+| `CORS_ORIGIN`                            | `*`                       | Allowed CORS origin(s) for the Express API. Set to a specific origin in production (e.g. `https://manna.example.com`). Defaults to `*` (all origins). |
+| `OPENAI_COMPAT_RATE_LIMIT`               | `60`                      | Max `/v1/chat/completions` requests per minute per client IP                                                                                          |
+| `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                                                                                                    |
+| `QDRANT_URL`                             | `http://localhost:6333`   | Qdrant endpoint for semantic memory                                                                                                                   |
+| `QDRANT_COLLECTION`                      | —                         | Qdrant collection name                                                                                                                                |
+| `BOILERPLATE_ROOT`                       | `data/boilerplates`       | Source directory for `scaffold_project`                                                                                                               |
+| `PROJECT_OUTPUT_ROOT`                    | `data/generated-projects` | Output directory for `write_file` / `scaffold_project`                                                                                                |
+| `LOG_ENABLED`                            | `true`                    | Toggle logging                                                                                                                                        |
+| `LOG_LEVEL`                              | `info`                    | `error` / `warn` / `info` / `debug`                                                                                                                   |
+| `LOG_PRETTY`                             | `false`                   | `true` = human-readable; `false` = JSON lines                                                                                                         |
 
 ---
 
