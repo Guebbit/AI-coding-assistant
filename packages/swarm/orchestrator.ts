@@ -24,6 +24,7 @@ import { emit } from '../events/bus';
 import { getLogger } from '../logger/logger';
 import { decomposeTask } from './decomposer';
 import type { IDecomposition, ISubtask, ISubtaskResult, ISwarmConfig, ISwarmResult } from './types';
+import { saveSwarmRun } from '../persistence/db';
 
 const log = getLogger('swarm:orchestrator');
 
@@ -72,6 +73,7 @@ export class SwarmOrchestrator {
      */
     async run(task: string, config: ISwarmConfig = {}): Promise<ISwarmResult> {
         const runStartedAt = Date.now();
+        const startTime = new Date();
 
         log.info('swarm_run_started', {
             task,
@@ -123,6 +125,21 @@ export class SwarmOrchestrator {
             totalDurationMs,
             decomposition
         };
+
+        /* Persist run to PostgreSQL (fail-open). */
+        await saveSwarmRun({
+            task,
+            decomposition,
+            subtasks: decomposition.subtasks,
+            results: subtaskResults,
+            answer,
+            startTime,
+            endTime: new Date(),
+            totalDurationMs,
+            status: 'completed'
+        }).catch((error: unknown) =>
+            log.warn('swarm_persist_failed', { error: String(error) })
+        );
 
         emit({ type: 'swarm:done', payload: { answer, totalDurationMs } });
 

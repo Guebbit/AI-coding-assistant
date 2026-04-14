@@ -35,6 +35,7 @@ import { registerSwarmRoutes } from "./swarm-endpoints";
 import { registerInfoRoutes } from "./info-endpoints";
 import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { createAgent, VALID_PROFILES } from "./agents";
+import { runMigrations } from "../../packages/persistence/migrate";
 
 const log = getLogger("api");
 
@@ -136,6 +137,12 @@ app.get("/health", (_req, res) => {
 
 /* Default port for the Manna API server. */
 const PORT = Number.parseInt(process.env.PORT ?? "3001", 10);
+
+/* Run DB migrations on startup (fail-open — a DB outage must not prevent the
+ * API from starting). */
+runMigrations().catch((error: unknown) =>
+  log.warn("api_db_migration_failed", { error: String(error) })
+);
 
 app.listen(PORT, () => {
   log.info("api_started", { url: `http://localhost:${PORT}` });

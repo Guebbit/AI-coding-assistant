@@ -10,6 +10,7 @@
     "scripts": {
         "dev": "tsx apps/api/index.ts",
         "start": "node dist/apps/api/index.js",
+        "db:migrate": "tsx packages/persistence/migrate.ts",
         "ts-check": "tsc --noEmit",
         "build": "npm run typecheck",
         "build-only": "npm run lint",

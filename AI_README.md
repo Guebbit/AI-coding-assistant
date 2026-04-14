@@ -507,6 +507,12 @@ SSE events for `/run/swarm/stream`:
 | `DIAGNOSTIC_LOG_ENABLED`                 | `true`                    | Toggle diagnostic Markdown file output                                                                                                                |
 | `DIAGNOSTIC_LOG_DIR`                     | `data/diagnostics`        | Output folder for diagnostic logs                                                                                                                     |
 | `DIAGNOSTIC_LOG_MAX_FILES`               | `100`                     | Auto-prune threshold for diagnostic log files                                                                                                         |
+| `MANNA_DB_HOST`                          | `localhost`               | PostgreSQL host for the persistence layer                                                                                                             |
+| `MANNA_DB_PORT`                          | `5432`                    | PostgreSQL port for the persistence layer                                                                                                             |
+| `MANNA_DB_USER`                          | `manna`                   | PostgreSQL user for the persistence layer                                                                                                             |
+| `MANNA_DB_PASSWORD`                      | _(empty)_                 | PostgreSQL password for the persistence layer                                                                                                         |
+| `MANNA_DB_NAME`                          | `manna`                   | PostgreSQL database name for the persistence layer                                                                                                    |
+| `MANNA_DB_ENABLED`                       | `true`                    | Set `false` to disable DB persistence (agent/swarm still run normally)                                                                               |
 | `SWARM_DECOMPOSER_MODEL`                 | `AGENT_MODEL_REASONING`   | Model used for task decomposition in the swarm                                                                                                        |
 | `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                                                                                                    |
 | `PORT`                                   | `3001`                    | Express server port                                                                                                                                   |
@@ -594,13 +600,21 @@ SSE events for `/run/swarm/stream`:
 │   ├── evals/
 │   │   ├── types.ts          — eval harness types
 │   │   ├── scorer-builder.ts
+│   │   ├── persist.ts        — scoreAndPersist(); fetchRecentAgentRuns(); fetchRecentSwarmRuns()
 │   │   ├── index.ts
 │   │   └── scorers/
 │   │       ├── tool-accuracy.ts  — scores whether correct tool was chosen
 │   │       └── agent-quality.ts  — scores response quality
+│   ├── persistence/
+│   │   ├── types.ts          — IAgentRunRecord, ISwarmRunRecord, IEvalResultRecord, IToolCall, RunStatus
+│   │   ├── db.ts             — getPool(); saveAgentRun(); saveSwarmRun(); saveEvalResult(); fetchRecentRuns()
+│   │   ├── migrate.ts        — runMigrations(); CLI entry point
+│   │   ├── index.ts          — re-exports all persistence types and helpers
+│   │   └── migrations/
+│   │       └── 001_initial.sql — agent_runs, swarm_runs, eval_results schema
 │   └── logger/
 │       └── logger.ts         — getLogger(name); winston wrapper
-├── docker-compose.yml        — compose stack for Ollama + Qdrant; no MySQL
+├── docker-compose.yml        — compose stack for Ollama + Qdrant + PostgreSQL
 ├── .env.example              — compose env template
 ├── data/                     — runtime data; gitignored
 │   ├── boilerplates/         — template sources for scaffold_project
@@ -628,6 +642,7 @@ SSE events for `/run/swarm/stream`:
 - Diagnostic logs: written only to `DIAGNOSTIC_LOG_DIR` (default `data/diagnostics`); output path validated via `resolveInsideRoot`.
 - Verification processor: disabled by default (`AGENT_VERIFICATION_ENABLED=false`); opt-in only. Fails open — a verification call error does not block the agent.
 - Tool reranker: disabled by default (`TOOL_RERANKER_ENABLED=false`); opt-in only. Fails open — a reranking error returns the original tool list.
+- PostgreSQL persistence: all `saveAgentRun` / `saveSwarmRun` / `saveEvalResult` calls are wrapped in `.catch()` in the agent/swarm; a DB outage only emits a warning log and never crashes the agent. Set `MANNA_DB_ENABLED=false` to disable entirely.
 
 ---
 
@@ -651,6 +666,9 @@ SSE events for `/run/swarm/stream`:
 | Intercept/modify steps      | Implement `Processor` in `packages/processors/`, register via `agent.addProcessor()`    |
 | Change memory strategy      | `packages/memory/memory.ts`                                                             |
 | Add an eval scorer          | `packages/evals/scorers/`                                                               |
+| Score + persist an eval     | `scoreAndPersist(scorer, input)` from `packages/evals/persist.ts`                       |
+| Query recent runs from DB   | `fetchRecentRuns({ type, limit })` from `packages/persistence/db.ts`                    |
+| Run DB migrations           | `tsx packages/persistence/migrate.ts` or call `runMigrations()` on startup              |
 | Add a diagnostic category   | `packages/diagnostics/types.ts` — extend `IDiagnosticEntry.category` documentation      |
 | Change budget thresholds    | `AGENT_BUDGET_MAX_DURATION_MS` / `AGENT_BUDGET_MAX_CONTEXT_CHARS` env vars              |
 | Enable verification         | Set `AGENT_VERIFICATION_ENABLED=true`; optionally set `AGENT_VERIFICATION_MODEL`        |

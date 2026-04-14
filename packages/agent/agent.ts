@@ -38,6 +38,8 @@ import type {
 } from '../processors/types';
 import { writeDiagnosticLog, cleanupOldLogs } from '../diagnostics';
 import type { IDiagnosticEntry } from '../diagnostics';
+import { saveAgentRun } from '../persistence/db';
+import type { IToolCall } from '../persistence/types';
 
 /**
  * Maximum number of reasoning iterations before the agent gives up.
@@ -125,8 +127,10 @@ export class Agent {
         options?: { profile?: ModelProfile; maxSteps?: number }
     ): Promise<string> {
         const runStartedAt = Date.now();
+        const startTime = new Date();
         let context = '';
         const diagnosticEntries: IDiagnosticEntry[] = [];
+        const toolCalls: IToolCall[] = [];
 
         /* Use per-call override when provided; fall back to the global default. */
         const effectiveMaxSteps =
@@ -298,6 +302,23 @@ export class Agent {
                     log.info('agent_diagnostic_log_written', { logPath });
                 }
 
+                /* Persist run to PostgreSQL (fail-open). */
+                await saveAgentRun({
+                    task,
+                    agentProfile: options?.profile ?? null,
+                    output: parsed.thought,
+                    context,
+                    memory,
+                    startTime,
+                    endTime: new Date(),
+                    durationMs: Date.now() - runStartedAt,
+                    toolCalls,
+                    diagnosticEntries,
+                    status: 'completed'
+                }).catch((error: unknown) =>
+                    log.warn('agent_persist_failed', { error: String(error) })
+                );
+
                 return parsed.thought;
             }
 
@@ -336,16 +357,26 @@ export class Agent {
                             tool: parsed.action
                         });
                     }
+                    const durationMs = Date.now() - toolStartedAt;
                     log.info('agent_tool_executed', {
                         step,
                         tool: parsed.action,
-                        durationMs: Date.now() - toolStartedAt,
+                        durationMs,
                         resultSize
+                    });
+                    toolCalls.push({
+                        tool: parsed.action,
+                        step,
+                        input: parsed.input,
+                        result,
+                        success: true,
+                        durationMs
                     });
                     return { success: true as const, result };
                 })
                 .catch((error: unknown) => {
                     context += `\nTool "${parsed.action}" failed: ${String(error)}`;
+                    const durationMs = Date.now() - toolStartedAt;
                     log.warn('agent_tool_failed', {
                         step,
                         tool: parsed.action,
@@ -362,6 +393,15 @@ export class Agent {
                         category: 'tool',
                         message: `Tool "${parsed.action}" failed: ${String(error)}`,
                         metadata: { tool: parsed.action }
+                    });
+                    toolCalls.push({
+                        tool: parsed.action,
+                        step,
+                        input: parsed.input,
+                        result: null,
+                        success: false,
+                        error: String(error),
+                        durationMs
                     });
                     return { success: false as const };
                 });
@@ -415,6 +455,23 @@ export class Agent {
             .catch((error: unknown) =>
                 log.warn('agent_diagnostic_log_failed', { error: String(error) })
             );
+
+        /* Persist run to PostgreSQL (fail-open). */
+        await saveAgentRun({
+            task,
+            agentProfile: options?.profile ?? null,
+            output: summary,
+            context,
+            memory,
+            startTime,
+            endTime: new Date(),
+            durationMs: Date.now() - runStartedAt,
+            toolCalls,
+            diagnosticEntries,
+            status: 'max_steps'
+        }).catch((error: unknown) =>
+            log.warn('agent_persist_failed', { error: String(error) })
+        );
 
         emit({
             type: 'agent:max_steps',

@@ -31,3 +31,4 @@ export * from './types';
 export * from './scorer-builder';
 export * from './scorers/tool-accuracy';
 export * from './scorers/agent-quality';
+export * from './persist';
