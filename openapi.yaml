@@ -5,7 +5,7 @@ info:
     version: '1.0.0'
     description: |
         Local-first agentic AI platform. Exposes the agent reasoning loop, IDE-specific
-        direct-LLM endpoints, file-upload helpers, OpenAI-compatible endpoints,
+        direct-LLM endpoints, file-upload helpers,
         and a multi-library PDF ingestion and semantic search system.
 
         **Base URL (default):** `http://localhost:3001`
@@ -21,8 +21,6 @@ tags:
       description: IDE-specific direct-LLM endpoints (bypass the agent loop)
     - name: upload
       description: File-upload helpers (image, audio, PDF)
-    - name: openai-compat
-      description: OpenAI-compatible endpoints for Open WebUI integration (temporary)
     - name: swarm
       description: |
           Multi-agent swarm orchestration. Decomposes complex tasks into subtasks,
@@ -701,85 +699,6 @@ paths:
                                                                 type: boolean
                                                             description:
                                                                 type: string
-
-    # ── OpenAI-compatible (temporary) ─────────────────────────────────────────
-
-    /v1/models:
-        get:
-            tags: [openai-compat]
-            summary: List available Manna model profiles (OpenAI format)
-            description: |
-                Returns Manna profiles in OpenAI model-list format. Intended for Open WebUI
-                and other OpenAI-compatible clients. **This endpoint is temporary** and will
-                be removed when the custom Manna frontend ships.
-            operationId: getV1Models
-            responses:
-                '200':
-                    description: OpenAI-format model list
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                                properties:
-                                    object:
-                                        type: string
-                                        example: list
-                                    data:
-                                        type: array
-                                        items:
-                                            type: object
-
-    /v1/chat/completions:
-        post:
-            tags: [openai-compat]
-            summary: OpenAI-compatible chat completions (routes through agent loop)
-            description: |
-                Translates an OpenAI chat request into a Manna `agent.run()` call and returns
-                the result in OpenAI response format. Supports streaming (SSE).
-
-                **This endpoint is temporary** and will be removed when the custom Manna frontend ships.
-            operationId: postV1ChatCompletions
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            type: object
-                            required: [model, messages]
-                            properties:
-                                model:
-                                    type: string
-                                    enum:
-                                        [
-                                            manna,
-                                            manna-agent,
-                                            manna-fast,
-                                            manna-reasoning,
-                                            manna-code
-                                        ]
-                                messages:
-                                    type: array
-                                    items:
-                                        type: object
-                                stream:
-                                    type: boolean
-                                    default: false
-                                allowWrite:
-                                    type: boolean
-                                    default: false
-            responses:
-                '200':
-                    description: Chat completion result (OpenAI format)
-                    content:
-                        application/json:
-                            schema:
-                                type: object
-                '400':
-                    $ref: '#/components/responses/BadRequest'
-                '429':
-                    description: Rate limit exceeded
-                '500':
-                    $ref: '#/components/responses/InternalError'
 
     # ── Library endpoints ──────────────────────────────────────────────────────
 

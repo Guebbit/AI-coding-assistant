@@ -6,7 +6,7 @@ Local-first AI agent API — send a task, get an answer. Ollama models, tool exe
 
 This documentation is now organized into **5 clear tracks**:
 
-1. **Getting Started & Use Cases** → [/use-the-application](/use-the-application) — setup, plus how to use Manna with Open WebUI, as an IDE agent, for agentic programming, or as a knowledge base
+1. **Getting Started & Use Cases** → [/use-the-application](/use-the-application) — setup, plus how to use Manna as an IDE agent, for agentic programming, or as a knowledge base
 2. **API Surface** → [/endpoint-map](/endpoint-map)
 3. **Architecture** → [/theory/how-it-works-layered](/theory/how-it-works-layered)
 4. **Modeling & Routing** → [/model-selection](/model-selection)

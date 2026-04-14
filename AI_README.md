@@ -76,8 +76,7 @@ Four operational surfaces:
 2. `POST /run/swarm`, `POST /run/swarm/stream` — multi-agent swarm orchestration (decompose → delegate → synthesise).
 3. `POST /workflow`, `POST /workflow/stream` — sequential workflow orchestration (explicit ordered steps, each bounded independently).
 4. `POST /autocomplete`, `POST /lint-conventions`, `POST /page-review` — direct IDE endpoints, **bypass** the agent loop entirely.
-5. `GET /v1/models`, `POST /v1/chat/completions` — OpenAI-compatible endpoints; route Open WebUI (or any OpenAI client) through Manna's full agentic loop.
-6. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
+5. `GET /info/modes`, `GET /info/models`, `GET /help` — informational endpoints; return instance metadata, no LLM calls.
 
 ---
 
@@ -379,40 +378,6 @@ Max upload size: 50 MB. Uses `multer` with in-memory storage.
 
 ---
 
-## OpenAI-compatibility endpoints ⚠ TEMPORARY
-
-> **This section describes a temporary Open WebUI bridge.**
-> `apps/api/openai-compat.ts` and the `registerOpenAiRoutes(app)` call in `apps/api/index.ts`
-> should be **deleted** once the custom Manna frontend is available.
-> Do not add new features to this layer.
-
-File: `apps/api/openai-compat.ts`  
-Registered in `apps/api/index.ts` via `registerOpenAiRoutes(app)`.
-
-These endpoints implement the OpenAI REST API shape, allowing **Open WebUI** (and any other OpenAI-compatible client) to use Manna as its backend. Requests pass through the full agentic loop — tools, memory, and model routing are all active.
-
-| Endpoint                    | Purpose                                                                    |
-| --------------------------- | -------------------------------------------------------------------------- |
-| `GET /v1/models`            | Lists all Manna model profiles as OpenAI model entries                     |
-| `POST /v1/chat/completions` | Translates an OpenAI chat request → `agent.run()` → OpenAI response format |
-
-**Model → profile mapping**
-
-| Model ID                | Manna profile         |
-| ----------------------- | --------------------- |
-| `manna` / `manna-agent` | auto (router decides) |
-| `manna-fast`            | `fast`                |
-| `manna-reasoning`       | `reasoning`           |
-| `manna-code`            | `code`                |
-
-**Write tools**: disabled by default; enabled when `allowWrite: true` is in the body or when the last user message starts with `[WRITE] `.
-
-**Streaming**: `stream: true` is supported — the agent result is buffered and sent as a single SSE chunk followed by `[DONE]`.
-
-> Full schema, curl examples, and env vars: `docs/endpoint-map.md`.
-
----
-
 ## Informational endpoints
 
 File: `apps/api/info-endpoints.ts`  
@@ -546,7 +511,6 @@ SSE events for `/run/swarm/stream`:
 | `SWARM_SYNTHESIS_MODEL`                  | `AGENT_MODEL_REASONING`   | Model used for final answer synthesis in the swarm                                                                                                    |
 | `PORT`                                   | `3001`                    | Express server port                                                                                                                                   |
 | `CORS_ORIGIN`                            | `*`                       | Allowed CORS origin(s) for the Express API. Set to a specific origin in production (e.g. `https://manna.example.com`). Defaults to `*` (all origins). |
-| `OPENAI_COMPAT_RATE_LIMIT`               | `60`                      | Max `/v1/chat/completions` requests per minute per client IP                                                                                          |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                                                                                                    |
 | `QDRANT_URL`                             | `http://localhost:6333`   | Qdrant endpoint for semantic memory                                                                                                                   |
 | `QDRANT_COLLECTION`                      | —                         | Qdrant collection name                                                                                                                                |
@@ -571,7 +535,6 @@ SSE events for `/run/swarm/stream`:
 │       ├── workflow-endpoints.ts — registerWorkflowRoutes(); POST /workflow, POST /workflow/stream
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
-│       ├── openai-compat.ts  — registerOpenAiRoutes(); GET /v1/models, POST /v1/chat/completions
 │       └── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
 ├── packages/
 │   ├── agent/
@@ -637,7 +600,7 @@ SSE events for `/run/swarm/stream`:
 │   │       └── agent-quality.ts  — scores response quality
 │   └── logger/
 │       └── logger.ts         — getLogger(name); winston wrapper
-├── docker-compose.yml        — compose stack for Ollama + Open WebUI + Qdrant; no MySQL
+├── docker-compose.yml        — compose stack for Ollama + Qdrant; no MySQL
 ├── .env.example              — compose env template
 ├── data/                     — runtime data; gitignored
 │   ├── boilerplates/         — template sources for scaffold_project

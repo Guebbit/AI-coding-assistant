@@ -4,8 +4,7 @@
  * factory used by all API route modules.
  *
  * Extracting agent setup into this module avoids duplication between
- * `index.ts` and `openai-compat.ts` while keeping each route module
- * focused on its own HTTP concerns.
+ * route modules while keeping each one focused on its own HTTP concerns.
  *
  * @module apps/api/agents
  */

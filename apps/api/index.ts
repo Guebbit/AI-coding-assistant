@@ -9,15 +9,12 @@
  * - `POST /workflow`               — run an explicit ordered list of steps sequentially.
  * - `POST /workflow/stream`        — streaming variant of `/workflow` (SSE).
  * - `GET  /health`                 — liveness check for monitoring / Docker.
- * - `GET  /v1/models`              — OpenAI-compatible model list.
- * - `POST /v1/chat/completions`    — OpenAI-compatible chat completions.
  * - `GET  /info/modes`             — list Manna agent routing profiles.
  * - `GET  /info/models`            — list models available in Ollama.
  * - `GET  /help`                   — structured overview of all API endpoints.
  *
  * IDE-specific routes (`/autocomplete`, `/lint-conventions`,
  * `/page-review`) are registered from `ide-endpoints.ts`.
- * OpenAI-compatible routes are registered from `openai-compat.ts`.
  * Swarm routes are registered from `swarm-endpoints.ts`.
  * Workflow routes are registered from `workflow-endpoints.ts`.
  * Informational routes (`/info/modes`, `/info/models`, `/help`) are
@@ -33,7 +30,6 @@ import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { registerIdeRoutes } from "./ide-endpoints";
 import { registerUploadRoutes } from "./upload-endpoints";
-import { registerOpenAiRoutes } from "./openai-compat";
 import { registerStreamRoutes } from "./stream-endpoints";
 import { registerSwarmRoutes } from "./swarm-endpoints";
 import { registerInfoRoutes } from "./info-endpoints";
@@ -58,11 +54,6 @@ registerIdeRoutes(app);
 
 /* Register file-upload endpoints (image, audio, PDF). */
 registerUploadRoutes(app);
-
-/* Register OpenAI-compatible endpoints (/v1/models, /v1/chat/completions).
- * TODO: Remove once the custom Manna frontend ships — this is a temporary
- *       Open WebUI bridge. See apps/api/openai-compat.ts for details. */
-registerOpenAiRoutes(app);
 
 /* Register SSE streaming endpoint (POST /run/stream). */
 registerStreamRoutes(app);
@@ -143,7 +134,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-/* Default to 3001 — port 3000 is reserved for Open WebUI in docker-compose.yml. */
+/* Default port for the Manna API server. */
 const PORT = Number.parseInt(process.env.PORT ?? "3001", 10);
 
 app.listen(PORT, () => {

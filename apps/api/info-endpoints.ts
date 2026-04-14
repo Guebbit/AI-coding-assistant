@@ -227,40 +227,6 @@ const HELP_CATALOGUE: IHelpEntry[] = [
     params: [{ name: "file", type: "file", required: true, description: "PDF file." }],
   },
 
-  /* ── OpenAI compat ─────────────────────────────────────────────────── */
-  {
-    method: "GET",
-    path: "/v1/models",
-    summary: "OpenAI-compatible model list (temporary Open WebUI bridge).",
-    params: [],
-  },
-  {
-    method: "POST",
-    path: "/v1/chat/completions",
-    summary: "OpenAI-compatible chat completions → runs the full agent loop.",
-    params: [
-      {
-        name: "model",
-        type: "string",
-        required: true,
-        description: 'Model ID, e.g. "manna", "manna-fast", "manna-code".',
-      },
-      { name: "messages", type: "array", required: true, description: "Chat message array." },
-      {
-        name: "stream",
-        type: "boolean",
-        required: false,
-        description: "Enable SSE streaming.",
-      },
-      {
-        name: "allowWrite",
-        type: "boolean",
-        required: false,
-        description: "Enable write tools.",
-      },
-    ],
-  },
-
   /* ── Info ───────────────────────────────────────────────────────────── */
   {
     method: "GET",

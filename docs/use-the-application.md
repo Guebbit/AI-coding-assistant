@@ -1,7 +1,7 @@
 # Use the Application
 
 ::: tip TL;DR
-Manna is versatile — you can use it as a chat interface via Open WebUI, as an AI agent inside your IDE, as an agentic coding engine to build entire websites, or as a searchable knowledge base over your own PDFs and documents.
+Manna is versatile — you can use it as an AI agent inside your IDE, as an agentic coding engine to build entire websites, or as a searchable knowledge base over your own PDFs and documents.
 :::
 
 There are several ways to use Manna, each suited to a different workflow. This page covers the initial setup and then explains each use case individually.
@@ -18,16 +18,15 @@ Before using Manna in any mode, you need the base stack running.
 npm install
 ```
 
-### 2. Start Ollama + Open WebUI
+### 2. Start Ollama
 
 ```bash
 cp .env.example .env
-# set LINUX_USERNAME and WEBUI_SECRET_KEY
+# set LINUX_USERNAME
 docker compose --env-file .env up -d
 ```
 
 - Ollama API: `http://localhost:11434`
-- Open WebUI: `http://localhost:3000`
 
 ### 3. Start Qdrant (semantic memory)
 
@@ -61,74 +60,7 @@ You should get back a JSON response with the agent's answer. If this works, the 
 
 ---
 
-## Use Case 1: Chat via Open WebUI (limited)
-
-::: warning Limited integration
-Open WebUI connects to Manna through an OpenAI-compatibility shim. It works for basic chat-style interaction but does **not** expose the full power of the agentic loop (no streaming tool events, no write-mode toggle in the UI, no multi-turn tool orchestration visibility). This integration is a temporary stopgap while a dedicated Manna frontend is in development.
-:::
-
-Open WebUI gives you a familiar ChatGPT-like interface that routes every message through Manna's agentic loop — including tools, memory, and model routing.
-
-### Setup
-
-1. Make sure Manna is running (`npm run dev`).
-2. Open your Open WebUI instance at `http://localhost:3000`.
-3. Go to **Settings → Connections → Add OpenAI API connection**.
-4. Set the **Base URL** to `http://localhost:3001/v1`.
-5. Set the **API Key** to any non-empty string (e.g. `manna`) — the key is not validated.
-6. Save. Open WebUI will call `/v1/models` and populate the model picker.
-
-### Available models in the picker
-
-| Model name              | Manna profile | Description                                   |
-| ----------------------- | ------------- | --------------------------------------------- |
-| `manna` / `manna-agent` | auto          | Router selects the best profile for each task |
-| `manna-fast`            | `fast`        | Optimised for speed                           |
-| `manna-reasoning`       | `reasoning`   | Optimised for multi-step reasoning            |
-| `manna-code`            | `code`        | Optimised for coding tasks                    |
-
-### Enabling write tools
-
-By default, write tools (`write_file`, `scaffold_project`) are disabled. To enable them for a single message, prefix the message with `[WRITE]`:
-
-```
-[WRITE] Create a file hello.txt with content "Hello, world!"
-```
-
-### What works well
-
-- Quick questions ("What does this function do?")
-- Research tasks ("Fetch this URL and summarise it")
-- SQL queries against a connected database
-- Reading and reasoning over files in the project
-
-### What does not work well
-
-- You cannot see intermediate tool calls or agent steps in real-time
-- There is no UI control for `allowWrite` — you have to use the `[WRITE]` prefix
-- Multi-turn conversations do not carry over tool context between messages
-- Streaming shows the final answer only, not the thinking process
-
-### Test without Open WebUI
-
-You can also test the OpenAI-compatible endpoints directly:
-
-```bash
-# List models
-curl http://localhost:3001/v1/models
-
-# Chat completion (non-streaming)
-curl -X POST http://localhost:3001/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "manna",
-    "messages": [{"role": "user", "content": "Explain how the agent loop works"}]
-  }'
-```
-
----
-
-## Use Case 2: IDE Agent (WebStorm, VS Code, etc.)
+## Use Case 1: IDE Agent (WebStorm, VS Code, etc.)
 
 Manna exposes dedicated HTTP endpoints designed for IDE integration. These endpoints bypass the full agentic loop and are optimised for low-latency responses at cursor-time.
 
@@ -225,7 +157,7 @@ curl -X POST http://localhost:3001/page-review \
 
 ---
 
-## Use Case 3: Agentic Programming (Build Websites and Projects)
+## Use Case 2: Agentic Programming (Build Websites and Projects)
 
 This is the most powerful use of Manna. By enabling write mode, the agent can scaffold projects, create files, run shell commands, and iteratively build working code — all driven by natural language instructions.
 
@@ -359,7 +291,7 @@ For comprehensive coverage, ingest your library's documentation PDFs or markdown
 
 ---
 
-## Use Case 4: Knowledge Base — Talk to Your PDFs and Documents
+## Use Case 3: Knowledge Base — Talk to Your PDFs and Documents
 
 Manna can act as a **semantic search engine** over your own document collections. Instead of manually searching through hundreds of PDFs, you ingest them once and then ask natural language questions to find the most relevant articles or sections.
 
