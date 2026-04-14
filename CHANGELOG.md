@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **CORS middleware** (`apps/api/index.ts`): Added `cors` middleware to the Express server so that the Manna frontend (and any browser client) can make requests to the API without CORS errors. The allowed origin is configurable via the `CORS_ORIGIN` environment variable (defaults to `*` for local development; set to a specific origin such as `https://manna.example.com` in production). Preflight `OPTIONS` requests and SSE streaming endpoints are handled automatically.
 - **Workflow orchestration** (`apps/api/workflow-endpoints.ts`): New `POST /workflow` and `POST /workflow/stream` endpoints for sequential multi-step agent orchestration.
     - Accepts `steps: string[]` — an explicit ordered list of task strings.
     - Each step is executed as a **bounded independent `agent.run()` sub-call**; a slow or failing step does not consume the budget of subsequent steps.
