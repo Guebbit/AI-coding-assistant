@@ -14,7 +14,7 @@
  * @module tools/mongo.query
  */
 
-import { MongoClient } from 'mongodb';
+import { MongoClient, type Document } from 'mongodb';
 import { createDbTool } from './base-db-tool';
 
 /** Validated input shape for the MongoDB query tool. */
@@ -134,9 +134,8 @@ export const mongoQueryTool = createDbTool<IMongoQueryInput>({
             }
 
             /* aggregate */
-            const pipeline = (query as unknown[] | undefined) ?? [];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return await col.aggregate(pipeline as any[]).toArray();
+            const pipeline = (query as Document[] | undefined) ?? [];
+            return await col.aggregate(pipeline).toArray();
         } finally {
             await client.close();
         }

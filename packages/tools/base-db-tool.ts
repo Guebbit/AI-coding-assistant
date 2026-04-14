@@ -20,7 +20,7 @@
  * 3. Create `packages/tools/<engine>.query.ts` and define a tool that:
  *    - Reads connection config from environment variables using a dedicated
  *      prefix (e.g. `ORACLE_HOST`, `ORACLE_PORT`, …).
- *    - Validates the input with {@link BaseDbTool.validateSqlInput} (SQL engines)
+ *    - Validates the input with {@link validateSqlInput} (SQL engines)
  *      or your own input guard (NoSQL engines).
  *    - Opens a connection, runs the operation, closes the connection in a
  *      `finally` block, and returns a JSON-serialisable result.
@@ -103,7 +103,7 @@ export interface IDbToolOptions<TInput extends Record<string, unknown>> {
  * ```
  *
  * @template TInput - Narrowed input type returned by `validateInput`.
- * @param options - Tool configuration.
+ * @param options - Tool configuration (see {@link IDbToolOptions}).
  * @returns A fully-formed `ITool` ready to be passed to an `Agent`.
  */
 export function createDbTool<TInput extends Record<string, unknown>>(
