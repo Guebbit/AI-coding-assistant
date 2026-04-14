@@ -1,18 +1,24 @@
 # Use the Application
 
 ::: tip TL;DR
-Install → start Ollama → start Qdrant → start API → POST /run with a task → get an answer.
+Manna is versatile — you can use it as a chat interface via Open WebUI, as an AI agent inside your IDE, as an agentic coding engine to build entire websites, or as a searchable knowledge base over your own PDFs and documents.
 :::
 
-This is the shortest path from zero to first successful agent run.
+There are several ways to use Manna, each suited to a different workflow. This page covers the initial setup and then explains each use case individually.
 
-## 1) Install dependencies
+---
+
+## Quick Setup (required for all use cases)
+
+Before using Manna in any mode, you need the base stack running.
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-## 2) Start Ollama + Open WebUI stack
+### 2. Start Ollama + Open WebUI
 
 ```bash
 cp .env.example .env
@@ -20,10 +26,10 @@ cp .env.example .env
 docker compose --env-file .env up -d
 ```
 
-- Open WebUI: `http://localhost:3000`
 - Ollama API: `http://localhost:11434`
+- Open WebUI: `http://localhost:3000`
 
-## 2.5) Start Qdrant (semantic memory)
+### 3. Start Qdrant (semantic memory)
 
 ```bash
 docker run -d \
@@ -33,42 +39,17 @@ docker run -d \
   qdrant/qdrant
 ```
 
-## 3) Start the API
+If Qdrant is unavailable, Manna continues with local in-memory recent memory only — but semantic recall is lost.
+
+### 4. Start the Manna API
 
 ```bash
-cd /path/to/AI-coding-assistant
 npm run dev
 ```
 
 Default API URL: `http://localhost:3001`
 
-## 3.5) Use dedicated IDE endpoints (separate from `/run`)
-
-These endpoints are independent and can be wired to different WebStorm UX surfaces:
-
-- `POST /autocomplete` for inline suggestions at cursor position
-- `POST /lint-conventions` for lint + conventions findings
-- `POST /page-review` for whole-file/page categorized review
-
-```bash
-curl -X POST http://localhost:3001/autocomplete \
-  -H "Content-Type: application/json" \
-  -d '{"prefix":"const answer = ","language":"typescript"}'
-```
-
-```bash
-curl -X POST http://localhost:3001/lint-conventions \
-  -H "Content-Type: application/json" \
-  -d '{"content":"var x = 1\\nconsole.log(x)","language":"javascript"}'
-```
-
-```bash
-curl -X POST http://localhost:3001/page-review \
-  -H "Content-Type: application/json" \
-  -d '{"content":"export function add(a:number,b:number){return a+b}","language":"typescript"}'
-```
-
-## 4) Run your first task
+### Verify it works
 
 ```bash
 curl -X POST http://localhost:3001/run \
@@ -76,15 +57,432 @@ curl -X POST http://localhost:3001/run \
   -d '{"task":"List files in the current directory"}'
 ```
 
-## 5) What should happen
+You should get back a JSON response with the agent's answer. If this works, the stack is healthy and you can proceed to any of the use cases below.
 
-- API receives `task`
-- Agent builds prompt + context + memory + tool list
-- LLM returns JSON with `thought`, `action`, `input`
-- Tool executes (if `action` is not `none`)
-- Loop repeats until done or max 5 steps
+---
 
-### Agent loop visualized
+## Use Case 1: Chat via Open WebUI (limited)
+
+::: warning Limited integration
+Open WebUI connects to Manna through an OpenAI-compatibility shim. It works for basic chat-style interaction but does **not** expose the full power of the agentic loop (no streaming tool events, no write-mode toggle in the UI, no multi-turn tool orchestration visibility). This integration is a temporary stopgap while a dedicated Manna frontend is in development.
+:::
+
+Open WebUI gives you a familiar ChatGPT-like interface that routes every message through Manna's agentic loop — including tools, memory, and model routing.
+
+### Setup
+
+1. Make sure Manna is running (`npm run dev`).
+2. Open your Open WebUI instance at `http://localhost:3000`.
+3. Go to **Settings → Connections → Add OpenAI API connection**.
+4. Set the **Base URL** to `http://localhost:3001/v1`.
+5. Set the **API Key** to any non-empty string (e.g. `manna`) — the key is not validated.
+6. Save. Open WebUI will call `/v1/models` and populate the model picker.
+
+### Available models in the picker
+
+| Model name              | Manna profile | Description                                   |
+| ----------------------- | ------------- | --------------------------------------------- |
+| `manna` / `manna-agent` | auto          | Router selects the best profile for each task |
+| `manna-fast`            | `fast`        | Optimised for speed                           |
+| `manna-reasoning`       | `reasoning`   | Optimised for multi-step reasoning            |
+| `manna-code`            | `code`        | Optimised for coding tasks                    |
+
+### Enabling write tools
+
+By default, write tools (`write_file`, `scaffold_project`) are disabled. To enable them for a single message, prefix the message with `[WRITE]`:
+
+```
+[WRITE] Create a file hello.txt with content "Hello, world!"
+```
+
+### What works well
+
+- Quick questions ("What does this function do?")
+- Research tasks ("Fetch this URL and summarise it")
+- SQL queries against a connected database
+- Reading and reasoning over files in the project
+
+### What does not work well
+
+- You cannot see intermediate tool calls or agent steps in real-time
+- There is no UI control for `allowWrite` — you have to use the `[WRITE]` prefix
+- Multi-turn conversations do not carry over tool context between messages
+- Streaming shows the final answer only, not the thinking process
+
+### Test without Open WebUI
+
+You can also test the OpenAI-compatible endpoints directly:
+
+```bash
+# List models
+curl http://localhost:3001/v1/models
+
+# Chat completion (non-streaming)
+curl -X POST http://localhost:3001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "manna",
+    "messages": [{"role": "user", "content": "Explain how the agent loop works"}]
+  }'
+```
+
+---
+
+## Use Case 2: IDE Agent (WebStorm, VS Code, etc.)
+
+Manna exposes dedicated HTTP endpoints designed for IDE integration. These endpoints bypass the full agentic loop and are optimised for low-latency responses at cursor-time.
+
+### Available IDE endpoints
+
+| Endpoint               | Purpose                              | Typical latency |
+| ---------------------- | ------------------------------------ | --------------- |
+| `POST /autocomplete`   | Inline code completion at cursor     | < 200 ms        |
+| `POST /lint-conventions` | Lint findings + convention checks  | < 500 ms        |
+| `POST /page-review`    | Full-file review with categorised suggestions | 1–3 s  |
+
+### WebStorm setup
+
+WebStorm supports external HTTP-based tools through its **HTTP Client** and **External Tools** features. Here is how to wire each endpoint:
+
+#### Autocomplete suggestions
+
+1. Open **Settings → Tools → External Tools → Add**.
+2. Set **Program** to `curl` and **Arguments** to:
+   ```
+   -s -X POST http://localhost:3001/autocomplete -H "Content-Type: application/json" -d "{\"prefix\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+   ```
+3. Assign a keyboard shortcut (e.g. `Ctrl+Alt+A`).
+4. When triggered, the selected text (or text before cursor) is sent as the prefix, and the model returns a completion suggestion.
+
+#### Lint and convention checks
+
+1. Add another external tool with:
+   ```
+   -s -X POST http://localhost:3001/lint-conventions -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+   ```
+2. This returns deterministic findings (TypeScript checks, convention rules) followed by optional LLM-enriched suggestions.
+
+#### Full page review
+
+1. Add another external tool with:
+   ```
+   -s -X POST http://localhost:3001/page-review -H "Content-Type: application/json" -d "{\"content\":\"$SelectedText$\",\"language\":\"$FileExt$\"}"
+   ```
+2. This analyses the entire file and returns categorised suggestions (readability, performance, bugs, style).
+
+### VS Code setup
+
+For VS Code, you can use the **REST Client** extension or create a task in `.vscode/tasks.json`:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Manna: Autocomplete",
+      "type": "shell",
+      "command": "curl -s -X POST http://localhost:3001/autocomplete -H 'Content-Type: application/json' -d '{\"prefix\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Manna: Page Review",
+      "type": "shell",
+      "command": "curl -s -X POST http://localhost:3001/page-review -H 'Content-Type: application/json' -d '{\"content\":\"${selectedText}\",\"language\":\"${fileExtname}\"}'",
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+Bind these tasks to keyboard shortcuts via **Preferences → Keyboard Shortcuts**.
+
+### Other IDEs
+
+Any IDE that supports external tools or HTTP requests can integrate with Manna. The pattern is always the same:
+
+1. Send a POST request to the relevant endpoint.
+2. Pass the code content (or selection) and the language identifier.
+3. Display the JSON response in a panel or tooltip.
+
+### Example requests
+
+```bash
+# Autocomplete
+curl -X POST http://localhost:3001/autocomplete \
+  -H "Content-Type: application/json" \
+  -d '{"prefix":"const answer = ","language":"typescript"}'
+
+# Lint + conventions
+curl -X POST http://localhost:3001/lint-conventions \
+  -H "Content-Type: application/json" \
+  -d '{"content":"var x = 1\nconsole.log(x)","language":"javascript"}'
+
+# Full page review
+curl -X POST http://localhost:3001/page-review \
+  -H "Content-Type: application/json" \
+  -d '{"content":"export function add(a:number,b:number){return a+b}","language":"typescript"}'
+```
+
+---
+
+## Use Case 3: Agentic Programming (Build Websites and Projects)
+
+This is the most powerful use of Manna. By enabling write mode, the agent can scaffold projects, create files, run shell commands, and iteratively build working code — all driven by natural language instructions.
+
+### How it works
+
+When you send a request with `"allowWrite": true`, the agent gains access to:
+
+- **`scaffold_project`** — copies a boilerplate template into a new project folder
+- **`write_file`** — creates or overwrites files inside the project output directory
+
+Combined with the always-available read tools (`read_file`, `shell`, `browser_fetch`), the agent can:
+
+1. Scaffold a project from a template
+2. Read existing files to understand the structure
+3. Write new files or modify existing ones
+4. Run shell commands to install dependencies, build, or test
+5. Iterate based on errors or requirements
+
+### Starting from scratch
+
+Send a task describing what you want. The agent will use its tools to build it step by step:
+
+```bash
+curl -X POST http://localhost:3001/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Create a simple landing page with HTML, CSS, and JavaScript. Include a hero section, a features grid, and a contact form.",
+    "allowWrite": true
+  }'
+```
+
+The agent will create files under `data/generated-projects/` (configurable via `PROJECT_OUTPUT_ROOT`).
+
+### Starting from a boilerplate
+
+If you have boilerplate templates, place them under `data/boilerplates/` (configurable via `BOILERPLATE_ROOT`). Each template is a folder containing a ready-to-use project structure.
+
+```
+data/boilerplates/
+├── react-ts/          ← React + TypeScript starter
+├── vue-landing/       ← Vue.js landing page
+├── express-api/       ← Express REST API
+└── static-site/       ← Plain HTML/CSS/JS
+```
+
+Then ask the agent to scaffold from a specific template:
+
+```bash
+curl -X POST http://localhost:3001/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Scaffold a new project from template react-ts called my-portfolio, then add a dark mode toggle component",
+    "allowWrite": true
+  }'
+```
+
+The agent will:
+1. Copy the `react-ts` boilerplate into `data/generated-projects/my-portfolio/`
+2. Read the existing structure to understand the code
+3. Create the dark mode toggle component
+4. Wire it into the app
+
+### Teaching the agent your custom libraries
+
+If you use private or custom libraries that the agent does not know about, you can teach it by providing documentation as context. There are several strategies:
+
+#### Strategy 1: Include library docs in the project
+
+Place a `LIBRARY_DOCS.md` or `AI_CONTEXT.md` file in your boilerplate that describes your library's API, components, and conventions. When the agent reads the project files, it will pick up this context automatically.
+
+```markdown
+<!-- data/boilerplates/my-stack/AI_CONTEXT.md -->
+# Custom Library Reference
+
+## @my-org/ui-kit
+- `<Button variant="primary|ghost|danger">` — Standard button component
+- `<Card elevation={1|2|3}>` — Card container with shadow levels
+- `<FormField label="..." error="...">` — Form field wrapper with validation display
+
+## @my-org/api-client
+- `createClient({ baseUrl, token })` — Initialize API client
+- `client.get<T>(path)` — Type-safe GET request
+- `client.post<T>(path, body)` — Type-safe POST request
+
+## Conventions
+- All components use CSS Modules (`.module.css`)
+- State management via Zustand stores in `src/stores/`
+- API calls only in `src/api/` directory
+```
+
+#### Strategy 2: Feed documentation in the task prompt
+
+For one-off tasks, include relevant information directly in the prompt:
+
+```bash
+curl -X POST http://localhost:3001/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Create a user profile page using my UI kit. The UI kit exports: <Card>, <Avatar>, <Button variant=primary|ghost>, <Badge>. All components accept a className prop. Use CSS Modules for styling.",
+    "allowWrite": true
+  }'
+```
+
+#### Strategy 3: Use semantic memory
+
+If you have already run tasks that used your custom libraries, Manna's semantic memory (via Qdrant) will recall past context about those libraries in future tasks. Over time, the agent builds up knowledge about your tools and conventions through repeated use.
+
+#### Strategy 4: Ingest library documentation as a knowledge base
+
+For comprehensive coverage, ingest your library's documentation PDFs or markdown files into a Qdrant collection using the [Library Ingestion](/library-ingestion) pipeline. The agent can then use `semantic_search` to look up relevant API details during code generation.
+
+### Tips for effective agentic programming
+
+- **Be specific about tech stack**: "React with TypeScript and Tailwind CSS" is better than "a web page".
+- **Mention file structure preferences**: "Put components in `src/components/` and pages in `src/pages/`".
+- **Reference your conventions**: "Follow the coding style in AI_CONTEXT.md".
+- **Use multi-step prompts for complex projects**: scaffold first, then add features one at a time.
+- **Review generated code**: the agent is powerful but not infallible — always review what it produces.
+
+### Environment variables
+
+| Variable              | Default                    | Description                              |
+| --------------------- | -------------------------- | ---------------------------------------- |
+| `BOILERPLATE_ROOT`    | `data/boilerplates`        | Where your boilerplate templates live    |
+| `PROJECT_OUTPUT_ROOT` | `data/generated-projects`  | Where generated projects are written     |
+
+---
+
+## Use Case 4: Knowledge Base — Talk to Your PDFs and Documents
+
+Manna can act as a **semantic search engine** over your own document collections. Instead of manually searching through hundreds of PDFs, you ingest them once and then ask natural language questions to find the most relevant articles or sections.
+
+### How it works
+
+The system uses a **summary-index approach** (not full RAG):
+
+1. **Ingest**: PDFs are processed in two passes — first the table of contents is extracted, then each article is summarised and embedded.
+2. **Store**: One embedding per article is stored in Qdrant, along with metadata (title, summary, topics, page numbers, PDF path).
+3. **Search**: When you ask a question, it is embedded and matched against the article summaries using cosine similarity.
+4. **Result**: You get a ranked list of articles with exact citations (title, page range, PDF path) — you read the original source, the AI just finds it.
+
+```mermaid
+flowchart LR
+    PDFs["Your PDF collection"] --> Ingest["Ingest pipeline\n(2-pass: TOC → summaries)"]
+    Ingest --> Qdrant["Qdrant\n(embedded summaries)"]
+    Question["Your question"] --> Embed["Embed query"]
+    Embed --> Search["Cosine similarity search"]
+    Qdrant --> Search
+    Search --> Results["Ranked article list\nwith PDF locations"]
+```
+
+### Setting up a library
+
+#### Step 1: Organise your PDFs
+
+Place your PDF files in a folder structure. The system can infer metadata (year, month) from the path:
+
+```
+/storage/my-library/
+├── 2024/
+│   ├── 01.pdf
+│   ├── 02.pdf
+│   └── ...
+├── 2025/
+│   ├── 01.pdf
+│   └── ...
+```
+
+#### Step 2: Import the collection
+
+```bash
+# Import an entire folder (bulk)
+curl -X POST http://localhost:3001/library/my-library/import \
+  -H "Content-Type: application/json" \
+  -d '{"folder": "/storage/my-library"}'
+
+# Or import specific PDFs
+curl -X POST http://localhost:3001/library/my-library/import \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pdfs": [
+      {"path": "/storage/my-library/2025/03.pdf", "year": 2025, "month": "March"}
+    ]
+  }'
+```
+
+The import runs unattended. A 20-year archive (~2 400 articles) takes approximately 2–8 hours depending on model and PDF complexity.
+
+#### Step 3: Search your library
+
+```bash
+curl -X POST http://localhost:3001/library/my-library/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "ocean acidification and coral bleaching",
+    "topK": 5,
+    "filters": {"year": 2025}
+  }'
+```
+
+The response is a ranked list of articles with metadata and PDF paths:
+
+```json
+[
+  {
+    "score": 0.91,
+    "title": "The Oceans' Tipping Point",
+    "summary": "Examines how rising CO₂ is dissolving coral structures...",
+    "topics": ["ocean", "climate", "CO2"],
+    "year": 2025,
+    "month": "March",
+    "startPage": 42,
+    "pdfPath": "/storage/my-library/2025/03.pdf"
+  }
+]
+```
+
+### Use cases for this feature
+
+- **Magazine archives**: index years of Scientific American, Nature, etc. and search by topic
+- **Research papers**: ingest a collection of academic PDFs and find relevant papers by concept
+- **Company documentation**: index internal documentation, policies, or technical specs
+- **Legal documents**: search across contracts or regulatory filings by topic
+- **Personal notes**: if your notes are in PDF form, make them semantically searchable
+
+### When to use this vs full RAG
+
+| Question type                                      | Best approach    |
+| -------------------------------------------------- | ---------------- |
+| "Which articles cover topic X?"                    | Summary index ✅ |
+| "What did article Y say about Z?"                  | Read the PDF directly |
+| "Summarise 10 years of coverage on topic X"        | Full RAG (not yet supported) |
+| "Find all mentions of a specific term"             | Keyword search / grep |
+
+For a deeper dive into the architecture, see [Library Ingestion & Search](/library-ingestion), [RAG Theory](/theory/RAG), and [Vector Databases](/theory/VECTOR_DATABASES).
+
+### API reference
+
+| Endpoint                            | Method | Description                            |
+| ----------------------------------- | ------ | -------------------------------------- |
+| `/library`                          | GET    | List all libraries                     |
+| `/library/{id}/import`              | POST   | Import PDFs into a library             |
+| `/library/{id}/search`              | POST   | Semantic search over articles          |
+| `/library/{id}/export`              | GET    | Export full article index as JSON      |
+
+---
+
+## How the Agent Loop Works
+
+For every use case above (except the direct IDE endpoints), Manna runs an agentic loop:
+
+1. API receives your `task`
+2. Agent builds a prompt with task + context + memory + tool descriptions
+3. LLM returns a JSON decision: `{ thought, action, input }`
+4. If `action` is a tool name, the tool executes and the result is appended to context
+5. Loop repeats (up to 5 steps by default)
+6. When `action` is `"none"`, the agent returns its final answer
 
 ```mermaid
 sequenceDiagram
@@ -108,55 +506,26 @@ sequenceDiagram
     API-->>You: { result }
 ```
 
-## 6) Browser tool is enabled by default
+---
 
-`browser_fetch` is already wired in `apps/api/index.ts`.
-Chromium is installed automatically on `npm install` via the project `postinstall` script.
+## Common Troubleshooting
 
-## 7) Enable write mode only when needed
+| Problem                         | Solution                                                        |
+| ------------------------------- | --------------------------------------------------------------- |
+| Ollama not reachable            | Check `OLLAMA_BASE_URL` (default `http://localhost:11434`)      |
+| Router selects wrong profile    | Tune `AGENT_MODEL_ROUTER_MODE` and `AGENT_MODEL_*` env vars    |
+| Qdrant not reachable            | Check `QDRANT_URL` (default `http://localhost:6333`)            |
+| Empty or invalid request        | Ensure request body includes a non-empty `"task"`               |
+| MySQL tool fails                | Verify `MYSQL_*` env vars and database availability             |
+| IDE endpoints slow              | Check `TOOL_IDE_MODEL` — use a smaller model for lower latency  |
+| Write tools not available       | Set `"allowWrite": true` in the request body                    |
+| Library import fails            | Check PDF paths exist and Qdrant is running                     |
 
-Write tools are disabled by default and only exposed when request body sets `allowWrite: true`.
+---
 
-```bash
-curl -X POST http://localhost:3001/run \
-  -H "Content-Type: application/json" \
-  -d '{"task":"Scaffold project my-react-app from template react-ts and create README notes","allowWrite":true}'
-```
+## What Next?
 
-Write mode tools:
-
-- `scaffold_project`
-- `write_file`
-
-Optional env vars:
-
-- `BOILERPLATE_ROOT` (default `data/boilerplates`)
-- `PROJECT_OUTPUT_ROOT` (default `data/generated-projects`)
-
-## 8) Common troubleshooting
-
-- Ollama not reachable: check `OLLAMA_BASE_URL` (default `http://localhost:11434`)
-- Router selects wrong profile: tune `AGENT_MODEL_ROUTER_MODE` and `AGENT_MODEL_*` env vars
-- Qdrant not reachable: check `QDRANT_URL` (default `http://localhost:6333`)
-- Empty/invalid request: ensure body includes non-empty `"task"`
-- MySQL tool fails: verify `MYSQL_*` env vars and DB availability
-
-## 9) Learn-by-doing next
-
-Go to [/scenarios](/scenarios) and run the exercises one by one.
-
-If you are deciding which Ollama model to run (fast vs heavy, coding vs reasoning, local limits), see [/model-selection](/model-selection).
-
-## 10) Start from your own boilerplates (write mode roadmap)
-
-Current setup is mostly read-oriented. To generate projects from your own templates, start with this sequence:
-
-1. Add your boilerplates under a fixed root (for example `data/boilerplates/`).
-2. Add a small metadata file per template (stack, language, package manager, test command).
-3. Keep your coding standards in docs (naming, architecture, folder style, quality rules).
-4. Add a write-capable tool (create/update files) with strict path boundaries.
-5. Add a scaffold tool (copy chosen boilerplate into a new target folder).
-6. Keep shell allowlist strict and only add commands required for safe project setup.
-7. Run generation tasks with explicit prompts (template, target path, constraints, required checks).
-
-This gives you controlled writing only when requested, while keeping the default behavior safe.
+- **Hands-on practice**: run the step-by-step [Scenarios](/scenarios)
+- **Model tuning**: choose the right model for your hardware in [Model Selection](/model-selection)
+- **API reference**: see every endpoint in the [Endpoint Map](/endpoint-map)
+- **Deep dive**: understand the internals in [How It Works (Layered)](/theory/how-it-works-layered)
