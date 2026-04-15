@@ -22,9 +22,10 @@ import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
+import { rejectResponse } from "../../packages/shared";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
-import type { ErrorResponse, RunRequest } from "../../api/models";
+import type { RunRequest } from "../../api/models";
 
 const log = getLogger("stream-endpoints");
 
@@ -60,18 +61,17 @@ export function registerStreamRoutes(app: Express): void {
     const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
 
     if (!task || typeof task !== "string" || task.trim() === "") {
-      const errorResponse: ErrorResponse = {
-        error: '"task" (non-empty string) is required in the request body',
-      };
-      res.status(400).json(errorResponse);
+      rejectResponse(
+        res,
+        400,
+        "Bad Request",
+        ['"task" (non-empty string) is required in the request body'],
+      );
       return;
     }
 
     if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-      const errorResponse: ErrorResponse = {
-        error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
-      };
-      res.status(400).json(errorResponse);
+      rejectResponse(res, 400, "Bad Request", [`"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`]);
       return;
     }
 

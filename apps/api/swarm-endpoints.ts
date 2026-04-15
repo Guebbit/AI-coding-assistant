@@ -15,10 +15,11 @@ import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
+import { rejectResponse, successResponse } from "../../packages/shared";
 import { createSwarmOrchestrator, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { ISwarmConfig } from "../../packages/swarm/types";
-import type { ErrorResponse, SwarmRequest, SwarmResponse } from "../../api/models";
+import type { SwarmRequest, SwarmResponse } from "../../api/models";
 
 const log = getLogger("swarm-endpoints");
 
@@ -95,59 +96,60 @@ export function registerSwarmRoutes(app: Express): void {
    *
    * Response: `{ "result": "...", "subtaskResults": [...], "totalDurationMs": 12345 }`
    */
-  app.post("/run/swarm", async (req: Request, res: Response) => {
+  app.post("/run/swarm", (req: Request, res: Response) => {
     const { task, config, error } = parseSwarmBody(
       req.body as Partial<SwarmRequest>,
     );
 
     if (error || !task || !config) {
-      const errorResponse: ErrorResponse = { error: error ?? "Invalid swarm request" };
-      res.status(400).json(errorResponse);
+      rejectResponse(res, 400, "Bad Request", [error ?? "Invalid swarm request"]);
       return;
     }
 
-    try {
-      log.info("swarm_request_received", {
-        task,
-        maxSubtasks: config.maxSubtasks,
-        allowWrite: config.allowWrite,
-        profile: config.profileOverride ?? null,
+    log.info("swarm_request_received", {
+      task,
+      maxSubtasks: config.maxSubtasks,
+      allowWrite: config.allowWrite,
+      profile: config.profileOverride ?? null,
+      requestId: req.requestId,
+    });
+
+    const orchestrator = createSwarmOrchestrator(config.allowWrite ?? false);
+    orchestrator
+      .run(task, config)
+      .then((result) => {
+        log.info("swarm_request_completed", {
+          taskLength: task.length,
+          subtaskCount: result.subtaskResults.length,
+          totalDurationMs: result.totalDurationMs,
+          requestId: req.requestId,
+        });
+
+        const response: SwarmResponse = {
+          answer: result.answer,
+          result: result.answer,
+          subtaskResults: result.subtaskResults.map((r) => ({
+            id: r.subtask.id,
+            description: r.subtask.description,
+            profile: r.subtask.profile,
+            success: r.success,
+            answer: r.answer,
+            durationMs: r.durationMs,
+            error: r.error,
+          })),
+          decomposition: {
+            reasoning: result.decomposition.reasoning,
+            subtaskCount: result.decomposition.subtasks.length,
+          },
+          totalDurationMs: result.totalDurationMs,
+        };
+
+        successResponse(res, response);
+      })
+      .catch((reason: unknown) => {
+        log.error("swarm_request_failed", { error: String(reason), requestId: req.requestId });
+        rejectResponse(res, 500, "Internal Server Error", [String(reason)]);
       });
-
-      const orchestrator = createSwarmOrchestrator(config.allowWrite ?? false);
-      const result = await orchestrator.run(task, config);
-
-      log.info("swarm_request_completed", {
-        taskLength: task.length,
-        subtaskCount: result.subtaskResults.length,
-        totalDurationMs: result.totalDurationMs,
-      });
-
-      const response: SwarmResponse = {
-        answer: result.answer,
-        result: result.answer,
-        subtaskResults: result.subtaskResults.map((r) => ({
-          id: r.subtask.id,
-          description: r.subtask.description,
-          profile: r.subtask.profile,
-          success: r.success,
-          answer: r.answer,
-          durationMs: r.durationMs,
-          error: r.error,
-        })),
-        decomposition: {
-          reasoning: result.decomposition.reasoning,
-          subtaskCount: result.decomposition.subtasks.length,
-        },
-        totalDurationMs: result.totalDurationMs,
-      };
-
-      res.json(response);
-    } catch (error) {
-      log.error("swarm_request_failed", { error: String(error) });
-      const errorResponse: ErrorResponse = { error: String(error) };
-      res.status(500).json(errorResponse);
-    }
   });
 
   /**
@@ -172,8 +174,7 @@ export function registerSwarmRoutes(app: Express): void {
     );
 
     if (error || !task || !config) {
-      const errorResponse: ErrorResponse = { error: error ?? "Invalid swarm request" };
-      res.status(400).json(errorResponse);
+      rejectResponse(res, 400, "Bad Request", [error ?? "Invalid swarm request"]);
       return;
     }
 

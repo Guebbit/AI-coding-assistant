@@ -19,10 +19,10 @@ import { z } from "zod";
 import ts from "typescript";
 import { generate } from "../../packages/llm/ollama";
 import { getLogger } from "../../packages/logger/logger";
+import { rejectResponse, successResponse } from "../../packages/shared";
 import type {
   AutocompleteRequest,
   AutocompleteResponse,
-  ErrorResponse,
   LintConventionsRequest,
   LintResponse,
   PageReviewRequest,
@@ -684,12 +684,9 @@ function sendRateLimitedResponse(
   retryAfterSeconds: number,
 ): void {
   response.setHeader("Retry-After", String(retryAfterSeconds));
-  const payload = {
-    error: "Rate limit exceeded",
-    retryAfterSeconds,
-  };
-  const errorResponse: ErrorResponse = payload;
-  response.status(429).json(errorResponse);
+  rejectResponse(response, 429, "Too Many Requests", [
+    `Rate limit exceeded. Retry after ${retryAfterSeconds} second(s).`,
+  ]);
 }
 
 /**
@@ -702,7 +699,7 @@ function sendRateLimitedResponse(
  * @param application - The Express app instance to register routes on.
  */
 export function registerIdeRoutes(application: express.Express): void {
-  application.post("/autocomplete", async (request, response) => {
+  application.post("/autocomplete", (request, response) => {
     const clientAddress = resolveClientAddress(request);
     const retryAfterSeconds = enforceRateLimit("autocomplete", clientAddress);
     if (retryAfterSeconds !== null) {
@@ -712,12 +709,9 @@ export function registerIdeRoutes(application: express.Express): void {
 
     const parsed = autocompleteSchema.safeParse(request.body as AutocompleteRequest);
     if (!parsed.success) {
-      const payload = {
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      };
-      const errorResponse: ErrorResponse = payload;
-      response.status(400).json(errorResponse);
+      rejectResponse(response, 400, "Bad Request", [
+        `Invalid request body: ${JSON.stringify(parsed.error.flatten())}`,
+      ]);
       return;
     }
 
@@ -738,62 +732,61 @@ export function registerIdeRoutes(application: express.Express): void {
         createdAtIso: cacheHit.createdAtIso,
       };
       const typedPayload: AutocompleteResponse = payload;
-      response.json(typedPayload);
+      successResponse(response, typedPayload);
       return;
     }
 
-    try {
-      const prompt =
-        `You are an IDE autocomplete engine.\n` +
-        `Return only the exact code continuation with no markdown.\n` +
-        `Language: ${language}\n` +
-        `Code before cursor:\n${prefix}`;
+    const prompt =
+      `You are an IDE autocomplete engine.\n` +
+      `Return only the exact code continuation with no markdown.\n` +
+      `Language: ${language}\n` +
+      `Code before cursor:\n${prefix}`;
 
-      const completion = await withTimeout(
-        generate(prompt, {
-          model: DEFAULT_AUTOCOMPLETE_MODEL,
-          stream: false,
-          suffix,
-          options: {
-            num_predict: AUTOCOMPLETE_MAX_TOKENS,
-            temperature: 0.2,
-            top_p: 0.95,
-          },
-        }),
-        endpointTimeoutMs.autocomplete,
-        "autocomplete",
-      );
-
-      const completionTrimmed = completion.trim();
-      const payload = {
-        completion: completionTrimmed,
+    withTimeout(
+      generate(prompt, {
         model: DEFAULT_AUTOCOMPLETE_MODEL,
-        language,
-        cached: false,
-        latencyMs: Date.now() - startedAt,
-        createdAtIso: new Date().toISOString(),
-      };
-      autocompleteCache.set(cacheKey, {
-        completion: payload.completion,
-        model: payload.model,
-        language: payload.language,
-        createdAtIso: payload.createdAtIso,
-        expiresAt: now + AUTOCOMPLETE_CACHE_TTL_MS,
+        stream: false,
+        suffix,
+        options: {
+          num_predict: AUTOCOMPLETE_MAX_TOKENS,
+          temperature: 0.2,
+          top_p: 0.95,
+        },
+      }),
+      endpointTimeoutMs.autocomplete,
+      "autocomplete",
+    )
+      .then((completion) => {
+        const completionTrimmed = completion.trim();
+        const payload = {
+          completion: completionTrimmed,
+          model: DEFAULT_AUTOCOMPLETE_MODEL,
+          language,
+          cached: false,
+          latencyMs: Date.now() - startedAt,
+          createdAtIso: new Date().toISOString(),
+        };
+        autocompleteCache.set(cacheKey, {
+          completion: payload.completion,
+          model: payload.model,
+          language: payload.language,
+          createdAtIso: payload.createdAtIso,
+          expiresAt: now + AUTOCOMPLETE_CACHE_TTL_MS,
+        });
+        pruneAutocompleteCache();
+        const typedPayload: AutocompleteResponse = payload;
+        successResponse(response, typedPayload);
+      })
+      .catch((error: unknown) => {
+        log.error("autocomplete_failed", {
+          error: String(error),
+          language,
+        });
+        rejectResponse(response, 500, "Internal Server Error", [String(error)]);
       });
-      pruneAutocompleteCache();
-      const typedPayload: AutocompleteResponse = payload;
-      response.json(typedPayload);
-    } catch (error) {
-      log.error("autocomplete_failed", {
-        error: String(error),
-        language,
-      });
-      const errorResponse: ErrorResponse = { error: String(error) };
-      response.status(500).json(errorResponse);
-    }
   });
 
-  application.post("/lint-conventions", async (request, response) => {
+  application.post("/lint-conventions", (request, response) => {
     const clientAddress = resolveClientAddress(request);
     const retryAfterSeconds = enforceRateLimit("lint-conventions", clientAddress);
     if (retryAfterSeconds !== null) {
@@ -812,12 +805,9 @@ export function registerIdeRoutes(application: express.Express): void {
     };
     const parsed = lintConventionsSchema.safeParse(normalizedBody);
     if (!parsed.success) {
-      const payload = {
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      };
-      const errorResponse: ErrorResponse = payload;
-      response.status(400).json(errorResponse);
+      rejectResponse(response, 400, "Bad Request", [
+        `Invalid request body: ${JSON.stringify(parsed.error.flatten())}`,
+      ]);
       return;
     }
 
@@ -831,77 +821,79 @@ export function registerIdeRoutes(application: express.Express): void {
       ...getConventionFindings(parsed.data.code, language),
     ];
 
-    let llmFindings: IFinding[] = [];
-    let llmModelUsed: string | undefined;
-    if (parsed.data.includeLlm) {
-      const llmModel = parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL;
-      llmModelUsed = llmModel;
-      const reviewPrompt =
-        `You are a strict code reviewer for conventions and linting.\n` +
-        `Return ONLY JSON as an array of findings.\n` +
-        `Each finding object must have: severity (error|warning|info), category, message, optional line, optional column, optional rule.\n` +
-        `Avoid duplicates of obvious syntax errors.\n` +
-        `Language: ${language}\n` +
-        `File path: ${filePath}\n` +
-        `Code:\n${parsed.data.code}`;
+    const llmModelUsed = parsed.data.includeLlm
+      ? parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL
+      : undefined;
 
-      llmFindings = await withTimeout(
-        generate(reviewPrompt, {
-          model: llmModel,
-          stream: false,
-          format: "json",
-          options: {
-            num_predict: LINT_CONVENTIONS_MAX_TOKENS,
-            temperature: 0.15,
-          },
-        }),
-        endpointTimeoutMs["lint-conventions"],
-        "lint-conventions",
-      )
-        .then((rawLlmResponse) => {
-          const parsedLlmResponse = JSON.parse(rawLlmResponse);
-          const asArray = Array.isArray(parsedLlmResponse)
-            ? parsedLlmResponse
-            : Array.isArray(parsedLlmResponse.findings)
-              ? parsedLlmResponse.findings
-              : [];
-          return (asArray as unknown[])
-            .map((finding: unknown) => normalizeLlmFinding(finding))
-            .filter((finding: IFinding | null): finding is IFinding => finding !== null)
-            .slice(0, parsed.data.maxFindings);
-        })
-        .catch((error: unknown) => {
-          log.warn("lint_conventions_llm_enrichment_failed", {
-            error: String(error),
-          });
-          return [] as IFinding[];
-        });
-    }
+    const llmFindingsPromise = parsed.data.includeLlm
+      ? withTimeout(
+          generate(
+            `You are a strict code reviewer for conventions and linting.\n` +
+              `Return ONLY JSON as an array of findings.\n` +
+              `Each finding object must have: severity (error|warning|info), category, message, optional line, optional column, optional rule.\n` +
+              `Avoid duplicates of obvious syntax errors.\n` +
+              `Language: ${language}\n` +
+              `File path: ${filePath}\n` +
+              `Code:\n${parsed.data.code}`,
+            {
+              model: llmModelUsed,
+              stream: false,
+              format: "json",
+              options: {
+                num_predict: LINT_CONVENTIONS_MAX_TOKENS,
+                temperature: 0.15,
+              },
+            },
+          ),
+          endpointTimeoutMs["lint-conventions"],
+          "lint-conventions",
+        )
+          .then((rawLlmResponse) => {
+            const parsedLlmResponse = JSON.parse(rawLlmResponse);
+            const asArray = Array.isArray(parsedLlmResponse)
+              ? parsedLlmResponse
+              : Array.isArray(parsedLlmResponse.findings)
+                ? parsedLlmResponse.findings
+                : [];
+            return (asArray as unknown[])
+              .map((finding: unknown) => normalizeLlmFinding(finding))
+              .filter((finding: IFinding | null): finding is IFinding => finding !== null)
+              .slice(0, parsed.data.maxFindings);
+          })
+          .catch((error: unknown) => {
+            log.warn("lint_conventions_llm_enrichment_failed", {
+              error: String(error),
+            });
+            return [] as IFinding[];
+          })
+      : Promise.resolve([] as IFinding[]);
 
-    const findings = [...deterministicFindings, ...llmFindings].slice(0, parsed.data.maxFindings);
-    const summary = {
-      total: findings.length,
-      errors: findings.filter((item) => item.severity === "error").length,
-      warnings: findings.filter((item) => item.severity === "warning").length,
-      infos: findings.filter((item) => item.severity === "info").length,
-      deterministicCount: deterministicFindings.length,
-      llmCount: llmFindings.length,
-    };
+    llmFindingsPromise.then((llmFindings) => {
+      const findings = [...deterministicFindings, ...llmFindings].slice(0, parsed.data.maxFindings);
+      const summary = {
+        total: findings.length,
+        errors: findings.filter((item) => item.severity === "error").length,
+        warnings: findings.filter((item) => item.severity === "warning").length,
+        infos: findings.filter((item) => item.severity === "info").length,
+        deterministicCount: deterministicFindings.length,
+        llmCount: llmFindings.length,
+      };
 
-    const payload = {
-      requestId: randomUUID(),
-      language,
-      filePath,
-      summary,
-      findings,
-      llmModelUsed,
-      latencyMs: Date.now() - startedAt,
-    };
-    const typedPayload: LintResponse = payload;
-    response.json(typedPayload);
+      const payload = {
+        requestId: randomUUID(),
+        language,
+        filePath,
+        summary,
+        findings,
+        llmModelUsed,
+        latencyMs: Date.now() - startedAt,
+      };
+      const typedPayload: LintResponse = payload;
+      successResponse(response, typedPayload);
+    });
   });
 
-  application.post("/page-review", async (request, response) => {
+  application.post("/page-review", (request, response) => {
     const clientAddress = resolveClientAddress(request);
     const retryAfterSeconds = enforceRateLimit("page-review", clientAddress);
     if (retryAfterSeconds !== null) {
@@ -920,12 +912,9 @@ export function registerIdeRoutes(application: express.Express): void {
     };
     const parsed = pageReviewSchema.safeParse(normalizedBody);
     if (!parsed.success) {
-      const payload = {
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      };
-      const errorResponse: ErrorResponse = payload;
-      response.status(400).json(errorResponse);
+      rejectResponse(response, 400, "Bad Request", [
+        `Invalid request body: ${JSON.stringify(parsed.error.flatten())}`,
+      ]);
       return;
     }
 
@@ -946,41 +935,40 @@ export function registerIdeRoutes(application: express.Express): void {
       `Project context: ${projectContext || "none"}\n` +
       `Code:\n${parsed.data.code}`;
 
-    try {
-      const rawReview = await withTimeout(
-        generate(prompt, {
-          model,
-          stream: false,
-          format: "json",
-          options: {
-            num_predict: PAGE_REVIEW_MAX_TOKENS,
-            temperature: 0.2,
-          },
-        }),
-        endpointTimeoutMs["page-review"],
-        "page-review",
-      );
-      const categories = parsePageReviewBody(rawReview);
-      const payload = {
-        requestId,
+    withTimeout(
+      generate(prompt, {
         model,
-        language,
-        filePath,
-        findings: Object.values(categories).flat(),
-        categories,
-        latencyMs: Date.now() - startedAt,
-      };
-      const typedPayload: PageReviewResponse = payload;
-      response.json(typedPayload);
-    } catch (error) {
-      log.error("page_review_failed", {
-        error: String(error),
-        language,
-        filePath,
+        stream: false,
+        format: "json",
+        options: {
+          num_predict: PAGE_REVIEW_MAX_TOKENS,
+          temperature: 0.2,
+        },
+      }),
+      endpointTimeoutMs["page-review"],
+      "page-review",
+    )
+      .then((rawReview) => {
+        const categories = parsePageReviewBody(rawReview);
+        const payload = {
+          requestId,
+          model,
+          language,
+          filePath,
+          findings: Object.values(categories).flat(),
+          categories,
+          latencyMs: Date.now() - startedAt,
+        };
+        const typedPayload: PageReviewResponse = payload;
+        successResponse(response, typedPayload);
+      })
+      .catch((error: unknown) => {
+        log.error("page_review_failed", {
+          error: String(error),
+          language,
+          filePath,
+        });
+        rejectResponse(response, 500, "Internal Server Error", [String(error), requestId]);
       });
-      const payload = { error: String(error), requestId };
-      const errorResponse: ErrorResponse = payload;
-      response.status(500).json(errorResponse);
-    }
   });
 }

@@ -23,11 +23,14 @@
  * @module apps/api
  */
 
-import express from "express";
 import cors from "cors";
+import express, { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
+import { MulterError } from "multer";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import { on } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
+import { ExtendedError, rejectResponse, successResponse, validateRecommendedEnvironment } from "../../packages/shared";
 import { registerIdeRoutes } from "./ide-endpoints";
 import { registerUploadRoutes } from "./upload-endpoints";
 import { registerStreamRoutes } from "./stream-endpoints";
@@ -36,7 +39,8 @@ import { registerInfoRoutes } from "./info-endpoints";
 import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { createAgent, VALID_PROFILES } from "./agents";
 import { runMigrations } from "../../packages/persistence/migrate";
-import type { ErrorResponse, HealthResponse, RunRequest, RunResponse } from "../../api/models";
+import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
+import type { HealthResponse, RunRequest, RunResponse } from "../../api/models";
 
 const log = getLogger("api");
 
@@ -48,6 +52,9 @@ on("*", (event) => {
 /* ── HTTP server ─────────────────────────────────────────────────────── */
 
 const app = express();
+app.use(helmet());
+app.use(requestIdMiddleware);
+app.use(rateLimiter);
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
 app.use(express.json());
 
@@ -89,41 +96,44 @@ registerInfoRoutes(app);
  *
  * Response: `{ "result": "agent's final answer" }`
  */
-app.post("/run", async (req, res) => {
+app.post("/run", (req, res) => {
   const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
 
   if (!task || typeof task !== "string" || task.trim() === "") {
-    const errorResponse: ErrorResponse = {
-      error: '"task" (non-empty string) is required in the request body',
-    };
-    res.status(400).json(errorResponse);
+    rejectResponse(
+      res,
+      400,
+      "Bad Request",
+      ['"task" (non-empty string) is required in the request body'],
+    );
     return;
   }
 
   if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-    const errorResponse: ErrorResponse = {
-      error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
-    };
-    res.status(400).json(errorResponse);
+    rejectResponse(res, 400, "Bad Request", [`"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`]);
     return;
   }
 
-  try {
-    log.info("run_request_received", { task, profile: profile ?? null });
-    const writeEnabled = allowWrite === true;
-    const agent = createAgent(writeEnabled);
-    const result = await agent.run(
-      task.trim(),
-      profile ? { profile: profile as ModelProfile } : undefined,
-    );
-    log.info("run_request_completed", { taskLength: task.length, writeEnabled, profile: profile ?? null });
-    const response: RunResponse = { result };
-    res.json(response);
-  } catch (error) {
-    log.error("run_request_failed", { error: String(error) });
-    const errorResponse: ErrorResponse = { error: String(error) };
-    res.status(500).json(errorResponse);
-  }
+  log.info("run_request_received", { task, profile: profile ?? null, requestId: req.requestId });
+  const writeEnabled = allowWrite === true;
+  const agent = createAgent(writeEnabled);
+
+  agent
+    .run(task.trim(), profile ? { profile: profile as ModelProfile } : undefined)
+    .then((result) => {
+      log.info("run_request_completed", {
+        taskLength: task.length,
+        writeEnabled,
+        profile: profile ?? null,
+        requestId: req.requestId,
+      });
+      const response: RunResponse = { result };
+      successResponse(res, response);
+    })
+    .catch((error: unknown) => {
+      log.error("run_request_failed", { error: String(error), requestId: req.requestId });
+      rejectResponse(res, 500, "Internal Server Error", [String(error)]);
+    });
 });
 
 /**
@@ -134,7 +144,47 @@ app.post("/run", async (req, res) => {
  */
 app.get("/health", (_req, res) => {
   const response: HealthResponse = { status: "ok", timestamp: new Date() };
-  res.json(response);
+  successResponse(res, response);
+});
+
+/**
+ * 404 catch-all — unmatched routes.
+ */
+app.use((request: Request, response: Response) => {
+  log.warn("route_not_found", { method: request.method, path: request.path, requestId: request.requestId });
+  rejectResponse(response, 404, "Not Found");
+});
+
+/**
+ * Global JSON error handler.
+ * Handles MulterError, ExtendedError, and generic Error.
+ */
+app.use((error: Error, request: Request, response: Response, _next: NextFunction) => {
+  if (response.headersSent) return;
+
+  if (error instanceof MulterError) {
+    log.error({
+      requestId: request.requestId,
+      message: error.message,
+      code: error.code,
+      field: error.field,
+    });
+    rejectResponse(response, 400, error.message, [error.code]);
+    return;
+  }
+
+  if (error instanceof ExtendedError) {
+    rejectResponse(response, error.httpCode, error.name, error.errors);
+    return;
+  }
+
+  log.error({
+    requestId: request.requestId,
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+  });
+  rejectResponse(response, 500, "Internal Server Error", [error.message]);
 });
 
 /* Default port for the Manna API server. */
@@ -146,9 +196,28 @@ runMigrations().catch((error: unknown) =>
   log.warn("api_db_migration_failed", { error: String(error) })
 );
 
+validateRecommendedEnvironment(log);
+
 app.listen(PORT, () => {
   log.info("api_started", { url: `http://localhost:${PORT}` });
   log.info("ollama_configured", {
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
   });
 });
+
+/**
+ * Last-resort process-level error handling.
+ */
+const unhandledRejections = new Map<Promise<unknown>, unknown>();
+process
+  .on("unhandledRejection", (reason, promise) => {
+    log.error({ message: "unhandledRejection", reason: String(reason) });
+    unhandledRejections.set(promise, reason);
+  })
+  .on("rejectionHandled", (promise) => {
+    unhandledRejections.delete(promise);
+  })
+  .on("uncaughtException", (error, origin) => {
+    log.error({ message: error.message, stack: error.stack, name: error.name, origin });
+    if (process.env.NODE_ENV === "production") process.exit(1);
+  });

@@ -9,7 +9,8 @@
  * Environment variables:
  * - `LOG_ENABLED` (`true`/`false`, default `true`) — master kill-switch.
  * - `LOG_LEVEL`   (default `"info"`) — minimum severity to emit.
- * - `LOG_PRETTY`  (`true`/`false`, default `false`) — toggle human-readable output.
+ * - `LOG_PRETTY`      (`true`/`false`, default `false`) — toggle human-readable output.
+ * - `LOG_ERROR_FILE`  (default `"error.log"`) — destination file for error-level logs.
  *
  * @module logger/logger
  */
@@ -46,6 +47,9 @@ const LOG_LEVEL = process.env.LOG_LEVEL ?? 'info';
 /** When `true`, logs are human-readable; otherwise JSON lines. */
 const LOG_PRETTY = asBoolean(process.env.LOG_PRETTY, false);
 
+/** File path used by the error-only file transport. */
+const LOG_ERROR_FILE = process.env.LOG_ERROR_FILE ?? 'error.log';
+
 /* ── Format definitions ──────────────────────────────────────────────── */
 
 /** Structured JSON format — one JSON object per log line. */
@@ -78,9 +82,15 @@ const prettyFormat = format.combine(
 export const logger = createLogger({
     level: LOG_LEVEL,
     silent: !LOG_ENABLED,
-    defaultMeta: { service: 'ai-assistant' },
+    defaultMeta: { service: 'manna' },
     format: LOG_PRETTY ? prettyFormat : jsonFormat,
-    transports: [new transports.Console()]
+    transports: [
+        new transports.Console(),
+        new transports.File({
+            level: 'error',
+            filename: LOG_ERROR_FILE
+        })
+    ]
 });
 
 /**

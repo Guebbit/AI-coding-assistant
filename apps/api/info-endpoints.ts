@@ -15,6 +15,7 @@
 
 import type express from "express";
 import { getLogger } from "../../packages/logger/logger";
+import { rejectResponse, successResponse } from "../../packages/shared";
 import { VALID_PROFILES } from "./agents";
 
 const log = getLogger("api-info");
@@ -276,7 +277,7 @@ export function registerInfoRoutes(application: express.Express): void {
       };
     });
 
-    response.json({
+    successResponse(response, {
       count: modes.length,
       modes,
     });
@@ -284,54 +285,52 @@ export function registerInfoRoutes(application: express.Express): void {
 
   /* ── GET /info/models ───────────────────────────────────────────── */
 
-  application.get("/info/models", async (_request, response) => {
+  application.get("/info/models", (_request, response) => {
     log.info("info_models_requested");
 
-    try {
-      const ollamaResponse = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    fetch(`${OLLAMA_BASE_URL}/api/tags`)
+      .then((ollamaResponse) => {
+        if (!ollamaResponse.ok) {
+          return ollamaResponse.text().catch(() => "").then((body) => {
+            log.error("ollama_tags_failed", {
+              status: ollamaResponse.status,
+              body: body.slice(0, 500),
+            });
+            rejectResponse(response, 502, "Bad Gateway", [`Ollama API returned ${ollamaResponse.status}`]);
+          });
+        }
 
-      if (!ollamaResponse.ok) {
-        const body = await ollamaResponse.text().catch(() => "");
-        log.error("ollama_tags_failed", {
-          status: ollamaResponse.status,
-          body: body.slice(0, 500),
-        });
-        response.status(502).json({
-          error: `Ollama API returned ${ollamaResponse.status}`,
-        });
-        return;
-      }
+        return ollamaResponse
+          .json()
+          .then((data: { models?: Array<Record<string, unknown>> }) => {
+            const models = (data.models ?? []).map((model) => ({
+              name: (model.name as string) ?? (model.model as string) ?? "unknown",
+              size: (model.size as number) ?? null,
+              digest: (model.digest as string) ?? null,
+              modifiedAt: (model.modified_at as string) ?? null,
+              details: (model.details as Record<string, unknown>) ?? null,
+            }));
 
-      const data = (await ollamaResponse.json()) as {
-        models?: Array<Record<string, unknown>>;
-      };
-
-      const models = (data.models ?? []).map((m) => ({
-        name: (m.name as string) ?? (m.model as string) ?? "unknown",
-        size: (m.size as number) ?? null,
-        digest: (m.digest as string) ?? null,
-        modifiedAt: (m.modified_at as string) ?? null,
-        details: (m.details as Record<string, unknown>) ?? null,
-      }));
-
-      response.json({
-        count: models.length,
-        ollamaBaseUrl: OLLAMA_BASE_URL,
-        models,
+            successResponse(response, {
+              count: models.length,
+              ollamaBaseUrl: OLLAMA_BASE_URL,
+              models,
+            });
+          });
+      })
+      .catch((error: unknown) => {
+        log.error("info_models_failed", { error: String(error) });
+        rejectResponse(response, 502, "Bad Gateway", [
+          `Failed to reach Ollama at ${OLLAMA_BASE_URL}: ${String(error)}`,
+        ]);
       });
-    } catch (error) {
-      log.error("info_models_failed", { error: String(error) });
-      response.status(502).json({
-        error: `Failed to reach Ollama at ${OLLAMA_BASE_URL}: ${String(error)}`,
-      });
-    }
   });
 
   /* ── GET /help ──────────────────────────────────────────────────── */
 
   application.get("/help", (_request, response) => {
     log.info("help_requested");
-    response.json({
+    successResponse(response, {
       description: "Manna AI Agent Platform — REST API quick reference",
       endpointCount: HELP_CATALOGUE.length,
       endpoints: HELP_CATALOGUE,

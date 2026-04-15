@@ -524,6 +524,8 @@ SSE events for `/run/swarm/stream`:
 | `GRAPH_NER_MODEL`                        | `AGENT_MODEL_FAST`        | Ollama model used for NER entity/relationship extraction (defaults to the fast profile model)                                                         |
 | `PORT`                                   | `3001`                    | Express server port                                                                                                                                   |
 | `CORS_ORIGIN`                            | `*`                       | Allowed CORS origin(s) for the Express API. Set to a specific origin in production (e.g. `https://manna.example.com`). Defaults to `*` (all origins). |
+| `RATE_LIMIT_WINDOW_MS`                   | `900000`                  | Global API rate-limit window in milliseconds (default 15 minutes).                                                                                    |
+| `RATE_LIMIT_MAX`                         | `100`                     | Global API max requests per IP per rate-limit window.                                                                                                 |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                                                                                                    |
 | `QDRANT_URL`                             | `http://localhost:6333`   | Qdrant endpoint for semantic memory                                                                                                                   |
 | `QDRANT_COLLECTION`                      | —                         | Qdrant collection name                                                                                                                                |
@@ -532,6 +534,7 @@ SSE events for `/run/swarm/stream`:
 | `LOG_ENABLED`                            | `true`                    | Toggle logging                                                                                                                                        |
 | `LOG_LEVEL`                              | `info`                    | `error` / `warn` / `info` / `debug`                                                                                                                   |
 | `LOG_PRETTY`                             | `false`                   | `true` = human-readable; `false` = JSON lines                                                                                                         |
+| `LOG_ERROR_FILE`                         | `error.log`               | File path for Winston error-level file transport.                                                                                                     |
 
 ---
 
@@ -549,8 +552,10 @@ SSE events for `/run/swarm/stream`:
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
 │       ├── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
-│       └── middlewares/
-│           └── multer.ts      — shared upload middleware; in-memory storage + MIME allowlist + 50 MB limit
+│       ├── middlewares/
+│           ├── multer.ts      — shared upload middleware; in-memory storage + MIME allowlist + 50 MB limit
+│           └── security.ts    — global security middleware; express-rate-limit + x-request-id correlation
+│       └── types.d.ts         — Express Request augmentation (`requestId?: string`)
 ├── api/                       — generated TypeScript OpenAPI client/models (`npm run genapi`)
 ├── packages/
 │   ├── agent/
@@ -618,6 +623,9 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── env.ts            — envFloat(); envInt() helpers
 │   │   ├── path-safety.ts    — resolveSafePath(); resolveInsideRoot()
 │   │   ├── chunker.ts        — chunkText(); IChunk; IChunkOptions
+│   │   ├── response.ts       — IResponseNeutral/IResponseSuccess/IResponseReject; successResponse(); rejectResponse()
+│   │   ├── errors.ts         — ExtendedError class (httpCode + isOperational + structured logging)
+│   │   ├── environment.ts    — validateRecommendedEnvironment(); startup warning for missing recommended env vars
 │   │   └── index.ts          — re-exports all shared utilities
 │   ├── evals/
 │   │   ├── types.ts          — eval harness types
@@ -687,6 +695,7 @@ SSE events for `/run/swarm/stream`:
 - Verification processor: disabled by default (`AGENT_VERIFICATION_ENABLED=false`); opt-in only. Fails open — a verification call error does not block the agent.
 - Tool reranker: disabled by default (`TOOL_RERANKER_ENABLED=false`); opt-in only. Fails open — a reranking error returns the original tool list.
 - PostgreSQL persistence: all `saveAgentRun` / `saveSwarmRun` / `saveEvalResult` calls are wrapped in `.catch()` in the agent/swarm; a DB outage only emits a warning log and never crashes the agent. Set `MANNA_DB_ENABLED=false` to disable entirely.
+- Global Express error handler catches `MulterError`, `ExtendedError`, and generic `Error`; all rejections flow through `rejectResponse` with a typed envelope.
 
 ---
 
@@ -905,5 +914,9 @@ packages/
   └── shared/
       ├── env.ts          — envFloat(); envInt(); environment variable parsing
       ├── path-safety.ts  — resolveSafePath(); resolveInsideRoot(); directory traversal prevention
+      ├── chunker.ts      — chunkText(); IChunk; IChunkOptions
+      ├── response.ts     — successResponse(); rejectResponse(); typed HTTP envelopes
+      ├── errors.ts       — ExtendedError; HTTP-aware operational error class
+      ├── environment.ts  — validateRecommendedEnvironment(); startup env warnings
       └── index.ts        — re-exports all shared utilities
 ```

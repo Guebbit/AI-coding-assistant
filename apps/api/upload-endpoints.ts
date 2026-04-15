@@ -19,6 +19,7 @@
 import type express from "express";
 import { imageClassifyTool, speechToTextTool, readPdfTool } from "../../packages/tools/index";
 import { getLogger } from "../../packages/logger/logger";
+import { rejectResponse, successResponse } from "../../packages/shared";
 import { upload } from "./middlewares/multer";
 
 const log = getLogger("api-upload");
@@ -39,29 +40,31 @@ export function registerUploadRoutes(app: express.Express): void {
    *
    * Response: `{ model, response }` where `response` is the model's description.
    */
-  app.post("/upload/image-classify", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
-        return;
-      }
+  app.post("/upload/image-classify", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      rejectResponse(res, 400, "Bad Request", ['"file" field is required (multipart/form-data)']);
+      return;
+    }
 
-      log.info("upload_image_classify", {
-        filename: req.file.originalname,
-        size: req.file.size,
-      });
+    log.info("upload_image_classify", {
+      filename: req.file.originalname,
+      size: req.file.size,
+      requestId: req.requestId,
+    });
 
-      const result = await imageClassifyTool.execute({
+    imageClassifyTool
+      .execute({
         data: req.file.buffer.toString("base64"),
         prompt: req.body?.prompt,
         model: req.body?.model,
+      })
+      .then((result) => {
+        successResponse(res, result);
+      })
+      .catch((error: unknown) => {
+        log.error("upload_image_classify_failed", { error: String(error), requestId: req.requestId });
+        rejectResponse(res, 500, "Internal Server Error", [String(error)]);
       });
-
-      res.json(result);
-    } catch (error) {
-      log.error("upload_image_classify_failed", { error: String(error) });
-      res.status(500).json({ error: String(error) });
-    }
   });
 
   /**
@@ -75,31 +78,33 @@ export function registerUploadRoutes(app: express.Express): void {
    *
    * Response: `{ model, text }` where `text` is the transcribed content.
    */
-  app.post("/upload/speech-to-text", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
-        return;
-      }
+  app.post("/upload/speech-to-text", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      rejectResponse(res, 400, "Bad Request", ['"file" field is required (multipart/form-data)']);
+      return;
+    }
 
-      log.info("upload_speech_to_text", {
-        filename: req.file.originalname,
-        size: req.file.size,
-      });
+    log.info("upload_speech_to_text", {
+      filename: req.file.originalname,
+      size: req.file.size,
+      requestId: req.requestId,
+    });
 
-      const result = await speechToTextTool.execute({
+    speechToTextTool
+      .execute({
         data: req.file.buffer.toString("base64"),
         filename: req.file.originalname,
         model: req.body?.model,
         language: req.body?.language,
         prompt: req.body?.prompt,
+      })
+      .then((result) => {
+        successResponse(res, result);
+      })
+      .catch((error: unknown) => {
+        log.error("upload_speech_to_text_failed", { error: String(error), requestId: req.requestId });
+        rejectResponse(res, 500, "Internal Server Error", [String(error)]);
       });
-
-      res.json(result);
-    } catch (error) {
-      log.error("upload_speech_to_text_failed", { error: String(error) });
-      res.status(500).json({ error: String(error) });
-    }
   });
 
   /**
@@ -110,27 +115,29 @@ export function registerUploadRoutes(app: express.Express): void {
    *
    * Response: `{ pageCount, text }` with the extracted content.
    */
-  app.post("/upload/read-pdf", upload.single("file"), async (req, res) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ error: '"file" field is required (multipart/form-data)' });
-        return;
-      }
-
-      log.info("upload_read_pdf", {
-        filename: req.file.originalname,
-        size: req.file.size,
-      });
-
-      const result = await readPdfTool.execute({
-        data: req.file.buffer.toString("base64"),
-      });
-
-      res.json(result);
-    } catch (error) {
-      log.error("upload_read_pdf_failed", { error: String(error) });
-      res.status(500).json({ error: String(error) });
+  app.post("/upload/read-pdf", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      rejectResponse(res, 400, "Bad Request", ['"file" field is required (multipart/form-data)']);
+      return;
     }
+
+    log.info("upload_read_pdf", {
+      filename: req.file.originalname,
+      size: req.file.size,
+      requestId: req.requestId,
+    });
+
+    readPdfTool
+      .execute({
+        data: req.file.buffer.toString("base64"),
+      })
+      .then((result) => {
+        successResponse(res, result);
+      })
+      .catch((error: unknown) => {
+        log.error("upload_read_pdf_failed", { error: String(error), requestId: req.requestId });
+        rejectResponse(res, 500, "Internal Server Error", [String(error)]);
+      });
   });
 
   log.info("upload_routes_registered", {
