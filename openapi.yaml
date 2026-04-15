@@ -505,6 +505,96 @@ paths:
                 '500':
                     $ref: '#/components/responses/InternalError'
 
+    /upload/image-sketch:
+        post:
+            tags: [upload]
+            summary: Generate sketch/line-art from an uploaded image
+            description: |
+                Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/sketch`).
+                Optional `prompt` and `negative_prompt` are passed through to the processor.
+                Content negotiation:
+                - `Accept: image/png` returns raw PNG bytes
+                - otherwise returns JSON `{ image, duration_ms, model }`
+            operationId: uploadImageSketch
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required: [file]
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                    description: 'Allowed image MIME types: image/jpeg, image/png, image/gif, image/webp.'
+                                prompt:
+                                    type: string
+                                    description: Optional positive prompt for sketch generation
+                                negative_prompt:
+                                    type: string
+                                    description: Optional negative prompt for sketch generation
+            responses:
+                '200':
+                    description: Sketch generation result
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ImageProcessorResponse'
+                        image/png:
+                            schema:
+                                type: string
+                                format: binary
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
+
+    /upload/image-colorize:
+        post:
+            tags: [upload]
+            summary: Colorize an uploaded image
+            description: |
+                Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/colorize`).
+                Optional `prompt` and `negative_prompt` are passed through to the processor.
+                Content negotiation:
+                - `Accept: image/png` returns raw PNG bytes
+                - otherwise returns JSON `{ image, duration_ms, model }`
+            operationId: uploadImageColorize
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            required: [file]
+                            properties:
+                                file:
+                                    type: string
+                                    format: binary
+                                    description: 'Allowed image MIME types: image/jpeg, image/png, image/gif, image/webp.'
+                                prompt:
+                                    type: string
+                                    description: Optional positive prompt for colorization
+                                negative_prompt:
+                                    type: string
+                                    description: Optional negative prompt for colorization
+            responses:
+                '200':
+                    description: Colorization result
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ImageProcessorResponse'
+                        image/png:
+                            schema:
+                                type: string
+                                format: binary
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
+
     /upload/read-pdf:
         post:
             tags: [upload]
@@ -928,6 +1018,20 @@ components:
                     format: date-time
                     description: ISO 8601 timestamp of when the health check was served.
                     example: '2026-04-13T20:05:07.044Z'
+
+        ImageProcessorResponse:
+            type: object
+            required: [image, duration_ms, model]
+            properties:
+                image:
+                    type: string
+                    description: Base64-encoded PNG image produced by the processor.
+                duration_ms:
+                    type: number
+                    description: Processing duration in milliseconds.
+                model:
+                    type: string
+                    description: Model identifier returned by the processor.
 
         # ── Core schemas ─────────────────────────────────────────────────────────
 

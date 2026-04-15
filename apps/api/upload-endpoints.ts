@@ -8,6 +8,8 @@
  *
  * Endpoints:
  * - `POST /upload/image-classify`  — classify/describe an uploaded image.
+ * - `POST /upload/image-sketch`    — sketch/line-art transform of an uploaded image.
+ * - `POST /upload/image-colorize`  — colorize transform of an uploaded image.
  * - `POST /upload/speech-to-text`  — transcribe an uploaded audio file.
  * - `POST /upload/read-pdf`        — extract text from an uploaded PDF.
  *
@@ -17,10 +19,52 @@
  */
 
 import type express from "express";
-import { imageClassifyTool, speechToTextTool, readPdfTool } from "../../packages/tools/index";
+import type { Request, Response } from "express";
+import {
+  imageClassifyTool,
+  imageSketchTool,
+  imageColorizeTool,
+  speechToTextTool,
+  readPdfTool
+} from "../../packages/tools/index";
 import { logger } from "../../packages/logger/logger";
 import { rejectResponse, successResponse, t } from "../../packages/shared";
 import { upload } from "./middlewares/multer";
+
+/**
+ * Response shape returned by image-processing upload endpoints.
+ */
+interface IUploadImageProcessingResult {
+  /** Base64-encoded PNG image. */
+  image: string;
+  /** Processing duration in milliseconds. */
+  duration_ms: number;
+  /** Model identifier used by the processor. */
+  model: string;
+}
+
+/**
+ * Send either raw PNG bytes or JSON metadata based on the `Accept` header.
+ *
+ * When `Accept` includes `image/png`, the endpoint returns image bytes directly.
+ * Otherwise it returns the full JSON payload produced by the tool.
+ *
+ * @param request - Express request (used for content negotiation).
+ * @param response - Express response object.
+ * @param result - Image-processing result payload.
+ */
+function sendImageOrJson(
+  request: Request,
+  response: Response,
+  result: IUploadImageProcessingResult
+): void {
+  if (request.headers.accept?.includes("image/png")) {
+    response.status(200).type("image/png").send(Buffer.from(result.image, "base64"));
+    return;
+  }
+
+  response.status(200).json(result);
+}
 
 /**
  * Register upload-based routes on the Express app.
@@ -63,6 +107,94 @@ export function registerUploadRoutes(app: express.Express): void {
       })
       .catch((error: unknown) => {
         logger.error("upload_image_classify_failed", {
+          component: "api.upload",
+          error: String(error),
+          requestId: req.requestId
+        });
+        rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
+      });
+  });
+
+  /**
+   * POST /upload/image-sketch — generate a sketch/line-art version of an uploaded image.
+   *
+   * Expects `multipart/form-data` with:
+   * - `file` (required) — the source image.
+   * - `prompt` (optional) — custom positive prompt.
+   * - `negative_prompt` (optional) — custom negative prompt.
+   *
+   * Response:
+   * - `image/png` when `Accept: image/png`
+   * - JSON `{ image, duration_ms, model }` otherwise.
+   */
+  app.post("/upload/image-sketch", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
+      return;
+    }
+
+    logger.info("upload_image_sketch", {
+      component: "api.upload",
+      filename: req.file.originalname,
+      size: req.file.size,
+      requestId: req.requestId,
+    });
+
+    imageSketchTool
+      .execute({
+        image: req.file.buffer.toString("base64"),
+        prompt: req.body?.prompt,
+        negative_prompt: req.body?.negative_prompt,
+      })
+      .then((result) => {
+        sendImageOrJson(req, res, result as IUploadImageProcessingResult);
+      })
+      .catch((error: unknown) => {
+        logger.error("upload_image_sketch_failed", {
+          component: "api.upload",
+          error: String(error),
+          requestId: req.requestId
+        });
+        rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
+      });
+  });
+
+  /**
+   * POST /upload/image-colorize — colorize an uploaded image.
+   *
+   * Expects `multipart/form-data` with:
+   * - `file` (required) — the source image.
+   * - `prompt` (optional) — custom positive prompt.
+   * - `negative_prompt` (optional) — custom negative prompt.
+   *
+   * Response:
+   * - `image/png` when `Accept: image/png`
+   * - JSON `{ image, duration_ms, model }` otherwise.
+   */
+  app.post("/upload/image-colorize", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
+      return;
+    }
+
+    logger.info("upload_image_colorize", {
+      component: "api.upload",
+      filename: req.file.originalname,
+      size: req.file.size,
+      requestId: req.requestId,
+    });
+
+    imageColorizeTool
+      .execute({
+        image: req.file.buffer.toString("base64"),
+        prompt: req.body?.prompt,
+        negative_prompt: req.body?.negative_prompt,
+      })
+      .then((result) => {
+        sendImageOrJson(req, res, result as IUploadImageProcessingResult);
+      })
+      .catch((error: unknown) => {
+        logger.error("upload_image_colorize_failed", {
           component: "api.upload",
           error: String(error),
           requestId: req.requestId
@@ -152,6 +284,12 @@ export function registerUploadRoutes(app: express.Express): void {
 
   logger.info("upload_routes_registered", {
     component: "api.upload",
-    routes: ["/upload/image-classify", "/upload/speech-to-text", "/upload/read-pdf"],
+    routes: [
+      "/upload/image-classify",
+      "/upload/image-sketch",
+      "/upload/image-colorize",
+      "/upload/speech-to-text",
+      "/upload/read-pdf",
+    ],
   });
 }

@@ -206,28 +206,30 @@ interface Tool {
 
 Tools registered per request in `apps/api/agents.ts`:
 
-| Tool name               | File                       | Write?  | Notes                                                                                                                                  |
-| ----------------------- | -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `read_file`             | `fs.read.ts`               | no      | Sandboxed to project root                                                                                                              |
-| `write_file`            | `fs.write.ts`              | **yes** | Writes under `PROJECT_OUTPUT_ROOT`                                                                                                     |
-| `shell`                 | `shell.ts`                 | no      | Allowlist-enforced; rejects unsafe commands                                                                                            |
-| `mysql_query`           | `mysql.query.ts`           | no      | SELECT-only; rejects non-SELECT SQL                                                                                                    |
-| `browser_fetch`         | `browser.ts`               | no      | Playwright Chromium; truncates content to 5000 chars                                                                                   |
-| `image_classify`        | `image.classify.ts`        | no      | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`); accepts `path` (disk) or `data` (base64)                                  |
-| `semantic_search`       | `semantic.search.ts`       | no      | Embeds query via Ollama; scores files via cosine similarity                                                                            |
-| `speech_to_text`        | `speech.to.text.ts`        | no      | Calls `TOOL_STT_MODEL` (default `whisper`); accepts `path` (disk) or `data` (base64)                                                   |
-| `read_pdf`              | `pdf.read.ts`              | no      | Returns `{ text, pages }`; accepts `path` (disk) or `data` (base64)                                                                    |
-| `code_autocomplete`     | `code.autocomplete.ts`     | no      | IDE-style completion via `TOOL_IDE_MODEL` (default `starcoder2`)                                                                       |
-| `generate_diagram`      | `diagram.generate.ts`      | no      | Generates Mermaid diagrams from descriptions; renders to SVG/PNG via mmdc                                                              |
-| `scaffold_project`      | `project.scaffold.ts`      | **yes** | Copies boilerplate from `BOILERPLATE_ROOT`                                                                                             |
-| `read_docx`             | `docx.read.ts`             | no      | Extracts text from `.docx` via ZIP/XML parsing; sandboxed to project root                                                              |
-| `read_csv`              | `csv.read.ts`              | no      | Parses CSV/TSV; returns `{ text, headers, rowCount }`                                                                                  |
-| `read_html`             | `html.read.ts`             | no      | Strips HTML tags; returns `{ text, title? }`                                                                                           |
-| `read_json`             | `json.read.ts`             | no      | Reads and parses a JSON file; returns `{ data: unknown }`                                                                              |
-| `read_markdown`         | `markdown.read.ts`         | no      | Reads a Markdown file; returns `{ text }`                                                                                              |
-| `document_ingest`       | `document.ingest.ts`       | **yes** | Detects format, chunks, embeds, and upserts into Qdrant                                                                                |
-| `knowledge_graph`       | `knowledge.graph.ts`       | **yes** | Extracts entities + relationships via Ollama NER and MERGEs them into Neo4j; fails open if Neo4j is unreachable                        |
-| `query_knowledge_graph` | `knowledge.graph.query.ts` | no      | Traverses the Neo4j knowledge graph; supports entity lookup, relationship listing, and raw read-only Cypher; fails open if unreachable |
+| Tool name               | File                       | Write?  | Notes                                                                                                                                     |
+| ----------------------- | -------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `read_file`             | `fs.read.ts`               | no      | Sandboxed to project root                                                                                                                 |
+| `write_file`            | `fs.write.ts`              | **yes** | Writes under `PROJECT_OUTPUT_ROOT`                                                                                                        |
+| `shell`                 | `shell.ts`                 | no      | Allowlist-enforced; rejects unsafe commands                                                                                               |
+| `mysql_query`           | `mysql.query.ts`           | no      | SELECT-only; rejects non-SELECT SQL                                                                                                       |
+| `browser_fetch`         | `browser.ts`               | no      | Playwright Chromium; truncates content to 5000 chars                                                                                      |
+| `image_classify`        | `image.classify.ts`        | no      | Sends image to `TOOL_VISION_MODEL` (default `llava-llama3`); accepts `path` (disk) or `data` (base64)                                     |
+| `image_sketch`          | `image.sketch.ts`          | no      | Calls `IMAGE_PROCESSOR_URL/sketch`; accepts base64 image + optional `prompt`/`negative_prompt`; returns `{ image, duration_ms, model }`   |
+| `image_colorize`        | `image.colorize.ts`        | no      | Calls `IMAGE_PROCESSOR_URL/colorize`; accepts base64 image + optional `prompt`/`negative_prompt`; returns `{ image, duration_ms, model }` |
+| `semantic_search`       | `semantic.search.ts`       | no      | Embeds query via Ollama; scores files via cosine similarity                                                                               |
+| `speech_to_text`        | `speech.to.text.ts`        | no      | Calls `TOOL_STT_MODEL` (default `whisper`); accepts `path` (disk) or `data` (base64)                                                      |
+| `read_pdf`              | `pdf.read.ts`              | no      | Returns `{ text, pages }`; accepts `path` (disk) or `data` (base64)                                                                       |
+| `code_autocomplete`     | `code.autocomplete.ts`     | no      | IDE-style completion via `TOOL_IDE_MODEL` (default `starcoder2`)                                                                          |
+| `generate_diagram`      | `diagram.generate.ts`      | no      | Generates Mermaid diagrams from descriptions; renders to SVG/PNG via mmdc                                                                 |
+| `scaffold_project`      | `project.scaffold.ts`      | **yes** | Copies boilerplate from `BOILERPLATE_ROOT`                                                                                                |
+| `read_docx`             | `docx.read.ts`             | no      | Extracts text from `.docx` via ZIP/XML parsing; sandboxed to project root                                                                 |
+| `read_csv`              | `csv.read.ts`              | no      | Parses CSV/TSV; returns `{ text, headers, rowCount }`                                                                                     |
+| `read_html`             | `html.read.ts`             | no      | Strips HTML tags; returns `{ text, title? }`                                                                                              |
+| `read_json`             | `json.read.ts`             | no      | Reads and parses a JSON file; returns `{ data: unknown }`                                                                                 |
+| `read_markdown`         | `markdown.read.ts`         | no      | Reads a Markdown file; returns `{ text }`                                                                                                 |
+| `document_ingest`       | `document.ingest.ts`       | **yes** | Detects format, chunks, embeds, and upserts into Qdrant                                                                                   |
+| `knowledge_graph`       | `knowledge.graph.ts`       | **yes** | Extracts entities + relationships via Ollama NER and MERGEs them into Neo4j; fails open if Neo4j is unreachable                           |
+| `query_knowledge_graph` | `knowledge.graph.query.ts` | no      | Traverses the Neo4j knowledge graph; supports entity lookup, relationship listing, and raw read-only Cypher; fails open if unreachable    |
 
 Write tools (`write_file`, `scaffold_project`, `document_ingest`, `knowledge_graph`) are only registered when the request body contains `"allowWrite": true`.
 
@@ -372,11 +374,13 @@ Registered in `apps/api/index.ts` via `registerUploadRoutes(app)`.
 
 These are **not** agent-loop routes. They accept `multipart/form-data` file uploads and call the corresponding tool with inline base64 data.
 
-| Endpoint                      | Form fields                                         | Purpose                                                     |
-| ----------------------------- | --------------------------------------------------- | ----------------------------------------------------------- |
-| `POST /upload/image-classify` | `file` (required), `prompt?`, `model?`              | Classify/describe an uploaded image via `TOOL_VISION_MODEL` |
-| `POST /upload/speech-to-text` | `file` (required), `model?`, `language?`, `prompt?` | Transcribe an uploaded audio file via `TOOL_STT_MODEL`      |
-| `POST /upload/read-pdf`       | `file` (required)                                   | Extract text from an uploaded PDF                           |
+| Endpoint                      | Form fields                                         | Purpose                                                                                                        |
+| ----------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `POST /upload/image-classify` | `file` (required), `prompt?`, `model?`              | Classify/describe an uploaded image via `TOOL_VISION_MODEL`                                                    |
+| `POST /upload/image-sketch`   | `file` (required), `prompt?`, `negative_prompt?`    | Sketch/line-art transform via `IMAGE_PROCESSOR_URL/sketch`; returns PNG if `Accept: image/png`, otherwise JSON |
+| `POST /upload/image-colorize` | `file` (required), `prompt?`, `negative_prompt?`    | Colorize transform via `IMAGE_PROCESSOR_URL/colorize`; returns PNG if `Accept: image/png`, otherwise JSON      |
+| `POST /upload/speech-to-text` | `file` (required), `model?`, `language?`, `prompt?` | Transcribe an uploaded audio file via `TOOL_STT_MODEL`                                                         |
+| `POST /upload/read-pdf`       | `file` (required)                                   | Extract text from an uploaded PDF                                                                              |
 
 Max upload size: 50 MB. Uses shared `apps/api/middlewares/multer.ts` (in-memory storage + MIME allowlist).
 
@@ -501,6 +505,8 @@ SSE events for `/run/swarm/stream`:
 | `AGENT_VERIFICATION_ENABLED`             | `false`                     | Enable post-tool verification gate processor                                                                                                          |
 | `AGENT_VERIFICATION_MODEL`               | `AGENT_MODEL_FAST`          | Model for the verification LLM call                                                                                                                   |
 | `TOOL_VISION_MODEL`                      | `llava-llama3`              | Vision model for `image_classify`                                                                                                                     |
+| `IMAGE_PROCESSOR_URL`                    | `http://localhost:5000`     | Base URL for external image processor microservice used by `image_sketch` / `image_colorize` tools and upload endpoints                               |
+| `IMAGE_PROCESSOR_TIMEOUT`                | `120000`                    | Timeout (milliseconds) for image processor HTTP requests                                                                                              |
 | `TOOL_STT_MODEL`                         | `whisper`                   | Speech-to-text model                                                                                                                                  |
 | `TOOL_IDE_MODEL`                         | `starcoder2`                | Completion model for IDE endpoints                                                                                                                    |
 | `TOOL_DIAGRAM_MODEL`                     | `AGENT_MODEL_CODE`          | Model used to generate Mermaid diagram markup                                                                                                         |
@@ -567,7 +573,7 @@ SSE events for `/run/swarm/stream`:
 │       ├── swarm-endpoints.ts — registerSwarmRoutes(); POST /run/swarm, POST /run/swarm/stream
 │       ├── workflow-endpoints.ts — registerWorkflowRoutes(); POST /workflow, POST /workflow/stream
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
-│       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
+│       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/image-sketch, /upload/image-colorize, /upload/speech-to-text, /upload/read-pdf
 │       ├── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
 │       ├── middlewares/
 │           ├── multer.ts      — shared upload middleware; in-memory storage + MIME allowlist + 50 MB limit
@@ -613,6 +619,8 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── mysql.query.ts    — mysql_query (SELECT-only)
 │   │   ├── browser.ts        — browser_fetch (Playwright)
 │   │   ├── image.classify.ts — image_classify
+│   │   ├── image.sketch.ts   — image_sketch
+│   │   ├── image.colorize.ts — image_colorize
 │   │   ├── semantic.search.ts— semantic_search
 │   │   ├── speech.to.text.ts — speech_to_text
 │   │   ├── pdf.read.ts       — read_pdf

@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Image sketch/colorization integration with external image processor**:
+    - New tools: `packages/tools/image.sketch.ts` (`image_sketch`) and `packages/tools/image.colorize.ts` (`image_colorize`) calling `IMAGE_PROCESSOR_URL/sketch` and `IMAGE_PROCESSOR_URL/colorize`.
+    - `apps/api/agents.ts`: registered `image_sketch` and `image_colorize` in the read-only tool set.
+    - `apps/api/upload-endpoints.ts`: added `POST /upload/image-sketch` and `POST /upload/image-colorize` (multipart upload with optional `prompt` and `negative_prompt`), plus `sendImageOrJson` content negotiation helper (`Accept: image/png` -> binary PNG, otherwise JSON metadata).
+    - `.env.example`: documented `IMAGE_PROCESSOR_URL` and `IMAGE_PROCESSOR_TIMEOUT`.
+    - `openapi.yaml`: documented both upload endpoints and reusable `ImageProcessorResponse` schema.
+
 - **Knowledge graph layer (GraphRAG)** (`packages/graph/`, `packages/tools/knowledge.graph*.ts`):
   Added a Neo4j-backed knowledge graph as a complementary memory/retrieval channel alongside Qdrant vector search.
   If Neo4j is unreachable, all graph operations fail open (log warning, return safe defaults) and never crash the agent.
