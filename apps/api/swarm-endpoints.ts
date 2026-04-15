@@ -15,27 +15,23 @@ import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
-import { rejectResponse, successResponse, t } from "../../packages/shared";
+import {
+  rejectResponse,
+  successResponse,
+  validateTask,
+  validateProfile,
+  sseFrame,
+  setupSSEHeaders,
+  onSSEClose,
+  SSE_PAYLOAD_MAX_LENGTH,
+  t,
+} from "../../packages/shared";
 import { createSwarmOrchestrator, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { ISwarmConfig } from "../../packages/swarm/types";
 import type { SwarmRequest, SwarmResponse } from "../../api/models";
 
 const log = getLogger("swarm-endpoints");
-
-/** Maximum characters to include in SSE event data payloads. */
-const SSE_PAYLOAD_MAX_LENGTH = 300;
-
-/**
- * Serialise an event as an SSE frame.
- *
- * @param eventType - The SSE event name.
- * @param data      - JSON-serialisable payload.
- * @returns A formatted SSE string ready to write to the response.
- */
-function sseFrame(eventType: string, data: unknown): string {
-  return `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-}
 
 /**
  * Parse and validate the shared request body fields for swarm endpoints.
@@ -48,17 +44,15 @@ function parseSwarmBody(body: Partial<SwarmRequest>): {
   config?: ISwarmConfig;
   error?: string;
 } {
-  const task = body.task;
-
-  if (!task || typeof task !== "string" || task.trim() === "") {
-    return { error: t("error.task_required") };
+  const taskResult = validateTask(body.task);
+  if ('error' in taskResult) {
+    return { error: taskResult.error };
   }
 
   const profile = body.profile;
-  if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-    return {
-      error: t("error.invalid_profile", { profiles: [...VALID_PROFILES].join(", ") }),
-    };
+  const profileError = validateProfile(profile, VALID_PROFILES);
+  if (profileError) {
+    return { error: profileError };
   }
 
   const maxSubtasks = body.maxSubtasks;
@@ -72,7 +66,7 @@ function parseSwarmBody(body: Partial<SwarmRequest>): {
     profileOverride: profile as ModelProfile | undefined,
   };
 
-  return { task: task.trim(), config };
+  return { task: taskResult.task, config };
 }
 
 /**
@@ -180,10 +174,7 @@ export function registerSwarmRoutes(app: Express): void {
     }
 
     /* ── Set SSE headers ──────────────────────────────────────────── */
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
+    setupSSEHeaders(res);
 
     const writeEvent = (eventType: string, data: unknown): void => {
       res.write(sseFrame(eventType, data));
@@ -287,8 +278,6 @@ export function registerSwarmRoutes(app: Express): void {
       });
 
     /* Clean up handler when the client disconnects early. */
-    req.on("close", () => {
-      off("*", handler);
-    });
+    onSSEClose(req, () => off("*", handler));
   });
 }

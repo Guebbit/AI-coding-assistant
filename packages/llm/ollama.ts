@@ -9,8 +9,7 @@
  * @module llm/ollama
  */
 
-/** Base URL for the Ollama REST API, configurable via environment variable. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+import { OLLAMA_BASE_URL, OLLAMA_MODEL } from './config';
 
 /**
  * Options accepted by both `generate` and `generateWithMetadata`.
@@ -117,7 +116,7 @@ export async function generateWithMetadata(
     options: IGenerateOptions = {}
 ): Promise<IGenerateResult> {
     const {
-        model = process.env.OLLAMA_MODEL ?? 'llama3',
+        model = OLLAMA_MODEL,
         stream = false,
         suffix,
         system,

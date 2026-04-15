@@ -21,6 +21,7 @@
 import { createScorer } from '../scorer-builder';
 import type { IScorerResult, IScorerRunInput } from '../types';
 import { generate } from '../../llm/ollama';
+import { stripCodeFences } from '../../shared';
 
 /** Model used to judge response quality — configurable via env var. */
 const JUDGE_MODEL = process.env.EVAL_JUDGE_MODEL ?? process.env.OLLAMA_MODEL ?? 'llama3';
@@ -88,8 +89,7 @@ async function scoreWithLlm(run: IScorerRunInput): Promise<IScorerResult> {
         stream: false
     });
 
-    /* Strip any markdown code fences the model may have added. */
-    const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+    const cleaned = stripCodeFences(raw);
     const parsed = JSON.parse(cleaned) as {
         score?: unknown;
         reasoning?: unknown;

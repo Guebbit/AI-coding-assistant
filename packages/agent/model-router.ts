@@ -17,7 +17,7 @@
  */
 
 import { generate } from '../llm/ollama';
-import { envFloat, envInt } from '../shared';
+import { envFloat, envInt, stripCodeFences } from '../shared';
 
 /* ── Budget environment variables ────────────────────────────────────── */
 
@@ -365,8 +365,7 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
         format: 'json'
     });
 
-    /* Strip any markdown code fences the model may have added. */
-    const cleaned = response.replace(/```(?:json)?\n?/g, '').trim();
+    const cleaned = stripCodeFences(response);
     const parsed = JSON.parse(cleaned) as { profile?: string; reason?: string };
     const profile = parsed.profile ? parseProfile(parsed.profile) : null;
     if (!profile) {

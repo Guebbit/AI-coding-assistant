@@ -21,12 +21,12 @@
  * @module agent/agent
  */
 
-import { generateWithMetadata } from '../llm/ollama';
-import { generate } from '../llm/ollama';
+import { generateWithMetadata, generate } from '../llm/ollama';
 import { addMemory, getMemory } from '../memory/memory';
 import { emit } from '../events/bus';
 import type { ITool } from '../tools';
 import { getLogger } from '../logger/logger';
+import { stripCodeFences } from '../shared';
 import { routeModel } from './model-router';
 import type { ModelProfile } from './model-router';
 import { agentStepSchema } from './schemas';
@@ -232,8 +232,7 @@ export class Agent {
             // ── Parse the LLM response with Zod schema validation ────────────
             let parsed: AgentStep;
             try {
-                /* Strip markdown code fences that some models wrap around JSON. */
-                const cleaned = response.replace(/```(?:json)?\n?/g, '').trim();
+                const cleaned = stripCodeFences(response);
                 parsed = agentStepSchema.parse(JSON.parse(cleaned));
             } catch {
                 /* Give the model a chance to self-correct on the next iteration. */

@@ -31,7 +31,17 @@ import type { Express, Request, Response } from 'express';
 import { on, off } from '../../packages/events/bus';
 import type { IAgentEvent } from '../../packages/events/bus';
 import { getLogger } from '../../packages/logger/logger';
-import { envInt, rejectResponse, successResponse, t } from '../../packages/shared';
+import {
+    envInt,
+    rejectResponse,
+    successResponse,
+    validateProfile,
+    sseFrame,
+    setupSSEHeaders,
+    onSSEClose,
+    SSE_PAYLOAD_MAX_LENGTH,
+    t,
+} from '../../packages/shared';
 import { createAgent, VALID_PROFILES } from './agents';
 import type { ModelProfile } from '../../packages/agent/model-router';
 import type {
@@ -42,9 +52,6 @@ import type {
 const log = getLogger('workflow-endpoints');
 
 /* ── Constants ───────────────────────────────────────────────────────── */
-
-/** Maximum characters to include in SSE event data payloads. */
-const SSE_PAYLOAD_MAX_LENGTH = 300;
 
 /**
  * Global step cap read once at startup (mirrors `agent.ts`'s own constant).
@@ -217,19 +224,6 @@ function buildCarryContext(carry: CarryMode, priors: IWorkflowStepResult[]): str
     return `Summary of prior steps:\n${bullets}\n\n`;
 }
 
-/* ── SSE helpers ─────────────────────────────────────────────────────── */
-
-/**
- * Serialise an event as an SSE frame.
- *
- * @param eventType - The SSE event name.
- * @param data      - JSON-serialisable payload.
- * @returns A formatted SSE string ready to write to the response.
- */
-function sseFrame(eventType: string, data: unknown): string {
-    return `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
 /* ── Core workflow runner ─────────────────────────────────────────────── */
 
 /**
@@ -343,11 +337,9 @@ export function registerWorkflowRoutes(app: Express): void {
         const parsed = parseResult.data;
 
         /* Extra profile check (Zod enum already validates, but defence-in-depth). */
-        if (
-            parsed.profile !== undefined &&
-            !VALID_PROFILES.has(parsed.profile as ModelProfile)
-        ) {
-            rejectResponse(res, 400, 'Bad Request', [t('error.invalid_profile', { profiles: [...VALID_PROFILES].join(', ') })]);
+        const profileError = validateProfile(parsed.profile, VALID_PROFILES);
+        if (profileError) {
+            rejectResponse(res, 400, 'Bad Request', [profileError]);
             return;
         }
 
@@ -415,19 +407,14 @@ export function registerWorkflowRoutes(app: Express): void {
 
         const parsed = parseResult.data;
 
-        if (
-            parsed.profile !== undefined &&
-            !VALID_PROFILES.has(parsed.profile as ModelProfile)
-        ) {
-            rejectResponse(res, 400, 'Bad Request', [t('error.invalid_profile', { profiles: [...VALID_PROFILES].join(', ') })]);
+        const profileError = validateProfile(parsed.profile, VALID_PROFILES);
+        if (profileError) {
+            rejectResponse(res, 400, 'Bad Request', [profileError]);
             return;
         }
 
         /* ── Set SSE headers ────────────────────────────────────────── */
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        res.flushHeaders();
+        setupSSEHeaders(res);
 
         const writeEvent = (eventType: string, data: unknown): void => {
             res.write(sseFrame(eventType, data));
@@ -538,8 +525,6 @@ export function registerWorkflowRoutes(app: Express): void {
             });
 
         /* Clean up the event handler if the client disconnects early. */
-        req.on('close', () => {
-            off('*', handler);
-        });
+        onSSEClose(req, () => off('*', handler));
     });
 }

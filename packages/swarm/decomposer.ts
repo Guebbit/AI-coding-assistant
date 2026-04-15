@@ -14,6 +14,7 @@
 
 import { generate } from '../llm/ollama';
 import { getLogger } from '../logger/logger';
+import { stripCodeFences } from '../shared';
 import type { IDecomposition, ISubtask } from './types';
 
 const log = getLogger('swarm:decomposer');
@@ -91,7 +92,7 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
     })
         .then((raw) => {
             try {
-                const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+                const cleaned = stripCodeFences(raw);
                 const parsed = JSON.parse(cleaned) as {
                     reasoning?: string;
                     subtasks?: unknown[];

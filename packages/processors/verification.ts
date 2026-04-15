@@ -24,6 +24,7 @@
 import { generate } from '../llm/ollama';
 import { emit } from '../events/bus';
 import { getLogger } from '../logger/logger';
+import { stripCodeFences } from '../shared';
 import { createProcessor } from './processor-builder';
 
 const log = getLogger('verification-processor');
@@ -75,7 +76,7 @@ export const verificationProcessor = createProcessor({
             format: 'json'
         })
             .then((raw) => {
-                const cleaned = raw.replace(/```(?:json)?\n?/g, '').trim();
+                const cleaned = stripCodeFences(raw);
                 const parsed = JSON.parse(cleaned) as {
                     valid?: boolean;
                     issue?: string | null;

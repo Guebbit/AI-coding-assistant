@@ -20,7 +20,8 @@
 
 import { getLogger } from '../logger/logger';
 import { createProcessor } from './processor-builder';
-import { envInt } from '../shared';
+import { envInt, cosineSimilarity } from '../shared';
+import { getEmbedding } from '../llm/embeddings';
 
 const log = getLogger('tool-reranker-processor');
 
@@ -30,62 +31,11 @@ const ENABLED = process.env.TOOL_RERANKER_ENABLED === 'true';
 /** Maximum number of tools passed to the agent per step. */
 const TOP_N = envInt(process.env.TOOL_RERANKER_TOP_N, 10);
 
-/** Ollama base URL for the embedding endpoint. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
-
-/** Embedding model used for vectorising tool descriptions and tasks. */
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
-
 /** Module-level cache: tool name → embedding vector. */
 const embeddingCache = new Map<string, number[]>();
 
 /** Whether the cache has been populated for the current tool set. */
 let cacheInitialised = false;
-
-/* ── Helpers ─────────────────────────────────────────────────────────── */
-
-/**
- * Request an embedding vector from Ollama for the given text.
- *
- * @param text - The text to embed.
- * @returns A numeric embedding vector.
- * @throws {Error} When the API call fails or returns an empty vector.
- */
-async function getEmbedding(text: string): Promise<number[]> {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: OLLAMA_EMBED_MODEL, prompt: text })
-    });
-    if (!res.ok) {
-        throw new Error(`Ollama embedding API error: ${res.status} ${res.statusText}`);
-    }
-    const json = (await res.json()) as { embedding?: number[] };
-    if (!json.embedding?.length) {
-        throw new Error('Ollama returned an empty embedding vector');
-    }
-    return json.embedding;
-}
-
-/**
- * Compute the cosine similarity between two equal-length vectors.
- *
- * @param a - First vector.
- * @param b - Second vector.
- * @returns Cosine similarity in the range [−1, 1].
- */
-function cosineSimilarity(a: number[], b: number[]): number {
-    let dot = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < a.length; i++) {
-        dot += a[i] * b[i];
-        normA += a[i] * a[i];
-        normB += b[i] * b[i];
-    }
-    const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom === 0 ? 0 : dot / denom;
-}
 
 /* ── Tool descriptions registry ──────────────────────────────────────── */
 

@@ -21,6 +21,7 @@ import path from 'path';
 import { randomUUID } from 'node:crypto';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { resolveSafePath, chunkText } from '../shared';
+import { getEmbedding } from '../llm/embeddings';
 import { createTool } from './tool-builder';
 import { z } from 'zod';
 import { readFileTool } from './fs.read';
@@ -32,37 +33,12 @@ import { readMarkdownTool } from './markdown.read';
 
 /* ── Configuration ──────────────────────────────────────────────────── */
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
 const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? 'agent_memory';
 
 const qdrant = new QdrantClient({ url: QDRANT_URL });
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
-
-/**
- * Request an embedding vector from Ollama for the given text.
- *
- * @param text - The text to embed.
- * @returns A numeric embedding vector.
- * @throws {Error} When the API call fails or returns an empty vector.
- */
-async function embedText(text: string): Promise<number[]> {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: OLLAMA_EMBED_MODEL, prompt: text })
-    });
-    if (!res.ok) {
-        throw new Error(`Ollama embedding API error: ${res.status} ${res.statusText}`);
-    }
-    const json = (await res.json()) as { embedding?: number[] };
-    if (!json.embedding?.length) {
-        throw new Error('Ollama returned an empty embedding vector');
-    }
-    return json.embedding;
-}
 
 /**
  * Extract plain text from a file by dispatching to the appropriate reader.
@@ -153,7 +129,7 @@ export const documentIngestTool = createTool({
         /* Embed all chunks and upsert in one batch. */
         const points: { id: string; vector: number[]; payload: Record<string, unknown> }[] = [];
         for (const chunk of chunks) {
-            const vector = await embedText(chunk.content);
+            const vector = await getEmbedding(chunk.content);
             if (chunk.index === 0) vectorSize = vector.length;
             points.push({
                 id: randomUUID(),

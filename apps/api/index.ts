@@ -36,6 +36,8 @@ import {
   initI18n,
   rejectResponse,
   successResponse,
+  validateTask,
+  validateProfile,
   t,
   validateRecommendedEnvironment
 } from "../../packages/shared";
@@ -106,20 +108,18 @@ registerInfoRoutes(app);
  * Response: `{ "result": "agent's final answer" }`
  */
 app.post("/run", (req, res) => {
-  const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
+  const { task: rawTask, allowWrite, profile } = req.body as Partial<RunRequest>;
 
-  if (!task || typeof task !== "string" || task.trim() === "") {
-    rejectResponse(
-      res,
-      400,
-      "Bad Request",
-      [t("error.task_required")],
-    );
+  const taskResult = validateTask(rawTask);
+  if ('error' in taskResult) {
+    rejectResponse(res, 400, "Bad Request", [taskResult.error]);
     return;
   }
+  const task = taskResult.task;
 
-  if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-    rejectResponse(res, 400, "Bad Request", [t("error.invalid_profile", { profiles: [...VALID_PROFILES].join(", ") })]);
+  const profileError = validateProfile(profile, VALID_PROFILES);
+  if (profileError) {
+    rejectResponse(res, 400, "Bad Request", [profileError]);
     return;
   }
 
@@ -128,7 +128,7 @@ app.post("/run", (req, res) => {
   const agent = createAgent(writeEnabled);
 
   agent
-    .run(task.trim(), profile ? { profile: profile as ModelProfile } : undefined)
+    .run(task, profile ? { profile: profile as ModelProfile } : undefined)
     .then((result) => {
       log.info("run_request_completed", {
         taskLength: task.length,

@@ -19,13 +19,12 @@
 
 import { z } from 'zod';
 import { getLogger } from '../logger/logger';
+import { OLLAMA_BASE_URL } from '../llm/config';
 import type { IExtractionResult } from './types';
 
 const log = getLogger('graph:extractor');
 
 /* ── Configuration ──────────────────────────────────────────────────── */
-
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 
 /**
  * The model used for entity/relationship extraction.

@@ -22,26 +22,20 @@ import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
-import { rejectResponse, t } from "../../packages/shared";
+import {
+  rejectResponse,
+  validateTask,
+  validateProfile,
+  sseFrame,
+  setupSSEHeaders,
+  onSSEClose,
+  SSE_PAYLOAD_MAX_LENGTH,
+} from "../../packages/shared";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { RunRequest } from "../../api/models";
 
 const log = getLogger("stream-endpoints");
-
-/** Maximum characters to include in SSE event data payloads. */
-const SSE_PAYLOAD_MAX_LENGTH = 300;
-
-/**
- * Serialise an event as an SSE frame.
- *
- * @param eventType - The SSE event name.
- * @param data      - JSON-serialisable payload.
- * @returns A formatted SSE string ready to write to the response.
- */
-function sseFrame(eventType: string, data: unknown): string {
-  return `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-}
 
 /**
  * Register the `POST /run/stream` endpoint on the given Express app.
@@ -59,28 +53,23 @@ export function registerStreamRoutes(app: Express): void {
    * Each significant lifecycle event is forwarded as a typed SSE event.
    */
   app.post("/run/stream", (req: Request, res: Response) => {
-    const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
+    const { task: rawTask, allowWrite, profile } = req.body as Partial<RunRequest>;
 
-    if (!task || typeof task !== "string" || task.trim() === "") {
-      rejectResponse(
-        res,
-        400,
-        "Bad Request",
-        [t("error.task_required")],
-      );
+    const taskResult = validateTask(rawTask);
+    if ('error' in taskResult) {
+      rejectResponse(res, 400, "Bad Request", [taskResult.error]);
       return;
     }
+    const task = taskResult.task;
 
-    if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-      rejectResponse(res, 400, "Bad Request", [t("error.invalid_profile", { profiles: [...VALID_PROFILES].join(", ") })]);
+    const profileError = validateProfile(profile, VALID_PROFILES);
+    if (profileError) {
+      rejectResponse(res, 400, "Bad Request", [profileError]);
       return;
     }
 
     /* ── Set SSE headers ──────────────────────────────────────────── */
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
+    setupSSEHeaders(res);
 
     const writeEvent = (eventType: string, data: unknown): void => {
       res.write(sseFrame(eventType, data));
@@ -150,7 +139,7 @@ export function registerStreamRoutes(app: Express): void {
     });
 
     agent
-      .run(task.trim(), profile ? { profile: profile as ModelProfile } : undefined)
+      .run(task, profile ? { profile: profile as ModelProfile } : undefined)
       .then((result) => {
         writeEvent("done", { result });
         log.info("stream_run_completed", { taskLength: task.length });
@@ -165,8 +154,6 @@ export function registerStreamRoutes(app: Express): void {
       });
 
     /* Clean up handler when the client disconnects early. */
-    req.on("close", () => {
-      off("*", handler);
-    });
+    onSSEClose(req, () => off("*", handler));
   });
 }

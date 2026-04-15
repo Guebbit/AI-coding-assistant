@@ -16,6 +16,7 @@
 import { randomUUID } from 'node:crypto';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { getLogger } from '../logger/logger';
+import { getEmbedding } from '../llm/embeddings';
 import type { IMemoryEntry } from './types';
 
 /* ── Configuration from environment ──────────────────────────────────── */
@@ -25,12 +26,6 @@ const MAX_ENTRIES = 20;
 
 /** Default cap on the number of memory strings returned by `getMemory`. */
 const DEFAULT_RETURN_COUNT = 10;
-
-/** Base URL for the Ollama API (embedding endpoint). */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
-
-/** Ollama model used to generate text embeddings. */
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
 
 /** URL of the Qdrant vector database REST API. */
 const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
@@ -91,46 +86,6 @@ function logMemoryAddedLocalOnly(startedAt: number): void {
  */
 function logMemoryClearedRecentOnly(startedAt: number): void {
     log.info('memory_cleared_recent_only', { durationMs: Date.now() - startedAt });
-}
-
-/**
- * Request an embedding vector from Ollama for the given text.
- *
- * Calls the `/api/embeddings` endpoint and returns the first
- * embedding vector from the response.
- *
- * @param text - The text to embed.
- * @returns A numeric embedding vector.
- * @throws {Error} When the Ollama API returns an error or an empty vector.
- */
-async function getEmbedding(text: string): Promise<number[]> {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: OLLAMA_EMBED_MODEL,
-            prompt: text
-        })
-    });
-
-    if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(
-            `Embedding API error: ${res.status} ${res.statusText}${body ? ` — ${body}` : ''}`
-        );
-    }
-
-    const data = (await res.json()) as {
-        embedding?: number[];
-        embeddings?: number[][];
-    };
-
-    const embedding = data.embedding ?? data.embeddings?.[0];
-    if (!embedding || embedding.length === 0) {
-        throw new Error('Embedding API returned an empty embedding vector');
-    }
-
-    return embedding;
 }
 
 /**

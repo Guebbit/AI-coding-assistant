@@ -12,13 +12,9 @@
 
 import fs from 'fs/promises';
 import type { ITool } from './types';
-import { resolveSafePath } from '../shared';
-
-/** Ollama base URL for the embedding endpoint. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
-
-/** Embedding model used for vectorising text. */
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
+import { resolveSafePath, cosineSimilarity } from '../shared';
+import { getEmbedding } from '../llm/embeddings';
+import { OLLAMA_EMBED_MODEL } from '../llm/config';
 
 /** Hard cap on the number of documents that can be searched at once. */
 const MAX_DOCUMENTS = 50;
@@ -34,70 +30,6 @@ interface IRankedDocument {
     score: number;
     /** First 500 characters of the document for preview. */
     snippet: string;
-}
-
-/**
- * Request an embedding vector from Ollama for the given text.
- *
- * @param text - The text to embed.
- * @returns A numeric embedding vector.
- * @throws {Error} When the API returns an error or empty vector.
- */
-async function getEmbedding(text: string): Promise<number[]> {
-    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: OLLAMA_EMBED_MODEL,
-            prompt: text
-        })
-    });
-
-    if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(
-            `Embedding API error: ${res.status} ${res.statusText}${body ? ` — ${body}` : ''}`
-        );
-    }
-
-    const data = (await res.json()) as {
-        embedding?: number[];
-        embeddings?: number[][];
-    };
-
-    const embedding = data.embedding ?? data.embeddings?.[0];
-    if (!embedding || embedding.length === 0) {
-        throw new Error('Embedding API returned an empty embedding vector');
-    }
-    return embedding;
-}
-
-/**
- * Compute the cosine similarity between two vectors.
- *
- * Returns −1 when vectors are empty, zero-norm, or have mismatched
- * dimensions (treated as completely dissimilar).
- *
- * @param a - First embedding vector.
- * @param b - Second embedding vector.
- * @returns Cosine similarity in the range [−1, 1].
- */
-function cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length || a.length === 0) {
-        return -1;
-    }
-    let dot = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < a.length; i++) {
-        dot += a[i] * b[i];
-        normA += a[i] * a[i];
-        normB += b[i] * b[i];
-    }
-    if (normA === 0 || normB === 0) {
-        return -1;
-    }
-    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
 /**
