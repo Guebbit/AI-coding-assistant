@@ -1,5 +1,5 @@
 /**
- * Integration tests for packages/swarm/orchestrator.ts (SwarmOrchestrator)
+ * Integration tests for packages/orchestrator/graph.ts (LangGraphSwarmOrchestrator)
  *
  * All HTTP calls (Ollama LLM, Qdrant, embeddings) are intercepted via a
  * global mock `fetch`, so no real services are needed.
@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SwarmOrchestrator } from '../../../packages/swarm/orchestrator.js';
+import { LangGraphSwarmOrchestrator } from '../../../packages/orchestrator/graph.js';
 
 /* ── Mock persistence and diagnostics (not under test) ───────────────── */
 vi.mock('../../../packages/persistence/db.js', () => ({
@@ -91,6 +91,7 @@ const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
 });
 
 beforeEach(() => {
+    process.env.SWARM_MAX_REVIEW_RETRIES = '0';
     fetchQueue.length = 0;
     vi.stubGlobal('fetch', mockFetch);
     mockFetch.mockClear();
@@ -102,7 +103,7 @@ afterEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────────────────── */
 
-describe('SwarmOrchestrator.run', () => {
+describe('LangGraphSwarmOrchestrator.run', () => {
     it('handles a single-subtask decomposition and returns the subtask answer directly', async () => {
         /* 1. decomposer call → single subtask */
         fetchQueue.push(
@@ -113,7 +114,7 @@ describe('SwarmOrchestrator.run', () => {
         /* 2. agent step for sub-0 */
         fetchQueue.push(agentResponse('The answer is Paris.', 'none'));
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('What is the capital of France?');
 
         expect(result.subtaskResults).toHaveLength(1);
@@ -150,7 +151,7 @@ describe('SwarmOrchestrator.run', () => {
         /* synthesis call */
         fetchQueue.push(rawResponse('synthesised answer'));
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('Two-step task');
 
         expect(result.subtaskResults).toHaveLength(2);
@@ -169,7 +170,7 @@ describe('SwarmOrchestrator.run', () => {
         /* synthesis call (fallback after failure) */
         fetchQueue.push(rawResponse('Degraded answer'));
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('Failing subtask task');
 
         expect(result.subtaskResults[0].success).toBe(false);
@@ -189,7 +190,7 @@ describe('SwarmOrchestrator.run', () => {
         /* synthesis */
         fetchQueue.push(rawResponse('deadlock handled'));
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('Circular dep task');
 
         /* All subtasks should have been executed despite the deadlock */
@@ -207,7 +208,7 @@ describe('SwarmOrchestrator.run', () => {
         fetchQueue.push(agentResponse('B done', 'none'));
         fetchQueue.push(rawResponse('final synthesis'));
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('Multi-part task');
 
         expect(result.answer).toBe('final synthesis');
@@ -225,7 +226,7 @@ describe('SwarmOrchestrator.run', () => {
         /* synthesis call fails */
         fetchQueue.push(FETCH_FAIL);
 
-        const orchestrator = new SwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([]);
         const result = await orchestrator.run('Synthesis failure task');
 
         /* Should have concatenated the successful subtask answers */

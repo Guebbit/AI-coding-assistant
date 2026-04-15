@@ -36,11 +36,19 @@ vi.mock('../../../packages/logger/logger.js', () => ({
 const fetchQueue: unknown[] = [];
 
 /** Build an Ollama /api/generate response body for a given agent step. */
-function agentResponse(thought: string, action: string, input: Record<string, unknown> = {}) {
+function agentResponse(
+    thought: string,
+    action: string,
+    input: Record<string, unknown> = {},
+    tokenCounts?: { prompt: number; completion: number }
+) {
     return {
         response: JSON.stringify({ thought, action, input }),
         model: 'test-model',
-        done: true
+        done: true,
+        ...(tokenCounts
+            ? { prompt_eval_count: tokenCounts.prompt, eval_count: tokenCounts.completion }
+            : {})
     };
 }
 
@@ -130,7 +138,9 @@ describe('Agent.run — happy paths', () => {
 
         const agent = new Agent([]);
         const result = await agent.run('What is 6 times 7?');
-        expect(result).toBe('The answer is 42.');
+        expect(result.answer).toBe('The answer is 42.');
+        expect(result.meta.models).toEqual(['test-model']);
+        expect(result.meta.steps).toBe(1);
     });
 
     it('executes a tool and then completes', async () => {
@@ -142,7 +152,7 @@ describe('Agent.run — happy paths', () => {
 
         const agent = new Agent([echoTool]);
         const result = await agent.run('Echo "hello"');
-        expect(result).toBe('Echo returned the message.');
+        expect(result.answer).toBe('Echo returned the message.');
         expect(echoTool.execute).toHaveBeenCalledWith({ message: 'hello' });
     });
 
@@ -150,14 +160,29 @@ describe('Agent.run — happy paths', () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
         const result = await agent.run('Quick task', { profile: 'fast' });
-        expect(result).toBe('Done.');
+        expect(result.answer).toBe('Done.');
+        expect(result.meta.profile).toBe('fast');
     });
 
     it('respects a maxSteps override', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
         const result = await agent.run('Quick task', { maxSteps: 1 });
-        expect(result).toBe('Done.');
+        expect(result.answer).toBe('Done.');
+    });
+
+    it('aggregates token metadata across LLM steps', async () => {
+        fetchQueue.push(
+            agentResponse('Need a tool first.', 'echo', { ok: true }, { prompt: 12, completion: 5 })
+        );
+        fetchQueue.push(agentResponse('Done now.', 'none', {}, { prompt: 8, completion: 7 }));
+
+        const agent = new Agent([echoTool]);
+        const result = await agent.run('Token aggregation task');
+        expect(result.answer).toBe('Done now.');
+        expect(result.meta.promptTokens).toBe(20);
+        expect(result.meta.completionTokens).toBe(12);
+        expect(result.meta.totalTokens).toBe(32);
     });
 });
 
@@ -170,7 +195,7 @@ describe('Agent.run — fail-open / retry paths', () => {
 
         const agent = new Agent([]);
         const result = await agent.run('Handle invalid JSON');
-        expect(result).toBe('Corrected.');
+        expect(result.answer).toBe('Corrected.');
     });
 
     it('appends error context for unknown tools and then completes', async () => {
@@ -181,7 +206,7 @@ describe('Agent.run — fail-open / retry paths', () => {
 
         const agent = new Agent([echoTool]);
         const result = await agent.run('Use an unknown tool');
-        expect(result).toBe('Recovered.');
+        expect(result.answer).toBe('Recovered.');
     });
 
     it('appends error context when a tool throws and then completes', async () => {
@@ -193,7 +218,7 @@ describe('Agent.run — fail-open / retry paths', () => {
 
         const agent = new Agent([failingTool]);
         const result = await agent.run('Call a failing tool');
-        expect(result).toBe('Tool failed but I recovered.');
+        expect(result.answer).toBe('Tool failed but I recovered.');
     });
 });
 
@@ -207,7 +232,7 @@ describe('Agent.run — max steps exhaustion', () => {
 
         const agent = new Agent([echoTool]);
         const result = await agent.run('Infinite loop task', { maxSteps: 2 });
-        expect(result).toBe('The agent got stuck in a loop.');
+        expect(result.answer).toBe('The agent got stuck in a loop.');
     });
 
     it('returns a fallback message when the self-debug LLM call also fails', async () => {
@@ -217,7 +242,7 @@ describe('Agent.run — max steps exhaustion', () => {
 
         const agent = new Agent([echoTool]);
         const result = await agent.run('Self-debug failure', { maxSteps: 1 });
-        expect(result).toBe('Max steps reached without a conclusive answer.');
+        expect(result.answer).toBe('Max steps reached without a conclusive answer.');
     });
 });
 

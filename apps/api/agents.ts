@@ -1,6 +1,6 @@
 /**
  * Shared agent wiring — constructs and exports the pre-built `Agent`
- * instances, the `createAgent` selector, and the `SwarmOrchestrator`
+ * instances, the `createAgent` selector, and the swarm orchestrator
  * factory used by all API route modules.
  *
  * Extracting agent setup into this module avoids duplication between
@@ -140,10 +140,7 @@ export function createAgent(allowWrite: boolean): Agent {
  * and processors.
  *
  * The returned orchestrator is backed by a LangGraph state machine that
- * supports cyclic review→retry workflows.  It exposes the same
- * `run(task, config): Promise<ISwarmResult>` interface as the legacy
- * `SwarmOrchestrator`, so all existing API route modules and callers are
- * fully backward-compatible.
+ * supports cyclic review→retry workflows.
  *
  * @param allowWrite - Whether write tools should be available to worker agents.
  * @returns A configured `LangGraphSwarmOrchestrator` instance.

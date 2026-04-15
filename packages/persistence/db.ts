@@ -177,7 +177,7 @@ export async function saveAgentRun(input: IAgentRunInput): Promise<IAgentRunReco
 /* ── saveSwarmRun ────────────────────────────────────────────────────────── */
 
 /**
- * Persist the result of a single {@link SwarmOrchestrator.run()} call.
+ * Persist the result of a single {@link LangGraphSwarmOrchestrator.run()} call.
  *
  * @example
  * ```typescript

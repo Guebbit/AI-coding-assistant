@@ -16,6 +16,7 @@
 import * as runtime from '../runtime';
 import type {
   ErrorResponse,
+  ImageProcessorResponse,
   UploadImageClassify200Response,
   UploadReadPdf200Response,
   UploadSpeechToText200Response,
@@ -23,6 +24,8 @@ import type {
 import {
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
+    ImageProcessorResponseFromJSON,
+    ImageProcessorResponseToJSON,
     UploadImageClassify200ResponseFromJSON,
     UploadImageClassify200ResponseToJSON,
     UploadReadPdf200ResponseFromJSON,
@@ -35,6 +38,18 @@ export interface UploadImageClassifyRequest {
     file: Blob;
     prompt?: string;
     model?: string;
+}
+
+export interface UploadImageColorizeRequest {
+    file: Blob;
+    prompt?: string;
+    negativePrompt?: string;
+}
+
+export interface UploadImageSketchRequest {
+    file: Blob;
+    prompt?: string;
+    negativePrompt?: string;
 }
 
 export interface UploadReadPdfRequest {
@@ -114,6 +129,134 @@ export class UploadApi extends runtime.BaseAPI {
      */
     async uploadImageClassify(requestParameters: UploadImageClassifyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UploadImageClassify200Response> {
         const response = await this.uploadImageClassifyRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/colorize`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
+     * Colorize an uploaded image
+     */
+    async uploadImageColorizeRaw(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImageProcessorResponse>> {
+        if (requestParameters['file'] == null) {
+            throw new runtime.RequiredError(
+                'file',
+                'Required parameter "file" was null or undefined when calling uploadImageColorize().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+        if (requestParameters['prompt'] != null) {
+            formParams.append('prompt', requestParameters['prompt'] as any);
+        }
+
+        if (requestParameters['negativePrompt'] != null) {
+            formParams.append('negative_prompt', requestParameters['negativePrompt'] as any);
+        }
+
+        const response = await this.request({
+            path: `/upload/image-colorize`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImageProcessorResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/colorize`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
+     * Colorize an uploaded image
+     */
+    async uploadImageColorize(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImageProcessorResponse> {
+        const response = await this.uploadImageColorizeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/sketch`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
+     * Generate sketch/line-art from an uploaded image
+     */
+    async uploadImageSketchRaw(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImageProcessorResponse>> {
+        if (requestParameters['file'] == null) {
+            throw new runtime.RequiredError(
+                'file',
+                'Required parameter "file" was null or undefined when calling uploadImageSketch().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+        if (requestParameters['prompt'] != null) {
+            formParams.append('prompt', requestParameters['prompt'] as any);
+        }
+
+        if (requestParameters['negativePrompt'] != null) {
+            formParams.append('negative_prompt', requestParameters['negativePrompt'] as any);
+        }
+
+        const response = await this.request({
+            path: `/upload/image-sketch`,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImageProcessorResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/sketch`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
+     * Generate sketch/line-art from an uploaded image
+     */
+    async uploadImageSketch(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImageProcessorResponse> {
+        const response = await this.uploadImageSketchRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

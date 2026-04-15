@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Repository-wide response metadata (`meta`) for JSON API responses**:
+    - `packages/shared/response.ts` now supports an optional typed `meta` object on successful envelopes.
+    - Added normalized metadata to core, info, IDE, upload, swarm, and workflow JSON endpoints (duration/start time and request ID everywhere; model/tokens/steps/tool/context where available).
+    - `Agent.run()` now returns structured run metadata (`answer` + `meta`) and aggregates model/token/step/tool/context statistics across the run.
+    - SSE terminal `done` events for `/run/stream`, `/run/swarm/stream`, and `/workflow/stream` now include optional metadata payloads without changing event names.
+    - OpenAPI schemas now document the reusable `ResponseMeta` object.
+
 - **Image sketch/colorization integration with external image processor**:
     - New tools: `packages/tools/image.sketch.ts` (`image_sketch`) and `packages/tools/image.colorize.ts` (`image_colorize`) calling `IMAGE_PROCESSOR_URL/sketch` and `IMAGE_PROCESSOR_URL/colorize`.
     - `apps/api/agents.ts`: registered `image_sketch` and `image_colorize` in the read-only tool set.

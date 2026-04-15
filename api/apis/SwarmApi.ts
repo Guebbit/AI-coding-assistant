@@ -80,7 +80,7 @@ export class SwarmApi extends runtime.BaseAPI {
     }
 
     /**
-     * Same as `POST /run/swarm`, but streams agent lifecycle events as Server-Sent Events. The connection stays open until the swarm completes.  SSE event types: `decomposed`, `subtask_start`, `subtask_done`, `subtask_error`, `step`, `tool`, `route`, `done`, `error`. 
+     * Same as `POST /run/swarm`, but streams agent lifecycle events as Server-Sent Events. The connection stays open until the swarm completes.  SSE event types: `decomposed`, `subtask_start`, `subtask_done`, `subtask_error`, `step`, `tool`, `route`, `done`, `error`. The terminal `done` event includes `{ answer, totalDurationMs, subtaskCount, meta? }`. 
      * Run a multi-agent swarm with SSE streaming
      */
     async postRunSwarmStreamRaw(requestParameters: PostRunSwarmStreamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
@@ -113,7 +113,7 @@ export class SwarmApi extends runtime.BaseAPI {
     }
 
     /**
-     * Same as `POST /run/swarm`, but streams agent lifecycle events as Server-Sent Events. The connection stays open until the swarm completes.  SSE event types: `decomposed`, `subtask_start`, `subtask_done`, `subtask_error`, `step`, `tool`, `route`, `done`, `error`. 
+     * Same as `POST /run/swarm`, but streams agent lifecycle events as Server-Sent Events. The connection stays open until the swarm completes.  SSE event types: `decomposed`, `subtask_start`, `subtask_done`, `subtask_error`, `step`, `tool`, `route`, `done`, `error`. The terminal `done` event includes `{ answer, totalDurationMs, subtaskCount, meta? }`. 
      * Run a multi-agent swarm with SSE streaming
      */
     async postRunSwarmStream(requestParameters: PostRunSwarmStreamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {

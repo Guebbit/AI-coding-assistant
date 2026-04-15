@@ -20,6 +20,13 @@ import {
     SwarmResponseDecompositionToJSON,
     SwarmResponseDecompositionToJSONTyped,
 } from './SwarmResponseDecomposition';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { SwarmSubtaskResult } from './SwarmSubtaskResult';
 import {
     SwarmSubtaskResultFromJSON,
@@ -41,13 +48,6 @@ export interface SwarmResponse {
      */
     answer?: string;
     /**
-     * Deprecated alias for `answer` kept for backward compatibility.
-     * @type {string}
-     * @memberof SwarmResponse
-     * @deprecated
-     */
-    result?: string;
-    /**
      * Individual results for each subtask.
      * @type {Array<SwarmSubtaskResult>}
      * @memberof SwarmResponse
@@ -65,6 +65,12 @@ export interface SwarmResponse {
      * @memberof SwarmResponse
      */
     totalDurationMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof SwarmResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -85,10 +91,10 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
     return {
         
         'answer': json['answer'] == null ? undefined : json['answer'],
-        'result': json['result'] == null ? undefined : json['result'],
         'subtaskResults': json['subtaskResults'] == null ? undefined : ((json['subtaskResults'] as Array<any>).map(SwarmSubtaskResultFromJSON)),
         'decomposition': json['decomposition'] == null ? undefined : SwarmResponseDecompositionFromJSON(json['decomposition']),
         'totalDurationMs': json['totalDurationMs'] == null ? undefined : json['totalDurationMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -104,10 +110,10 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
     return {
         
         'answer': value['answer'],
-        'result': value['result'],
         'subtaskResults': value['subtaskResults'] == null ? undefined : ((value['subtaskResults'] as Array<any>).map(SwarmSubtaskResultToJSON)),
         'decomposition': SwarmResponseDecompositionToJSON(value['decomposition']),
         'totalDurationMs': value['totalDurationMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

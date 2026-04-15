@@ -15,14 +15,14 @@ import { Agent } from '../../packages/agent/agent.js';
 describe('[eval] Agent loop — single-agent end-to-end', () => {
     it('returns a non-empty answer for a trivial task', async () => {
         const agent = new Agent([]);
-        const answer = await agent.run('Reply with the single word "hello" and nothing else.');
-        expect(typeof answer).toBe('string');
-        expect(answer.trim().length).toBeGreaterThan(0);
+        const runResult = await agent.run('Reply with the single word "hello" and nothing else.');
+        expect(typeof runResult.answer).toBe('string');
+        expect(runResult.answer.trim().length).toBeGreaterThan(0);
     }, 120_000);
 
     it('completes within MAX_STEPS for a simple factual question', async () => {
         const agent = new Agent([]);
-        const answer = await agent.run('What is 2 + 2? Answer in one sentence.');
-        expect(answer).toMatch(/4/);
+        const runResult = await agent.run('What is 2 + 2? Answer in one sentence.');
+        expect(runResult.answer).toMatch(/4/);
     }, 120_000);
 });

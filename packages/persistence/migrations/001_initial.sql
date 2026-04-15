@@ -3,7 +3,7 @@
 --
 -- Tables:
 --   agent_runs   — one row per Agent.run() execution
---   swarm_runs   — one row per SwarmOrchestrator.run() execution
+--   swarm_runs   — one row per LangGraphSwarmOrchestrator.run() execution
 --   eval_results — one row per scorer evaluation of any run
 -- ─────────────────────────────────────────────────────────────────────────────
 

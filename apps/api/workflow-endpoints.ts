@@ -33,17 +33,18 @@ import type { IAgentEvent } from '../../packages/events/bus';
 import { logger } from '../../packages/logger/logger';
 import {
     envInt,
+    type IResponseMeta,
     rejectResponse,
     successResponse,
     validateProfile,
     sseFrame,
     setupSSEHeaders,
     onSSEClose,
-    SSE_PAYLOAD_MAX_LENGTH,
     t,
 } from '../../packages/shared';
 import { createAgent, VALID_PROFILES } from './agents';
 import type { ModelProfile } from '../../packages/agent/model-router';
+import { writeAgentEventToSse } from './sse-event-bridge';
 import type {
     WorkflowRequest as OpenApiWorkflowRequest,
     WorkflowResponse as OpenApiWorkflowResponse,
@@ -91,12 +92,9 @@ export const workflowRequestSchema = z.object({
      */
     steps: z
         .array(
-            z.union([
-                z.string().min(1, 'Each step task must be a non-empty string'),
-                z.object({
-                    task: z.string().min(1, 'Each step task must be a non-empty string'),
-                }),
-            ]),
+            z.object({
+                task: z.string().min(1, 'Each step task must be a non-empty string'),
+            }),
         )
         .min(1, 'At least one step is required')
         .max(50, 'A workflow may contain at most 50 steps'),
@@ -175,6 +173,8 @@ export interface IWorkflowResponse {
     allSucceeded: boolean;
     /** Total wall-clock duration in milliseconds across all steps. */
     totalDurationMs: number;
+    /** Aggregated operational metadata for the workflow execution. */
+    meta?: IResponseMeta;
 }
 
 /**
@@ -236,13 +236,20 @@ async function runWorkflow(
     parsed: IWorkflowRequestBody,
     callbacks?: IWorkflowCallbacks,
 ): Promise<IWorkflowResponse> {
-    const workflowStartedAt = Date.now();
+    const workflowStartedAt = new Date();
     const stepResults: IWorkflowStepResult[] = [];
     const effectiveMaxSteps = parsed.maxStepsPerStep ?? DEFAULT_MAX_STEPS_PER_STEP;
+    const modelsUsed = new Set<string>();
+    let promptTokens: number | undefined;
+    let completionTokens: number | undefined;
+    let totalSteps = 0;
+    let totalToolCalls = 0;
+    let maxContextLength = 0;
+    let memoryUsed = false;
 
     for (let i = 0; i < parsed.steps.length; i++) {
         const step = parsed.steps[i];
-        const baseTask = typeof step === 'string' ? step : step.task;
+        const baseTask = step.task;
         const carryPrefix = buildCarryContext(parsed.carry, stepResults);
         const fullTask = carryPrefix ? `${carryPrefix}Current task:\n${baseTask}` : baseTask;
 
@@ -253,15 +260,28 @@ async function runWorkflow(
 
         try {
             const agent = createAgent(parsed.allowWrite);
-            const answer = await agent.run(fullTask, {
+            const runResult = await agent.run(fullTask, {
                 profile: parsed.profile as ModelProfile | undefined,
                 maxSteps: effectiveMaxSteps,
             });
+            for (const model of runResult.meta.models) {
+                modelsUsed.add(model);
+            }
+            if (typeof runResult.meta.promptTokens === 'number') {
+                promptTokens = (promptTokens ?? 0) + runResult.meta.promptTokens;
+            }
+            if (typeof runResult.meta.completionTokens === 'number') {
+                completionTokens = (completionTokens ?? 0) + runResult.meta.completionTokens;
+            }
+            totalSteps += runResult.meta.steps;
+            totalToolCalls += runResult.meta.toolCalls;
+            maxContextLength = Math.max(maxContextLength, runResult.meta.contextLength);
+            memoryUsed = memoryUsed || runResult.meta.memoryUsed;
 
             result = {
                 index: i,
                 task: baseTask,
-                result: answer,
+                result: runResult.answer,
                 success: true,
                 durationMs: Date.now() - stepStartedAt,
             };
@@ -280,10 +300,28 @@ async function runWorkflow(
         callbacks?.onStepComplete?.(result);
     }
 
+    const totalTokens =
+        typeof promptTokens === 'number' && typeof completionTokens === 'number'
+            ? promptTokens + completionTokens
+            : undefined;
+    const models = [...modelsUsed];
     return {
         steps: stepResults,
         allSucceeded: stepResults.every((r) => r.success),
-        totalDurationMs: Date.now() - workflowStartedAt,
+        totalDurationMs: Date.now() - workflowStartedAt.getTime(),
+        meta: {
+            startedAt: workflowStartedAt.toISOString(),
+            durationMs: Date.now() - workflowStartedAt.getTime(),
+            ...(models.length > 0 ? { models, model: models.length === 1 ? models[0] : undefined } : {}),
+            ...(typeof promptTokens === 'number' ? { promptTokens } : {}),
+            ...(typeof completionTokens === 'number' ? { completionTokens } : {}),
+            ...(typeof totalTokens === 'number' ? { totalTokens } : {}),
+            ...(totalSteps > 0 ? { steps: totalSteps } : {}),
+            ...(totalToolCalls > 0 ? { toolCalls: totalToolCalls } : {}),
+            ...(maxContextLength > 0 ? { contextLength: maxContextLength } : {}),
+            memoryUsed,
+            ...(parsed.profile ? { profile: parsed.profile } : {}),
+        },
     };
 }
 
@@ -301,13 +339,13 @@ export function registerWorkflowRoutes(app: Express): void {
     /**
      * POST /workflow — run an explicit list of steps sequentially.
      *
-     * Request body:
-     * ```json
-     * {
-     *   "steps": ["read all .ts files", "summarise findings"],
-     *   "carry": "summary",
-     *   "allowWrite": false,
-     *   "profile": "code",
+      * Request body:
+      * ```json
+      * {
+      *   "steps": [{ "task": "read all .ts files" }, { "task": "summarise findings" }],
+      *   "carry": "summary",
+      *   "allowWrite": false,
+      *   "profile": "code",
      *   "maxStepsPerStep": 10
      * }
      * ```
@@ -315,14 +353,9 @@ export function registerWorkflowRoutes(app: Express): void {
      * Response: `{ steps: [...], allSucceeded: bool, totalDurationMs: number }`
      */
     app.post('/workflow', (req: Request, res: Response) => {
-        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
-        const normalizedBody = {
-            ...requestBody,
-            steps: (requestBody.steps ?? []).map((step) =>
-                typeof step === 'string' ? { task: step } : step,
-            ),
-        };
-        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
+        const startedAt = new Date();
+        const requestBody = req.body as OpenApiWorkflowRequest;
+        const parseResult = workflowRequestSchema.safeParse(requestBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
@@ -360,7 +393,12 @@ export function registerWorkflowRoutes(app: Express): void {
                 });
 
                 const typedResponse: OpenApiWorkflowResponse = workflowResponse;
-                successResponse(res, typedResponse);
+                successResponse(res, typedResponse, 200, '', {
+                    ...workflowResponse.meta,
+                    startedAt: startedAt.toISOString(),
+                    durationMs: Date.now() - startedAt.getTime(),
+                    requestId: req.requestId,
+                });
             })
             .catch((error: unknown) => {
                 logger.error('workflow_request_failed', { component: 'api.workflow.endpoints', error: String(error) });
@@ -388,14 +426,9 @@ export function registerWorkflowRoutes(app: Express): void {
      * - `error`           — on fatal errors; `{ error }`.
      */
     app.post('/workflow/stream', (req: Request, res: Response) => {
-        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
-        const normalizedBody = {
-            ...requestBody,
-            steps: (requestBody.steps ?? []).map((step) =>
-                typeof step === 'string' ? { task: step } : step,
-            ),
-        };
-        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
+        const startedAt = new Date();
+        const requestBody = req.body as OpenApiWorkflowRequest;
+        const parseResult = workflowRequestSchema.safeParse(requestBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
@@ -430,56 +463,7 @@ export function registerWorkflowRoutes(app: Express): void {
         /* ── Event bridge for inner agent events ────────────────────── */
         const handler = (event: IAgentEvent): void => {
             try {
-                switch (event.type) {
-                    case 'agent:step': {
-                        const p = event.payload as {
-                            step: number;
-                            parsed: { thought: string; action: string };
-                        };
-                        writeEvent('step', {
-                            workflowIndex: currentWorkflowIndex,
-                            step: p.step,
-                            action: p.parsed.action,
-                            thought: p.parsed.thought.slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:result': {
-                        const p = event.payload as { tool: string; result: unknown };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            result: JSON.stringify(p.result).slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:error': {
-                        const p = event.payload as { tool: string; error: string };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            error: p.error,
-                        });
-                        break;
-                    }
-                    case 'agent:model_routed': {
-                        const p = event.payload as {
-                            profile: string;
-                            model: string;
-                            reason: string;
-                        };
-                        writeEvent('route', {
-                            workflowIndex: currentWorkflowIndex,
-                            profile: p.profile,
-                            model: p.model,
-                            reason: p.reason,
-                        });
-                        break;
-                    }
-                    default:
-                        /* All other event types are silently ignored. */
-                        break;
-                }
+                writeAgentEventToSse(event, writeEvent, { workflowIndex: currentWorkflowIndex });
             } catch (error) {
                 logger.warn('workflow_stream_event_write_failed', { component: 'api.workflow.endpoints', error: String(error) });
             }
@@ -509,7 +493,15 @@ export function registerWorkflowRoutes(app: Express): void {
         })
             .then((workflowResponse) => {
                 const typedResponse: OpenApiWorkflowResponse = workflowResponse;
-                writeEvent('done', typedResponse);
+                writeEvent('done', {
+                    ...typedResponse,
+                    meta: {
+                        ...workflowResponse.meta,
+                        startedAt: startedAt.toISOString(),
+                        durationMs: Date.now() - startedAt.getTime(),
+                        requestId: req.requestId,
+                    },
+                });
                 logger.info('workflow_stream_completed', {
                     component: 'api.workflow.endpoints',
                     stepCount: workflowResponse.steps.length,

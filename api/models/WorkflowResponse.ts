@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { WorkflowStepResult } from './WorkflowStepResult';
 import {
     WorkflowStepResultFromJSON,
@@ -45,6 +52,12 @@ export interface WorkflowResponse {
      * @memberof WorkflowResponse
      */
     totalDurationMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof WorkflowResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -67,6 +80,7 @@ export function WorkflowResponseFromJSONTyped(json: any, ignoreDiscriminator: bo
         'steps': json['steps'] == null ? undefined : ((json['steps'] as Array<any>).map(WorkflowStepResultFromJSON)),
         'allSucceeded': json['allSucceeded'] == null ? undefined : json['allSucceeded'],
         'totalDurationMs': json['totalDurationMs'] == null ? undefined : json['totalDurationMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -84,6 +98,7 @@ export function WorkflowResponseFromJSONTyped(json: any, ignoreDiscriminator: bo
         'steps': value['steps'] == null ? undefined : ((value['steps'] as Array<any>).map(WorkflowStepResultToJSON)),
         'allSucceeded': value['allSucceeded'],
         'totalDurationMs': value['totalDurationMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

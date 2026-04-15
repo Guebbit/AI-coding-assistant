@@ -20,6 +20,13 @@ import {
     LintResponseFindingsInnerToJSON,
     LintResponseFindingsInnerToJSONTyped,
 } from './LintResponseFindingsInner';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { LintResponseSummary } from './LintResponseSummary';
 import {
     LintResponseSummaryFromJSON,
@@ -76,6 +83,12 @@ export interface LintResponse {
      * @memberof LintResponse
      */
     latencyMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof LintResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -102,6 +115,7 @@ export function LintResponseFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'findings': json['findings'] == null ? undefined : ((json['findings'] as Array<any>).map(LintResponseFindingsInnerFromJSON)),
         'llmModelUsed': json['llmModelUsed'] == null ? undefined : json['llmModelUsed'],
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -123,6 +137,7 @@ export function LintResponseFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'findings': value['findings'] == null ? undefined : ((value['findings'] as Array<any>).map(LintResponseFindingsInnerToJSON)),
         'llmModelUsed': value['llmModelUsed'],
         'latencyMs': value['latencyMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

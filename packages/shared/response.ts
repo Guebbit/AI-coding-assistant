@@ -10,6 +10,41 @@
 import type { Response } from 'express';
 
 /**
+ * Standard operational metadata attached to successful API responses.
+ *
+ * This object is intentionally optional and sparse: endpoints should only
+ * populate fields that are genuinely available for that operation.
+ */
+export interface IResponseMeta {
+    /** Wall-clock duration in milliseconds for the handled operation. */
+    durationMs?: number;
+    /** ISO 8601 timestamp indicating when processing started. */
+    startedAt?: string;
+    /** Prompt token count (when provided by the model/provider). */
+    promptTokens?: number;
+    /** Completion token count (when provided by the model/provider). */
+    completionTokens?: number;
+    /** Total token count (prompt + completion) when available. */
+    totalTokens?: number;
+    /** Single model used for the operation when exactly one is relevant. */
+    model?: string;
+    /** Multiple models used during a composed or routed operation. */
+    models?: string[];
+    /** Active model routing profile for the request when applicable. */
+    profile?: string;
+    /** Number of reasoning/orchestration steps executed when applicable. */
+    steps?: number;
+    /** Number of tool invocations performed when applicable. */
+    toolCalls?: number;
+    /** Final context length in characters when applicable. */
+    contextLength?: number;
+    /** Correlation identifier for the request, when available. */
+    requestId?: string;
+    /** Whether memory/context retrieval provided non-empty memory. */
+    memoryUsed?: boolean;
+}
+
+/**
  * Shared neutral response fields used by both success and rejection payloads.
  */
 export interface IResponseNeutral {
@@ -29,6 +64,8 @@ export interface IResponseNeutral {
 export interface IResponseSuccess<T> extends IResponseNeutral {
     /** Optional business payload returned on success. */
     data?: T;
+    /** Optional operational metadata for observability and diagnostics. */
+    meta?: IResponseMeta;
     /** Success payloads cannot carry error arrays. */
     errors: never;
 }
@@ -50,14 +87,21 @@ export interface IResponseReject extends IResponseNeutral {
  * @param data - Payload to include in `data`.
  * @param status - HTTP status code to embed in the envelope.
  * @param message - Optional response message.
+ * @param meta - Optional operational metadata.
  * @returns A typed success envelope.
  */
-export const generateSuccess = <T>(data: T, status = 200, message = ''): IResponseSuccess<T> =>
+export const generateSuccess = <T>(
+    data: T,
+    status = 200,
+    message = '',
+    meta?: IResponseMeta
+): IResponseSuccess<T> =>
     ({
         success: true,
         status,
         message,
-        data
+        data,
+        meta
     }) as IResponseSuccess<T>;
 
 /**
@@ -68,10 +112,16 @@ export const generateSuccess = <T>(data: T, status = 200, message = ''): IRespon
  * @param data - Payload to include in `data`.
  * @param status - HTTP status code.
  * @param message - Optional response message.
+ * @param meta - Optional operational metadata.
  * @returns The Express response send result.
  */
-export const successResponse = <T>(response: Response, data: T, status = 200, message = '') =>
-    response.status(status).json(generateSuccess(data, status, message));
+export const successResponse = <T>(
+    response: Response,
+    data: T,
+    status = 200,
+    message = '',
+    meta?: IResponseMeta
+) => response.status(status).json(generateSuccess(data, status, message, meta));
 
 /**
  * Build a rejection payload (not yet sent).

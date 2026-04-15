@@ -20,18 +20,6 @@
  * const result = await orchestrator.run("Build a REST API with auth and tests");
  * ```
  *
- * ## Migration notes
- *
- * This module **replaces** `packages/swarm/orchestrator.ts`.
- * The legacy `SwarmOrchestrator` class is kept in place and marked
- * `@deprecated`; it will be removed in a follow-up PR once all callers
- * have been verified against the new graph-based orchestrator.
- *
- * The new `LangGraphSwarmOrchestrator` exposes the same `run()` interface
- * (`run(task, config): Promise<ISwarmResult>`) so drop-in replacement is
- * straightforward via `apps/api/agents.ts` — no API or endpoint changes
- * are required.
- *
  * @module orchestrator/graph
  */
 
@@ -84,27 +72,10 @@ export function buildSwarmGraph(tools: ITool[], processors: IProcessor[]) {
 /* ── LangGraphSwarmOrchestrator ──────────────────────────────────────── */
 
 /**
- * Drop-in replacement for the legacy {@link SwarmOrchestrator}.
+ * Swarm orchestrator backed by a LangGraph state machine.
  *
- * Wraps the compiled LangGraph swarm state machine and exposes the same
- * `run(task, config): Promise<ISwarmResult>` interface, so API route
- * modules (`apps/api/agents.ts`) require no changes beyond swapping the
- * import.
- *
- * Differences from the legacy orchestrator:
- * - Orchestration is defined as an explicit state machine (graph), not
- *   an imperative sequence of method calls.
- * - Supports cyclic review→retry workflows out of the box.
- * - Graph topology is inspectable, serialisable, and extensible via
- *   LangGraph's node/edge API.
- * - Human-in-the-loop interrupts can be added in a future PR by wiring
- *   a LangGraph `interrupt()` call into the review node.
- *
- * @example
- * ```typescript
- * const orchestrator = new LangGraphSwarmOrchestrator(readOnlyTools, [verificationProcessor]);
- * const result = await orchestrator.run("Build a React app with auth and tests");
- * ```
+ * Orchestration is modelled as an explicit graph and supports cyclic
+ * review→retry workflows.
  */
 export class LangGraphSwarmOrchestrator {
     /**
@@ -154,6 +125,48 @@ export class LangGraphSwarmOrchestrator {
             subtaskResults: finalState.subtaskResults,
             totalDurationMs: finalState.totalDurationMs,
             decomposition: finalState.decomposition!
+        };
+        const modelsUsed = new Set<string>();
+        let promptTokens: number | undefined;
+        let completionTokens: number | undefined;
+        let totalSteps = 0;
+        let totalToolCalls = 0;
+        let maxContextLength = 0;
+        let memoryUsed = false;
+        for (const subtaskResult of result.subtaskResults) {
+            if (!subtaskResult.meta) continue;
+            for (const model of subtaskResult.meta.models ?? []) {
+                modelsUsed.add(model);
+            }
+            if (typeof subtaskResult.meta.promptTokens === 'number') {
+                promptTokens = (promptTokens ?? 0) + subtaskResult.meta.promptTokens;
+            }
+            if (typeof subtaskResult.meta.completionTokens === 'number') {
+                completionTokens = (completionTokens ?? 0) + subtaskResult.meta.completionTokens;
+            }
+            totalSteps += subtaskResult.meta.steps ?? 0;
+            totalToolCalls += subtaskResult.meta.toolCalls ?? 0;
+            maxContextLength = Math.max(maxContextLength, subtaskResult.meta.contextLength ?? 0);
+            memoryUsed = memoryUsed || subtaskResult.meta.memoryUsed === true;
+        }
+        const models = [...modelsUsed];
+        const totalTokens =
+            typeof promptTokens === 'number' && typeof completionTokens === 'number'
+                ? promptTokens + completionTokens
+                : undefined;
+        result.meta = {
+            startedAt: startTime.toISOString(),
+            durationMs: result.totalDurationMs,
+            ...(models.length > 0
+                ? { models, model: models.length === 1 ? models[0] : undefined }
+                : {}),
+            ...(typeof promptTokens === 'number' ? { promptTokens } : {}),
+            ...(typeof completionTokens === 'number' ? { completionTokens } : {}),
+            ...(typeof totalTokens === 'number' ? { totalTokens } : {}),
+            ...(totalSteps > 0 ? { steps: totalSteps } : {}),
+            ...(totalToolCalls > 0 ? { toolCalls: totalToolCalls } : {}),
+            ...(maxContextLength > 0 ? { contextLength: maxContextLength } : {}),
+            memoryUsed
         };
 
         logger.info('langgraph_swarm_run_completed', {

@@ -132,7 +132,7 @@ app.post("/run", (req, res) => {
 
   agent
     .run(task, profile ? { profile: profile as ModelProfile } : undefined)
-    .then((result) => {
+    .then((runResult) => {
       logger.info("run_request_completed", {
         component: "api.server",
         taskLength: task.length,
@@ -140,8 +140,11 @@ app.post("/run", (req, res) => {
         profile: profile ?? null,
         requestId: req.requestId,
       });
-      const response: RunResponse = { result };
-      successResponse(res, response);
+      const response: RunResponse = { result: runResult.answer };
+      successResponse(res, response, 200, "", {
+        ...runResult.meta,
+        requestId: req.requestId,
+      });
     })
     .catch((error: unknown) => {
       logger.error("run_request_failed", { component: "api.server", error: String(error), requestId: req.requestId });
@@ -156,8 +159,12 @@ app.post("/run", (req, res) => {
  * Returns 200 OK with a timestamp.
  */
 app.get("/health", (_req, res) => {
+  const startedAt = new Date();
   const response: HealthResponse = { status: "ok", timestamp: new Date() };
-  successResponse(res, response);
+  successResponse(res, response, 200, "", {
+    startedAt: startedAt.toISOString(),
+    durationMs: Date.now() - startedAt.getTime(),
+  });
 });
 
 /**
