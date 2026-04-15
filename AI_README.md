@@ -709,7 +709,7 @@ SSE events for `/run/swarm/stream`:
 - PostgreSQL persistence: all `saveAgentRun` / `saveSwarmRun` / `saveEvalResult` calls are wrapped in `.catch()` in the agent/swarm; a DB outage only emits a warning log and never crashes the agent. Set `MANNA_DB_ENABLED=false` to disable entirely.
 - Global Express error handler catches `MulterError`, `ExtendedError`, and generic `Error`; all rejections flow through `rejectResponse` with a typed envelope.
 - Nodemailer (`sendMail`) is only active when `SMTP_HOST` is set; `isMailEnabled()` must be checked before calling `sendMail()`; a missing SMTP config never crashes the server.
-- i18next is initialised before `app.listen()`; `t()` falls back to the raw key string if not yet initialised, so it never returns `undefined`.
+- i18next is initialized before `app.listen()`; `t()` falls back to the raw key string if not yet initialized, so it never returns `undefined`.
 
 ---
 

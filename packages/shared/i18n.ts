@@ -1,8 +1,8 @@
 /**
- * Internationalisation (i18n) initialisation helper.
+ * Internationalization (i18n) initialization helper.
  *
  * Wraps i18next and exposes a single `t()` translation function.
- * Initialisation is gated on the presence of locale resource files —
+ * Initialization is gated on the presence of locale resource files —
  * the function is safe to call even if i18next has already been
  * initialised (it is idempotent after the first call).
  *
@@ -15,11 +15,11 @@
 
 import i18next from 'i18next';
 
-/** Whether i18next has been successfully initialised. */
-let initialised = false;
+/** Whether i18next has been successfully initialized. */
+let initialized = false;
 
 /**
- * Initialise i18next with the provided locale resources.
+ * Initialize i18next with the provided locale resources.
  *
  * Idempotent — safe to call multiple times; only the first call
  * triggers the actual setup.
@@ -30,7 +30,7 @@ let initialised = false;
 export const initI18n = (
     resources: Record<string, { translation: Record<string, unknown> }>
 ): Promise<void> => {
-    if (initialised) return Promise.resolve();
+    if (initialized) return Promise.resolve();
 
     return i18next
         .init({
@@ -40,14 +40,14 @@ export const initI18n = (
             interpolation: { escapeValue: false }
         })
         .then(() => {
-            initialised = true;
+            initialized = true;
         });
 };
 
 /**
  * Translate a key using the currently active i18next instance.
  *
- * Falls back to the raw key string if i18next is not yet initialised
+ * Falls back to the raw key string if i18next is not yet initialized
  * or if the key is not found, so callers never receive `undefined`.
  *
  * @param key - The translation key (dot-notation supported).
@@ -55,6 +55,9 @@ export const initI18n = (
  * @returns The translated string, or `key` if not found.
  */
 export const t = (key: string, options?: Record<string, unknown>): string => {
-    if (!initialised) return key;
+    if (!initialized) {
+        const defaultValue = options?.defaultValue;
+        return typeof defaultValue === 'string' ? defaultValue : key;
+    }
     return i18next.t(key, options) as string;
 };

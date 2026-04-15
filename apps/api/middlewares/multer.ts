@@ -40,10 +40,10 @@ export const upload = multer({
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_MIME_TYPES)[number])) {
       const callback = cb as (error: Error, acceptFile: boolean) => void;
-      const translated = t("error.unsupported_file_type", { mimetype: file.mimetype });
-      const message = translated === "error.unsupported_file_type"
-        ? `Unsupported file type: ${file.mimetype}`
-        : translated;
+      const message = t("error.unsupported_file_type", {
+        mimetype: file.mimetype,
+        defaultValue: `Unsupported file type: ${file.mimetype}`,
+      });
       callback(new Error(message), false);
       return;
     }
