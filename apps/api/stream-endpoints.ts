@@ -24,6 +24,7 @@ import type { IAgentEvent } from "../../packages/events/bus";
 import { getLogger } from "../../packages/logger/logger";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
+import type { ErrorResponse, RunRequest } from "../../api/models";
 
 const log = getLogger("stream-endpoints");
 
@@ -56,23 +57,21 @@ export function registerStreamRoutes(app: Express): void {
    * Each significant lifecycle event is forwarded as a typed SSE event.
    */
   app.post("/run/stream", (req: Request, res: Response) => {
-    const { task, allowWrite, profile } = req.body as {
-      task?: string;
-      allowWrite?: boolean;
-      profile?: string;
-    };
+    const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
 
     if (!task || typeof task !== "string" || task.trim() === "") {
-      res
-        .status(400)
-        .json({ error: '"task" (non-empty string) is required in the request body' });
+      const errorResponse: ErrorResponse = {
+        error: '"task" (non-empty string) is required in the request body',
+      };
+      res.status(400).json(errorResponse);
       return;
     }
 
     if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-      res.status(400).json({
+      const errorResponse: ErrorResponse = {
         error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
-      });
+      };
+      res.status(400).json(errorResponse);
       return;
     }
 

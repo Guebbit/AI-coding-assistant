@@ -18,6 +18,7 @@ import { getLogger } from "../../packages/logger/logger";
 import { createSwarmOrchestrator, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { ISwarmConfig } from "../../packages/swarm/types";
+import type { ErrorResponse, SwarmRequest, SwarmResponse } from "../../api/models";
 
 const log = getLogger("swarm-endpoints");
 
@@ -41,25 +42,25 @@ function sseFrame(eventType: string, data: unknown): string {
  * @param body - The raw request body.
  * @returns Validated fields, or an `error` string if validation fails.
  */
-function parseSwarmBody(body: Record<string, unknown>): {
+function parseSwarmBody(body: Partial<SwarmRequest>): {
   task?: string;
   config?: ISwarmConfig;
   error?: string;
 } {
-  const task = body.task as string | undefined;
+  const task = body.task;
 
   if (!task || typeof task !== "string" || task.trim() === "") {
     return { error: '"task" (non-empty string) is required in the request body' };
   }
 
-  const profile = body.profile as string | undefined;
+  const profile = body.profile;
   if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
     return {
       error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
     };
   }
 
-  const maxSubtasks = body.maxSubtasks as number | undefined;
+  const maxSubtasks = body.maxSubtasks;
   if (maxSubtasks !== undefined && (typeof maxSubtasks !== "number" || maxSubtasks < 1)) {
     return { error: '"maxSubtasks" must be a positive number' };
   }
@@ -96,11 +97,12 @@ export function registerSwarmRoutes(app: Express): void {
    */
   app.post("/run/swarm", async (req: Request, res: Response) => {
     const { task, config, error } = parseSwarmBody(
-      req.body as Record<string, unknown>,
+      req.body as Partial<SwarmRequest>,
     );
 
     if (error || !task || !config) {
-      res.status(400).json({ error });
+      const errorResponse: ErrorResponse = { error: error ?? "Invalid swarm request" };
+      res.status(400).json(errorResponse);
       return;
     }
 
@@ -121,7 +123,8 @@ export function registerSwarmRoutes(app: Express): void {
         totalDurationMs: result.totalDurationMs,
       });
 
-      res.json({
+      const response: SwarmResponse = {
+        answer: result.answer,
         result: result.answer,
         subtaskResults: result.subtaskResults.map((r) => ({
           id: r.subtask.id,
@@ -137,10 +140,13 @@ export function registerSwarmRoutes(app: Express): void {
           subtaskCount: result.decomposition.subtasks.length,
         },
         totalDurationMs: result.totalDurationMs,
-      });
+      };
+
+      res.json(response);
     } catch (error) {
       log.error("swarm_request_failed", { error: String(error) });
-      res.status(500).json({ error: String(error) });
+      const errorResponse: ErrorResponse = { error: String(error) };
+      res.status(500).json(errorResponse);
     }
   });
 
@@ -162,11 +168,12 @@ export function registerSwarmRoutes(app: Express): void {
    */
   app.post("/run/swarm/stream", (req: Request, res: Response) => {
     const { task, config, error } = parseSwarmBody(
-      req.body as Record<string, unknown>,
+      req.body as Partial<SwarmRequest>,
     );
 
     if (error || !task || !config) {
-      res.status(400).json({ error });
+      const errorResponse: ErrorResponse = { error: error ?? "Invalid swarm request" };
+      res.status(400).json(errorResponse);
       return;
     }
 

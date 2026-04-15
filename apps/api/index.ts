@@ -36,6 +36,7 @@ import { registerInfoRoutes } from "./info-endpoints";
 import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { createAgent, VALID_PROFILES } from "./agents";
 import { runMigrations } from "../../packages/persistence/migrate";
+import type { ErrorResponse, HealthResponse, RunRequest, RunResponse } from "../../api/models";
 
 const log = getLogger("api");
 
@@ -89,23 +90,21 @@ registerInfoRoutes(app);
  * Response: `{ "result": "agent's final answer" }`
  */
 app.post("/run", async (req, res) => {
-  const { task, allowWrite, profile } = req.body as {
-    task?: string;
-    allowWrite?: boolean;
-    profile?: string;
-  };
+  const { task, allowWrite, profile } = req.body as Partial<RunRequest>;
 
   if (!task || typeof task !== "string" || task.trim() === "") {
-    res
-      .status(400)
-      .json({ error: '"task" (non-empty string) is required in the request body' });
+    const errorResponse: ErrorResponse = {
+      error: '"task" (non-empty string) is required in the request body',
+    };
+    res.status(400).json(errorResponse);
     return;
   }
 
   if (profile !== undefined && !VALID_PROFILES.has(profile as ModelProfile)) {
-    res.status(400).json({
+    const errorResponse: ErrorResponse = {
       error: `"profile" must be one of: ${[...VALID_PROFILES].join(", ")}`,
-    });
+    };
+    res.status(400).json(errorResponse);
     return;
   }
 
@@ -118,10 +117,12 @@ app.post("/run", async (req, res) => {
       profile ? { profile: profile as ModelProfile } : undefined,
     );
     log.info("run_request_completed", { taskLength: task.length, writeEnabled, profile: profile ?? null });
-    res.json({ result });
+    const response: RunResponse = { result };
+    res.json(response);
   } catch (error) {
     log.error("run_request_failed", { error: String(error) });
-    res.status(500).json({ error: String(error) });
+    const errorResponse: ErrorResponse = { error: String(error) };
+    res.status(500).json(errorResponse);
   }
 });
 
@@ -132,7 +133,8 @@ app.post("/run", async (req, res) => {
  * Returns 200 OK with a timestamp.
  */
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  const response: HealthResponse = { status: "ok", timestamp: new Date() };
+  res.json(response);
 });
 
 /* Default port for the Manna API server. */

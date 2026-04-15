@@ -3,6 +3,13 @@ node_modules/
 
 # Build output
 dist/
+/api/*
+!/api/apis/
+!/api/apis/**
+!/api/models/
+!/api/models/**
+!/api/index.ts
+!/api/runtime.ts
 
 # Environment variables — never commit secrets
 .env

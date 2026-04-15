@@ -33,6 +33,11 @@ import type { IAgentEvent } from '../../packages/events/bus';
 import { getLogger } from '../../packages/logger/logger';
 import { createAgent, VALID_PROFILES } from './agents';
 import type { ModelProfile } from '../../packages/agent/model-router';
+import type {
+    ErrorResponse,
+    WorkflowRequest as OpenApiWorkflowRequest,
+    WorkflowResponse as OpenApiWorkflowResponse,
+} from '../../api/models';
 
 const log = getLogger('workflow-endpoints');
 
@@ -83,7 +88,14 @@ export const workflowRequestSchema = z.object({
      * `agent.run()` call.  Minimum 1 step, maximum 50 steps per request.
      */
     steps: z
-        .array(z.string().min(1, 'Each step must be a non-empty string'))
+        .array(
+            z.union([
+                z.string().min(1, 'Each step task must be a non-empty string'),
+                z.object({
+                    task: z.string().min(1, 'Each step task must be a non-empty string'),
+                }),
+            ]),
+        )
         .min(1, 'At least one step is required')
         .max(50, 'A workflow may contain at most 50 steps'),
 
@@ -129,7 +141,7 @@ export const workflowRequestSchema = z.object({
 });
 
 /** Inferred TypeScript type from the workflow request Zod schema. */
-export type WorkflowRequest = z.infer<typeof workflowRequestSchema>;
+export type IWorkflowRequestBody = z.infer<typeof workflowRequestSchema>;
 
 /* ── Result types ────────────────────────────────────────────────────── */
 
@@ -232,7 +244,7 @@ function sseFrame(eventType: string, data: unknown): string {
  * @returns The full workflow result object.
  */
 async function runWorkflow(
-    parsed: WorkflowRequest,
+    parsed: IWorkflowRequestBody,
     callbacks?: IWorkflowCallbacks,
 ): Promise<IWorkflowResponse> {
     const workflowStartedAt = Date.now();
@@ -240,7 +252,8 @@ async function runWorkflow(
     const effectiveMaxSteps = parsed.maxStepsPerStep ?? DEFAULT_MAX_STEPS_PER_STEP;
 
     for (let i = 0; i < parsed.steps.length; i++) {
-        const baseTask = parsed.steps[i];
+        const step = parsed.steps[i];
+        const baseTask = typeof step === 'string' ? step : step.task;
         const carryPrefix = buildCarryContext(parsed.carry, stepResults);
         const fullTask = carryPrefix ? `${carryPrefix}Current task:\n${baseTask}` : baseTask;
 
@@ -312,13 +325,23 @@ export function registerWorkflowRoutes(app: Express): void {
      * Response: `{ steps: [...], allSucceeded: bool, totalDurationMs: number }`
      */
     app.post('/workflow', async (req: Request, res: Response) => {
-        const parseResult = workflowRequestSchema.safeParse(req.body);
+        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
+        const normalizedBody = {
+            ...requestBody,
+            steps: (requestBody.steps ?? []).map((step) =>
+                typeof step === 'string' ? { task: step } : step,
+            ),
+        };
+        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
                 (i) => `${i.path.join('.')}: ${i.message}`,
             );
-            res.status(400).json({ error: 'Invalid workflow request', details: issues });
+            const errorResponse: ErrorResponse = {
+                error: `Invalid workflow request: ${issues.join('; ')}`,
+            };
+            res.status(400).json(errorResponse);
             return;
         }
 
@@ -329,9 +352,10 @@ export function registerWorkflowRoutes(app: Express): void {
             parsed.profile !== undefined &&
             !VALID_PROFILES.has(parsed.profile as ModelProfile)
         ) {
-            res.status(400).json({
+            const errorResponse: ErrorResponse = {
                 error: `"profile" must be one of: ${[...VALID_PROFILES].join(', ')}`,
-            });
+            };
+            res.status(400).json(errorResponse);
             return;
         }
 
@@ -352,10 +376,12 @@ export function registerWorkflowRoutes(app: Express): void {
                 totalDurationMs: response.totalDurationMs,
             });
 
-            res.json(response);
+            const typedResponse: OpenApiWorkflowResponse = response;
+            res.json(typedResponse);
         } catch (error) {
             log.error('workflow_request_failed', { error: String(error) });
-            res.status(500).json({ error: String(error) });
+            const errorResponse: ErrorResponse = { error: String(error) };
+            res.status(500).json(errorResponse);
         }
     });
 
@@ -379,13 +405,23 @@ export function registerWorkflowRoutes(app: Express): void {
      * - `error`           — on fatal errors; `{ error }`.
      */
     app.post('/workflow/stream', (req: Request, res: Response) => {
-        const parseResult = workflowRequestSchema.safeParse(req.body);
+        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
+        const normalizedBody = {
+            ...requestBody,
+            steps: (requestBody.steps ?? []).map((step) =>
+                typeof step === 'string' ? { task: step } : step,
+            ),
+        };
+        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
                 (i) => `${i.path.join('.')}: ${i.message}`,
             );
-            res.status(400).json({ error: 'Invalid workflow request', details: issues });
+            const errorResponse: ErrorResponse = {
+                error: `Invalid workflow request: ${issues.join('; ')}`,
+            };
+            res.status(400).json(errorResponse);
             return;
         }
 
@@ -395,9 +431,10 @@ export function registerWorkflowRoutes(app: Express): void {
             parsed.profile !== undefined &&
             !VALID_PROFILES.has(parsed.profile as ModelProfile)
         ) {
-            res.status(400).json({
+            const errorResponse: ErrorResponse = {
                 error: `"profile" must be one of: ${[...VALID_PROFILES].join(', ')}`,
-            });
+            };
+            res.status(400).json(errorResponse);
             return;
         }
 
@@ -498,7 +535,8 @@ export function registerWorkflowRoutes(app: Express): void {
             },
         })
             .then((workflowResponse) => {
-                writeEvent('done', workflowResponse);
+                const typedResponse: OpenApiWorkflowResponse = workflowResponse;
+                writeEvent('done', typedResponse);
                 log.info('workflow_stream_completed', {
                     stepCount: workflowResponse.steps.length,
                     allSucceeded: workflowResponse.allSucceeded,

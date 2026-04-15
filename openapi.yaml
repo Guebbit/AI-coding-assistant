@@ -3,6 +3,9 @@ openapi: '3.1.0'
 info:
     title: Manna AI Agent API
     version: '1.0.0'
+    contact:
+        name: Manna API
+        url: https://github.com/Guebbit/manna
     description: |
         Local-first agentic AI platform. Exposes the agent reasoning loop, IDE-specific
         direct-LLM endpoints, file-upload helpers,
@@ -57,16 +60,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    status:
-                                        type: string
-                                        example: ok
-                                    timestamp:
-                                        type: string
-                                        format: date-time
-                                        description: ISO 8601 timestamp of when the health check was served.
-                                        example: '2026-04-13T20:05:07.044Z'
+                                $ref: '#/components/schemas/HealthResponse'
 
     /run:
         post:
@@ -275,15 +269,15 @@ paths:
                                 summary: Two-step workflow (default carry=summary)
                                 value:
                                     steps:
-                                        - 'List all TypeScript files under packages/'
-                                        - 'Summarise the purpose of each listed file'
+                                        - task: 'List all TypeScript files under packages/'
+                                        - task: 'Summarise the purpose of each listed file'
                             withOptions:
                                 summary: Multi-step write workflow with per-step cap
                                 value:
                                     steps:
-                                        - 'Read the existing index.ts and summarise its structure'
-                                        - 'Create a new helper module at src/utils/helper.ts'
-                                        - 'Write unit tests for the helper module'
+                                        - task: 'Read the existing index.ts and summarise its structure'
+                                        - task: 'Create a new helper module at src/utils/helper.ts'
+                                        - task: 'Write unit tests for the helper module'
                                     allowWrite: true
                                     profile: code
                                     carry: full
@@ -383,7 +377,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/LintRequest'
+                            $ref: '#/components/schemas/LintConventionsRequest'
             responses:
                 '200':
                     description: Lint findings
@@ -443,7 +437,7 @@ paths:
                                 file:
                                     type: string
                                     format: binary
-                                    description: Image file (JPEG, PNG, WebP, etc.)
+                                    description: 'Allowed image MIME types: image/jpeg, image/png, image/gif, image/webp.'
                                 prompt:
                                     type: string
                                     description: Optional prompt to guide the classification
@@ -485,7 +479,7 @@ paths:
                                 file:
                                     type: string
                                     format: binary
-                                    description: Audio file (MP3, WAV, M4A, etc.)
+                                    description: 'Allowed audio MIME types: audio/mpeg, audio/wav, audio/ogg, audio/webm, audio/mp4.'
                                 model:
                                     type: string
                                     description: Override the STT model
@@ -530,7 +524,7 @@ paths:
                                 file:
                                     type: string
                                     format: binary
-                                    description: PDF file
+                                    description: 'Allowed document MIME type: application/pdf.'
             responses:
                 '200':
                     description: Extracted PDF content
@@ -914,11 +908,26 @@ components:
     schemas:
         ErrorResponse:
             type: object
+            required: [error]
             properties:
                 error:
                     type: string
                     description: Human-readable error message.
                     example: "Library 'scientific-american' not found"
+
+        HealthResponse:
+            type: object
+            required: [status, timestamp]
+            properties:
+                status:
+                    type: string
+                    description: Health status marker.
+                    example: ok
+                timestamp:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp of when the health check was served.
+                    example: '2026-04-13T20:05:07.044Z'
 
         # ── Core schemas ─────────────────────────────────────────────────────────
 
@@ -1005,9 +1014,13 @@ components:
         SwarmResponse:
             type: object
             properties:
-                result:
+                answer:
                     type: string
                     description: The synthesised final answer.
+                result:
+                    type: string
+                    deprecated: true
+                    description: Deprecated alias for `answer` kept for backward compatibility.
                 subtaskResults:
                     type: array
                     items:
@@ -1035,16 +1048,14 @@ components:
                 steps:
                     type: array
                     items:
-                        type: string
-                        minLength: 1
+                        $ref: '#/components/schemas/StepDefinition'
                     minItems: 1
                     maxItems: 50
                     description: |
-                        Ordered list of step task strings.  Each string is an independent
-                        natural-language task submitted to a fresh `agent.run()` call.
+                        Ordered list of workflow step definitions.
                     example:
-                        - 'List all TypeScript files under packages/'
-                        - 'Summarise the purpose of each listed file'
+                        - task: 'List all TypeScript files under packages/'
+                        - task: 'Summarise the purpose of each listed file'
                 allowWrite:
                     type: boolean
                     default: false
@@ -1140,7 +1151,17 @@ components:
                 latencyMs:
                     type: integer
 
-        LintRequest:
+        StepDefinition:
+            type: object
+            required: [task]
+            properties:
+                task:
+                    type: string
+                    minLength: 1
+                    description: Task text to run for this workflow step.
+            description: Workflow step input definition.
+
+        LintConventionsRequest:
             type: object
             required: [code]
             properties:
@@ -1150,6 +1171,22 @@ components:
                 language:
                     type: string
                     description: Programming language identifier.
+                filename:
+                    type: string
+                    description: Optional source file name/path for context.
+                includeLlm:
+                    type: boolean
+                    default: true
+                    description: Whether to include the optional LLM enrichment pass.
+                model:
+                    type: string
+                    description: Override the model used for LLM enrichment.
+                maxFindings:
+                    type: integer
+                    minimum: 1
+                    maximum: 200
+                    default: 80
+                    description: Maximum number of findings returned.
 
         LintResponse:
             type: object

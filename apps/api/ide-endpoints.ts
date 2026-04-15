@@ -19,6 +19,15 @@ import { z } from "zod";
 import ts from "typescript";
 import { generate } from "../../packages/llm/ollama";
 import { getLogger } from "../../packages/logger/logger";
+import type {
+  AutocompleteRequest,
+  AutocompleteResponse,
+  ErrorResponse,
+  LintConventionsRequest,
+  LintResponse,
+  PageReviewRequest,
+  PageReviewResponse,
+} from "../../api/models";
 
 const log = getLogger("api-ide");
 
@@ -146,11 +155,11 @@ const autocompleteSchema = z.object({
 /** Zod schema for `POST /lint-conventions` request body. */
 const lintConventionsSchema = z.object({
   /** Source code to analyse. */
-  content: z.string().min(1),
+  code: z.string().min(1),
   /** Programming language hint. */
   language: z.string().min(1).optional(),
   /** File path used for language inference and diagnostics context. */
-  filePath: z.string().min(1).optional(),
+  filename: z.string().min(1).optional(),
   /** Whether to enrich findings with an LLM review pass (default: `true`). */
   includeLlm: z.boolean().optional().default(true),
   /** Override the LLM model used for enrichment. */
@@ -162,11 +171,11 @@ const lintConventionsSchema = z.object({
 /** Zod schema for `POST /page-review` request body. */
 const pageReviewSchema = z.object({
   /** Full source code to review. */
-  content: z.string().min(1),
+  code: z.string().min(1),
   /** Programming language hint. */
   language: z.string().min(1).optional(),
   /** File path — helps the LLM understand context. */
-  filePath: z.string().min(1).optional(),
+  filename: z.string().min(1).optional(),
   /** Optional free-text project context the reviewer should consider. */
   projectContext: z.string().optional(),
   /** Override the LLM model used for the review. */
@@ -675,10 +684,12 @@ function sendRateLimitedResponse(
   retryAfterSeconds: number,
 ): void {
   response.setHeader("Retry-After", String(retryAfterSeconds));
-  response.status(429).json({
+  const payload = {
     error: "Rate limit exceeded",
     retryAfterSeconds,
-  });
+  };
+  const errorResponse: ErrorResponse = payload;
+  response.status(429).json(errorResponse);
 }
 
 /**
@@ -699,12 +710,14 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const parsed = autocompleteSchema.safeParse(request.body);
+    const parsed = autocompleteSchema.safeParse(request.body as AutocompleteRequest);
     if (!parsed.success) {
-      response.status(400).json({
+      const payload = {
         error: "Invalid request body",
         details: parsed.error.flatten(),
-      });
+      };
+      const errorResponse: ErrorResponse = payload;
+      response.status(400).json(errorResponse);
       return;
     }
 
@@ -716,14 +729,16 @@ export function registerIdeRoutes(application: express.Express): void {
     const now = Date.now();
     const cacheHit = autocompleteCache.get(cacheKey);
     if (cacheHit && cacheHit.expiresAt > now) {
-      response.json({
+      const payload = {
         completion: cacheHit.completion,
         model: cacheHit.model,
         language: cacheHit.language,
         cached: true,
         latencyMs: Date.now() - startedAt,
         createdAtIso: cacheHit.createdAtIso,
-      });
+      };
+      const typedPayload: AutocompleteResponse = payload;
+      response.json(typedPayload);
       return;
     }
 
@@ -766,13 +781,15 @@ export function registerIdeRoutes(application: express.Express): void {
         expiresAt: now + AUTOCOMPLETE_CACHE_TTL_MS,
       });
       pruneAutocompleteCache();
-      response.json(payload);
+      const typedPayload: AutocompleteResponse = payload;
+      response.json(typedPayload);
     } catch (error) {
       log.error("autocomplete_failed", {
         error: String(error),
         language,
       });
-      response.status(500).json({ error: String(error) });
+      const errorResponse: ErrorResponse = { error: String(error) };
+      response.status(500).json(errorResponse);
     }
   });
 
@@ -784,27 +801,38 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const parsed = lintConventionsSchema.safeParse(request.body);
+    const requestBody = request.body as LintConventionsRequest & {
+      content?: string;
+      filePath?: string;
+    };
+    const normalizedBody = {
+      ...requestBody,
+      code: requestBody.code ?? requestBody.content,
+      filename: requestBody.filename ?? requestBody.filePath,
+    };
+    const parsed = lintConventionsSchema.safeParse(normalizedBody);
     if (!parsed.success) {
-      response.status(400).json({
+      const payload = {
         error: "Invalid request body",
         details: parsed.error.flatten(),
-      });
+      };
+      const errorResponse: ErrorResponse = payload;
+      response.status(400).json(errorResponse);
       return;
     }
 
     const startedAt = Date.now();
-    const filePath = parsed.data.filePath?.trim() || "in-memory.ts";
+    const filePath = parsed.data.filename?.trim() || "in-memory.ts";
     const language = inferLanguage(parsed.data.language, filePath);
     const deterministicFindings = [
       ...(isTypeScriptLike(language) || isJavaScriptLike(language)
-        ? getTypeScriptFindings(parsed.data.content, filePath, language)
+        ? getTypeScriptFindings(parsed.data.code, filePath, language)
         : []),
-      ...getConventionFindings(parsed.data.content, language),
+      ...getConventionFindings(parsed.data.code, language),
     ];
 
     let llmFindings: IFinding[] = [];
-    let llmModelUsed: string | null = null;
+    let llmModelUsed: string | undefined;
     if (parsed.data.includeLlm) {
       const llmModel = parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL;
       llmModelUsed = llmModel;
@@ -815,7 +843,7 @@ export function registerIdeRoutes(application: express.Express): void {
         `Avoid duplicates of obvious syntax errors.\n` +
         `Language: ${language}\n` +
         `File path: ${filePath}\n` +
-        `Code:\n${parsed.data.content}`;
+        `Code:\n${parsed.data.code}`;
 
       llmFindings = await withTimeout(
         generate(reviewPrompt, {
@@ -860,7 +888,7 @@ export function registerIdeRoutes(application: express.Express): void {
       llmCount: llmFindings.length,
     };
 
-    response.json({
+    const payload = {
       requestId: randomUUID(),
       language,
       filePath,
@@ -868,7 +896,9 @@ export function registerIdeRoutes(application: express.Express): void {
       findings,
       llmModelUsed,
       latencyMs: Date.now() - startedAt,
-    });
+    };
+    const typedPayload: LintResponse = payload;
+    response.json(typedPayload);
   });
 
   application.post("/page-review", async (request, response) => {
@@ -879,18 +909,29 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const parsed = pageReviewSchema.safeParse(request.body);
+    const requestBody = request.body as PageReviewRequest & {
+      content?: string;
+      filePath?: string;
+    };
+    const normalizedBody = {
+      ...requestBody,
+      code: requestBody.code ?? requestBody.content,
+      filename: requestBody.filename ?? requestBody.filePath,
+    };
+    const parsed = pageReviewSchema.safeParse(normalizedBody);
     if (!parsed.success) {
-      response.status(400).json({
+      const payload = {
         error: "Invalid request body",
         details: parsed.error.flatten(),
-      });
+      };
+      const errorResponse: ErrorResponse = payload;
+      response.status(400).json(errorResponse);
       return;
     }
 
     const startedAt = Date.now();
     const requestId = randomUUID();
-    const filePath = parsed.data.filePath?.trim() ?? "in-memory";
+    const filePath = parsed.data.filename?.trim() ?? "in-memory";
     const language = inferLanguage(parsed.data.language, filePath);
     const model = parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL;
     const projectContext = parsed.data.projectContext?.trim() ?? "";
@@ -903,7 +944,7 @@ export function registerIdeRoutes(application: express.Express): void {
       `Language: ${language}\n` +
       `File path: ${filePath}\n` +
       `Project context: ${projectContext || "none"}\n` +
-      `Code:\n${parsed.data.content}`;
+      `Code:\n${parsed.data.code}`;
 
     try {
       const rawReview = await withTimeout(
@@ -920,21 +961,26 @@ export function registerIdeRoutes(application: express.Express): void {
         "page-review",
       );
       const categories = parsePageReviewBody(rawReview);
-      response.json({
+      const payload = {
         requestId,
         model,
         language,
         filePath,
+        findings: Object.values(categories).flat(),
         categories,
         latencyMs: Date.now() - startedAt,
-      });
+      };
+      const typedPayload: PageReviewResponse = payload;
+      response.json(typedPayload);
     } catch (error) {
       log.error("page_review_failed", {
         error: String(error),
         language,
         filePath,
       });
-      response.status(500).json({ error: String(error), requestId });
+      const payload = { error: String(error), requestId };
+      const errorResponse: ErrorResponse = payload;
+      response.status(500).json(errorResponse);
     }
   });
 }

@@ -376,7 +376,7 @@ These are **not** agent-loop routes. They accept `multipart/form-data` file uplo
 | `POST /upload/speech-to-text` | `file` (required), `model?`, `language?`, `prompt?` | Transcribe an uploaded audio file via `TOOL_STT_MODEL`      |
 | `POST /upload/read-pdf`       | `file` (required)                                   | Extract text from an uploaded PDF                           |
 
-Max upload size: 50 MB. Uses `multer` with in-memory storage.
+Max upload size: 50 MB. Uses shared `apps/api/middlewares/multer.ts` (in-memory storage + MIME allowlist).
 
 ---
 
@@ -548,7 +548,10 @@ SSE events for `/run/swarm/stream`:
 │       ├── workflow-endpoints.ts — registerWorkflowRoutes(); POST /workflow, POST /workflow/stream
 │       ├── ide-endpoints.ts  — registerIdeRoutes(); /autocomplete, /lint-conventions, /page-review
 │       ├── upload-endpoints.ts — registerUploadRoutes(); /upload/image-classify, /upload/speech-to-text, /upload/read-pdf
-│       └── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
+│       ├── info-endpoints.ts — registerInfoRoutes(); GET /info/modes, GET /info/models, GET /help
+│       └── middlewares/
+│           └── multer.ts      — shared upload middleware; in-memory storage + MIME allowlist + 50 MB limit
+├── api/                       — generated TypeScript OpenAPI client/models (`npm run genapi`)
 ├── packages/
 │   ├── agent/
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; per-run maxSteps override; diagnostic accumulation; self-debug on max_steps

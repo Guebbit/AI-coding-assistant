@@ -17,17 +17,11 @@
  */
 
 import type express from "express";
-import multer from "multer";
 import { imageClassifyTool, speechToTextTool, readPdfTool } from "../../packages/tools/index";
 import { getLogger } from "../../packages/logger/logger";
+import { upload } from "./middlewares/multer";
 
 const log = getLogger("api-upload");
-
-/** Multer instance — files are kept in memory (Buffer) for direct processing. */
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
-});
 
 /**
  * Register upload-based routes on the Express app.
