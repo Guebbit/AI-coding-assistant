@@ -23,6 +23,9 @@ By calling Manna's `/run` endpoint, the model can reason over multiple steps and
 - 🖼️ **Vision**: image classification and description
 - 🎙️ **Audio**: speech-to-text transcription
 - 🗄️ **Data**: MySQL read-only querying
+- 📄 **Documents**: DOCX, CSV, HTML, JSON, Markdown extraction; multi-document ingestion with semantic embedding
+- 📊 **Diagrams**: Mermaid diagram generation from text descriptions
+- 🕸️ **Knowledge Graph**: entity/relationship extraction and Neo4j-backed graph queries
 - 🧠 **Memory**: short-term ring buffer + semantic recall via Qdrant
 - 🧩 **Extensible**: easy to add new tools and domains
 
@@ -38,16 +41,20 @@ Planned expansions include:
 ## Architecture
 
 ```text
-ai-assistant/
+manna/
 ├── apps/
-│   └── api/              ← Express API entry point (`POST /run`)
+│   └── api/              ← Express API entry point
 ├── packages/
-│   ├── agent/            ← Agent loop
+│   ├── agent/            ← Agent loop + model router
 │   ├── events/           ← Event bus
-│   ├── llm/              ← Ollama wrapper ("lim" in your note likely means this)
-│   ├── memory/           ← In-memory short-term memory
+│   ├── graph/            ← Neo4j knowledge graph client
+│   ├── llm/              ← Ollama wrapper + embeddings
+│   ├── memory/           ← Hybrid ring buffer + Qdrant memory
+│   ├── orchestrator/     ← LangGraph swarm orchestrator
+│   ├── processors/       ← Agent middleware (verification, reranker)
+│   ├── shared/           ← Shared utilities (paths, SSE, i18n, etc.)
 │   └── tools/            ← Tool interface + built-in tools
-├── docker-compose.yml    ← Ollama + Qdrant compose stack
+├── docker-compose.yml    ← Ollama + Qdrant + PostgreSQL + Neo4j compose stack
 ├── .env.example          ← Compose env template
 └── data/                 ← Runtime data (gitignored)
 ```
@@ -98,10 +105,12 @@ curl -X POST http://localhost:3001/run \
 
 ## How tools are used
 
-Tools are configured in `apps/api/index.ts` when creating the `Agent`.
+Tools are configured in `apps/api/agents.ts` when creating the `Agent`.
 
 <details>
 <summary>Current enabled tools (click to expand)</summary>
+
+**Read-only tools** (always available):
 
 - `read_file` — read files inside project root
 - `shell` — run allowlisted shell commands
@@ -112,14 +121,26 @@ Tools are configured in `apps/api/index.ts` when creating the `Agent`.
 - `speech_to_text` — transcribe audio using an OpenAI-compatible endpoint
 - `read_pdf` — extract text from PDFs
 - `code_autocomplete` — produce IDE-style completion suggestions
-- `write_file` — write files under generated projects root (**disabled by default**)
-- `scaffold_project` — copy a boilerplate into generated projects root (**disabled by default**)
+- `generate_diagram` — generate Mermaid diagrams from text descriptions
+- `read_docx` — extract text from `.docx` files
+- `read_csv` — parse CSV/TSV files
+- `read_html` — extract text from HTML files
+- `read_json` — read and parse JSON files
+- `read_markdown` — read Markdown files
+- `query_knowledge_graph` — traverse the Neo4j knowledge graph
+
+**Write tools** (available only when `"allowWrite": true`):
+
+- `write_file` — write files under generated projects root
+- `scaffold_project` — copy a boilerplate into generated projects root
+- `document_ingest` — chunk, embed, and upsert a document into Qdrant
+- `knowledge_graph` — extract entities and relationships via NER into Neo4j
 
 </details>
 
 `browser_fetch` is enabled by default.
 Chromium is installed automatically during `npm install` via `postinstall`.
-`write_file` and `scaffold_project` are available only when request body sets `"allowWrite": true`.
+Write tools (`write_file`, `scaffold_project`, `document_ingest`, `knowledge_graph`) are available only when the request body sets `"allowWrite": true`.
 
 ## How the agentic loop works
 
@@ -161,6 +182,13 @@ Used by Node app (shell environment, `.env` loader, container env, etc.):
 - `MYSQL_USER` (default `root`)
 - `MYSQL_PASSWORD` (default empty)
 - `MYSQL_DATABASE` (default empty)
+- `PG_HOST` (default `localhost`)
+- `PG_PORT` (default `5432`)
+- `PG_USER` (default `postgres`)
+- `PG_PASSWORD` (default empty)
+- `PG_DATABASE` (default empty)
+- `MONGO_URI` (default `mongodb://localhost:27017`)
+- `MONGO_DATABASE` (default empty)
 - `QDRANT_URL` (default `http://localhost:6333`)
 - `QDRANT_COLLECTION` (example: `agent_memory`)
 - `LOG_ENABLED` (`true`/`false`, default `true`)
@@ -204,11 +232,10 @@ Runtime requirements:
 
 If Qdrant is unavailable, the app continues with local in-memory recent memory only.
 
-## Why compose has no database
+## Database services in compose
 
-Correct: `docker-compose.yml` does **not** include MySQL.
-
-Reason: MySQL is optional and only needed if you want `mysql_query` to hit a real DB.
+`docker-compose.yml` includes **PostgreSQL** (for agent run persistence) and **Neo4j** (for the knowledge graph).
+MySQL is **not** included — it is optional and only needed if you want `mysql_query` to hit a real DB.
 You can either:
 
 - point to an external/local MySQL instance via `MYSQL_*`, or

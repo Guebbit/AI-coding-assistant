@@ -41,7 +41,7 @@
 | `AGENT_MODEL_DEFAULT`          | `llama3.1:8b-instruct-q8_0`           | Same as FAST; safe fallback                                                      |
 | `AGENT_MODEL_ROUTER_MODEL`     | `phi4-mini:latest`                    | Fast routing; ~3.8 B params ≈ 2× throughput vs 8 B; model must return valid JSON |
 | `OLLAMA_EMBED_MODEL`           | `nomic-embed-text`                    | Efficient, high-quality embeddings                                               |
-| `TOOL_VISION_MODEL`            | `llava:13b-v1.6-vicuna-q4_K_M`        | Multimodal; 13 B Q4 fits in VRAM                                                 |
+| `TOOL_VISION_MODEL`            | `llava:13b-v1.6-vicuna-q4_K_M`        | Recommended upgrade from the default `llava-llama3`; 13 B Q4 fits in VRAM       |
 | `TOOL_STT_MODEL`               | `whisper`                             | No GPU requirement; CPU is fast enough                                           |
 | `TOOL_IDE_MODEL`               | `qwen2.5-coder:7b-instruct-q8_0`      | Sub-100 ms completions; cursor-time latency                                      |
 | `TOOL_DIAGRAM_MODEL`           | `qwen2.5-coder:14b-instruct-q8_0`     | Code-specialised model excels at structured Mermaid syntax generation            |
@@ -230,6 +230,8 @@ Tools registered per request in `apps/api/agents.ts`:
 | `query_knowledge_graph` | `knowledge.graph.query.ts` | no      | Traverses the Neo4j knowledge graph; supports entity lookup, relationship listing, and raw read-only Cypher; fails open if unreachable |
 
 Write tools (`write_file`, `scaffold_project`, `document_ingest`, `knowledge_graph`) are only registered when the request body contains `"allowWrite": true`.
+
+**Exported but not yet registered**: `pg_query` (`pg.query.ts`) and `mongo_query` (`mongo.query.ts`) are fully implemented and exported from `packages/tools/index.ts` but are not imported in `apps/api/agents.ts`. To enable them, add them to the `readOnlyTools` array in `agents.ts`.
 
 ---
 
@@ -529,8 +531,15 @@ SSE events for `/run/swarm/stream`:
 | `RATE_LIMIT_WINDOW_MS`                   | `900000`                  | Global API rate-limit window in milliseconds (default 15 minutes).                                                                                    |
 | `RATE_LIMIT_MAX`                         | `100`                     | Global API max requests per IP per rate-limit window.                                                                                                 |
 | `MYSQL_HOST/PORT/USER/PASSWORD/DATABASE` | various                   | MySQL connection for `mysql_query`                                                                                                                    |
+| `PG_HOST`                                | `localhost`               | PostgreSQL host for `pg_query` tool                                                                                                                   |
+| `PG_PORT`                                | `5432`                    | PostgreSQL port for `pg_query` tool                                                                                                                   |
+| `PG_USER`                                | `postgres`                | PostgreSQL user for `pg_query` tool                                                                                                                   |
+| `PG_PASSWORD`                            | _(empty)_                 | PostgreSQL password for `pg_query` tool                                                                                                               |
+| `PG_DATABASE`                            | _(empty)_                 | PostgreSQL database name for `pg_query` tool                                                                                                          |
+| `MONGO_URI`                              | `mongodb://localhost:27017` | MongoDB connection URI for `mongo_query` tool                                                                                                       |
+| `MONGO_DATABASE`                         | _(empty)_                 | MongoDB database name for `mongo_query` tool                                                                                                          |
 | `QDRANT_URL`                             | `http://localhost:6333`   | Qdrant endpoint for semantic memory                                                                                                                   |
-| `QDRANT_COLLECTION`                      | —                         | Qdrant collection name                                                                                                                                |
+| `QDRANT_COLLECTION`                      | `agent_memory`            | Qdrant collection name                                                                                                                                |
 | `BOILERPLATE_ROOT`                       | `data/boilerplates`       | Source directory for `scaffold_project`                                                                                                               |
 | `PROJECT_OUTPUT_ROOT`                    | `data/generated-projects` | Output directory for `write_file` / `scaffold_project`                                                                                                |
 | `SMTP_HOST`                              | _(empty)_                 | SMTP server; mail disabled when not set                                                                                                               |
@@ -588,7 +597,9 @@ SSE events for `/run/swarm/stream`:
 │   ├── events/
 │   │   └── bus.ts            — emit(); on(); off(); synchronous typed event bus
 │   ├── llm/
-│   │   └── ollama.ts         — generate(); generateWithMetadata(); Ollama REST wrapper
+│   │   ├── config.ts        — OLLAMA_BASE_URL; OLLAMA_EMBED_MODEL; OLLAMA_MODEL (centralised constants)
+│   │   ├── embeddings.ts    — getEmbedding(); shared Ollama embedding API call
+│   │   └── ollama.ts        — generate(); generateWithMetadata(); Ollama REST wrapper
 │   ├── memory/
 │   │   ├── memory.ts         — getMemory(); addMemory(); hybrid ring+Qdrant
 │   │   └── types.ts          — memory entry types
@@ -636,6 +647,10 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── environment.ts    — validateRecommendedEnvironment(); startup warning for missing recommended env vars
 │   │   ├── i18n.ts           — initI18n(); t(); i18next wrapper
 │   │   ├── mailer.ts         — isMailEnabled(); sendMail(); Nodemailer wrapper
+│   │   ├── llm-response.ts   — stripCodeFences(); shared LLM response cleanup
+│   │   ├── math.ts           — cosineSimilarity(); shared math utilities
+│   │   ├── sse.ts            — sseFrame(); setupSSEHeaders(); onSSEClose(); SSE helpers
+│   │   ├── request-validation.ts — validateTask(); validateProfile(); shared request validators
 │   │   ├── locales/
 │   │   │   └── en.json       — English translation strings
 │   │   └── index.ts          — re-exports all shared utilities

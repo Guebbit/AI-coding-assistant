@@ -10,13 +10,10 @@
  */
 
 /** Base URL for the Ollama REST API, configurable via environment variable. */
-export const OLLAMA_BASE_URL: string =
-    process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
+export const OLLAMA_BASE_URL: string = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 
 /** Ollama model used to generate text embeddings. */
-export const OLLAMA_EMBED_MODEL: string =
-    process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
+export const OLLAMA_EMBED_MODEL: string = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
 
 /** Default generative model, used as a fallback for all profiles. */
-export const OLLAMA_MODEL: string =
-    process.env.OLLAMA_MODEL ?? 'llama3';
+export const OLLAMA_MODEL: string = process.env.OLLAMA_MODEL ?? 'llama3';
