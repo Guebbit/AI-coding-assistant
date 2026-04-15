@@ -8,6 +8,7 @@
  */
 
 import type { Response } from 'express';
+import type { ResponseMeta as ApiResponseMeta } from '../../api/models';
 
 /**
  * Standard operational metadata attached to successful API responses.
@@ -15,34 +16,7 @@ import type { Response } from 'express';
  * This object is intentionally optional and sparse: endpoints should only
  * populate fields that are genuinely available for that operation.
  */
-export interface IResponseMeta {
-    /** Wall-clock duration in milliseconds for the handled operation. */
-    durationMs?: number;
-    /** ISO 8601 timestamp indicating when processing started. */
-    startedAt?: string;
-    /** Prompt token count (when provided by the model/provider). */
-    promptTokens?: number;
-    /** Completion token count (when provided by the model/provider). */
-    completionTokens?: number;
-    /** Total token count (prompt + completion) when available. */
-    totalTokens?: number;
-    /** Single model used for the operation when exactly one is relevant. */
-    model?: string;
-    /** Multiple models used during a composed or routed operation. */
-    models?: string[];
-    /** Active model routing profile for the request when applicable. */
-    profile?: string;
-    /** Number of reasoning/orchestration steps executed when applicable. */
-    steps?: number;
-    /** Number of tool invocations performed when applicable. */
-    toolCalls?: number;
-    /** Final context length in characters when applicable. */
-    contextLength?: number;
-    /** Correlation identifier for the request, when available. */
-    requestId?: string;
-    /** Whether memory/context retrieval provided non-empty memory. */
-    memoryUsed?: boolean;
-}
+export type IResponseMeta = ApiResponseMeta;
 
 /**
  * Shared neutral response fields used by both success and rejection payloads.
