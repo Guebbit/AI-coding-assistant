@@ -39,11 +39,11 @@ import {
     sseFrame,
     setupSSEHeaders,
     onSSEClose,
-    SSE_PAYLOAD_MAX_LENGTH,
     t,
 } from '../../packages/shared';
 import { createAgent, VALID_PROFILES } from './agents';
 import type { ModelProfile } from '../../packages/agent/model-router';
+import { writeAgentEventToSse } from './sse-event-bridge';
 import type {
     WorkflowRequest as OpenApiWorkflowRequest,
     WorkflowResponse as OpenApiWorkflowResponse,
@@ -415,56 +415,7 @@ export function registerWorkflowRoutes(app: Express): void {
         /* ── Event bridge for inner agent events ────────────────────── */
         const handler = (event: IAgentEvent): void => {
             try {
-                switch (event.type) {
-                    case 'agent:step': {
-                        const p = event.payload as {
-                            step: number;
-                            parsed: { thought: string; action: string };
-                        };
-                        writeEvent('step', {
-                            workflowIndex: currentWorkflowIndex,
-                            step: p.step,
-                            action: p.parsed.action,
-                            thought: p.parsed.thought.slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:result': {
-                        const p = event.payload as { tool: string; result: unknown };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            result: JSON.stringify(p.result).slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:error': {
-                        const p = event.payload as { tool: string; error: string };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            error: p.error,
-                        });
-                        break;
-                    }
-                    case 'agent:model_routed': {
-                        const p = event.payload as {
-                            profile: string;
-                            model: string;
-                            reason: string;
-                        };
-                        writeEvent('route', {
-                            workflowIndex: currentWorkflowIndex,
-                            profile: p.profile,
-                            model: p.model,
-                            reason: p.reason,
-                        });
-                        break;
-                    }
-                    default:
-                        /* All other event types are silently ignored. */
-                        break;
-                }
+                writeAgentEventToSse(event, writeEvent, { workflowIndex: currentWorkflowIndex });
             } catch (error) {
                 logger.warn('workflow_stream_event_write_failed', { component: 'api.workflow.endpoints', error: String(error) });
             }

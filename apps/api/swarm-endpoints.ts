@@ -23,13 +23,13 @@ import {
   sseFrame,
   setupSSEHeaders,
   onSSEClose,
-  SSE_PAYLOAD_MAX_LENGTH,
   t,
 } from "../../packages/shared";
 import { createSwarmOrchestrator, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { ISwarmConfig } from "../../packages/swarm/types";
 import type { SwarmRequest, SwarmResponse } from "../../api/models";
+import { writeSwarmEventToSse } from "./sse-event-bridge";
 
 /**
  * Parse and validate the shared request body fields for swarm endpoints.
@@ -186,64 +186,7 @@ export function registerSwarmRoutes(app: Express): void {
     /* ── Event bridge (swarm + agent events) ──────────────────────── */
     const handler = (event: IAgentEvent): void => {
       try {
-        switch (event.type) {
-          case "swarm:decomposed": {
-            writeEvent("decomposed", event.payload);
-            break;
-          }
-          case "swarm:subtask_start": {
-            writeEvent("subtask_start", event.payload);
-            break;
-          }
-          case "swarm:subtask_done": {
-            writeEvent("subtask_done", event.payload);
-            break;
-          }
-          case "swarm:subtask_error": {
-            writeEvent("subtask_error", event.payload);
-            break;
-          }
-          case "agent:step": {
-            const p = event.payload as {
-              step: number;
-              parsed: { thought: string; action: string };
-            };
-            writeEvent("step", {
-              step: p.step,
-              action: p.parsed.action,
-              thought: p.parsed.thought.slice(0, SSE_PAYLOAD_MAX_LENGTH),
-            });
-            break;
-          }
-          case "tool:result": {
-            const p = event.payload as { tool: string; result: unknown };
-            writeEvent("tool", {
-              tool: p.tool,
-              result: JSON.stringify(p.result).slice(0, SSE_PAYLOAD_MAX_LENGTH),
-            });
-            break;
-          }
-          case "tool:error": {
-            const p = event.payload as { tool: string; error: string };
-            writeEvent("tool", { tool: p.tool, error: p.error });
-            break;
-          }
-          case "agent:model_routed": {
-            const p = event.payload as {
-              profile: string;
-              model: string;
-              reason: string;
-            };
-            writeEvent("route", {
-              profile: p.profile,
-              model: p.model,
-              reason: p.reason,
-            });
-            break;
-          }
-          default:
-            break;
-        }
+        writeSwarmEventToSse(event, writeEvent);
       } catch (error) {
         logger.warn("swarm_stream_event_write_failed", { component: "api.swarm.endpoints", error: String(error) });
       }
