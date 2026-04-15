@@ -33,7 +33,6 @@ import type { IAgentEvent } from '../../packages/events/bus';
 import { logger } from '../../packages/logger/logger';
 import {
     envInt,
-    type IResponseMeta,
     rejectResponse,
     successResponse,
     validateProfile,
@@ -48,6 +47,7 @@ import { writeAgentEventToSse } from './sse-event-bridge';
 import type {
     WorkflowRequest as OpenApiWorkflowRequest,
     WorkflowResponse as OpenApiWorkflowResponse,
+    WorkflowStepResult as OpenApiWorkflowStepResult,
 } from '../../api/models';
 
 /* ── Constants ───────────────────────────────────────────────────────── */
@@ -148,7 +148,7 @@ export type IWorkflowRequestBody = z.infer<typeof workflowRequestSchema>;
 /**
  * Result record for a single workflow step.
  */
-export interface IWorkflowStepResult {
+export interface IWorkflowStepResult extends Pick<OpenApiWorkflowStepResult, 'error'> {
     /** Zero-based index of this step in the workflow. */
     index: number;
     /** The original task string submitted for this step. */
@@ -159,22 +159,18 @@ export interface IWorkflowStepResult {
     success: boolean;
     /** Wall-clock duration in milliseconds for this step. */
     durationMs: number;
-    /** Error message if `success` is `false`. */
-    error?: string;
 }
 
 /**
  * Full response body for `POST /workflow`.
  */
-export interface IWorkflowResponse {
+export interface IWorkflowResponse extends Pick<OpenApiWorkflowResponse, 'meta'> {
     /** Per-step results in execution order. */
     steps: IWorkflowStepResult[];
     /** `true` when every step completed successfully. */
     allSucceeded: boolean;
     /** Total wall-clock duration in milliseconds across all steps. */
     totalDurationMs: number;
-    /** Aggregated operational metadata for the workflow execution. */
-    meta?: IResponseMeta;
 }
 
 /**
