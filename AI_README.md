@@ -619,6 +619,7 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── mysql.query.ts    — mysql_query (SELECT-only)
 │   │   ├── browser.ts        — browser_fetch (Playwright)
 │   │   ├── image.classify.ts — image_classify
+│   │   ├── image.processor.shared.ts — shared schemas + HTTP client + factory for image processor tools
 │   │   ├── image.sketch.ts   — image_sketch
 │   │   ├── image.colorize.ts — image_colorize
 │   │   ├── semantic.search.ts— semantic_search

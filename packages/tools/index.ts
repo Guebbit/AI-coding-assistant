@@ -17,6 +17,7 @@ export * from './mongo.query';
 export * from './browser';
 export * from './project.scaffold';
 export * from './image.classify';
+export * from './image.processor.shared';
 export * from './image.sketch';
 export * from './image.colorize';
 export * from './semantic.search';

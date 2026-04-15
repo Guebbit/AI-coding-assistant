@@ -5,9 +5,14 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { imageSketchTool } from '../../../packages/tools/image.sketch.js';
 import { imageColorizeTool } from '../../../packages/tools/image.colorize.js';
 import { IMAGE_PROCESSOR_URL } from '../../../packages/tools/image.processor.config.js';
+import {
+    createImageProcessorTool,
+    imageProcessorInputSchema
+} from '../../../packages/tools/image.processor.shared.js';
 
 describe('image processor tools', () => {
     beforeEach(() => {
@@ -77,5 +82,43 @@ describe('image processor tools', () => {
             duration_ms: 654,
             model: 'mock-colorize-model'
         });
+    });
+
+    it('createImageProcessorTool supports extending the shared input schema', async () => {
+        const customTool = createImageProcessorTool({
+            id: 'image_custom_test',
+            endpoint: '/colorize',
+            description: 'Custom image processor test tool',
+            inputSchema: imageProcessorInputSchema.extend({
+                style: z.string().trim().min(1)
+            })
+        });
+
+        const mockedFetch = vi.mocked(fetch);
+        mockedFetch.mockResolvedValueOnce(
+            new Response(
+                JSON.stringify({
+                    image: 'Y3VzdG9t',
+                    duration_ms: 111,
+                    model: 'mock-custom-model'
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+            )
+        );
+
+        await expect(
+            customTool.execute({
+                image: 'aW5wdXQ=',
+                prompt: 'keep details'
+            } as unknown as Record<string, unknown>)
+        ).rejects.toThrow();
+
+        const result = (await customTool.execute({
+            image: 'aW5wdXQ=',
+            style: 'vibrant'
+        })) as Record<string, unknown>;
+
+        expect(result).toEqual({ image: 'Y3VzdG9t', duration_ms: 111, model: 'mock-custom-model' });
+        expect(mockedFetch).toHaveBeenCalledTimes(1);
     });
 });
