@@ -890,6 +890,13 @@ export function registerIdeRoutes(application: express.Express): void {
       };
       const typedPayload: LintResponse = payload;
       successResponse(response, typedPayload);
+    }).catch((error: unknown) => {
+      log.error("lint_conventions_failed", {
+        error: String(error),
+        language,
+        filePath,
+      });
+      rejectResponse(response, 500, "Internal Server Error", [String(error)]);
     });
   });
 
@@ -967,8 +974,9 @@ export function registerIdeRoutes(application: express.Express): void {
           error: String(error),
           language,
           filePath,
+          requestId,
         });
-        rejectResponse(response, 500, "Internal Server Error", [String(error), requestId]);
+        rejectResponse(response, 500, "Internal Server Error", [String(error)]);
       });
   });
 }

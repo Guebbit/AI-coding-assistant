@@ -291,34 +291,40 @@ export function registerInfoRoutes(application: express.Express): void {
     fetch(`${OLLAMA_BASE_URL}/api/tags`)
       .then((ollamaResponse) => {
         if (!ollamaResponse.ok) {
-          return ollamaResponse.text().catch(() => "").then((body) => {
-            log.error("ollama_tags_failed", {
-              status: ollamaResponse.status,
-              body: body.slice(0, 500),
+          return ollamaResponse
+            .text()
+            .catch(() => "")
+            .then((body) => {
+              log.error("ollama_tags_failed", {
+                status: ollamaResponse.status,
+                body: body.slice(0, 500),
+              });
+              rejectResponse(response, 502, "Bad Gateway", [`Ollama API returned ${ollamaResponse.status}`]);
+              return null;
             });
-            rejectResponse(response, 502, "Bad Gateway", [`Ollama API returned ${ollamaResponse.status}`]);
-          });
         }
 
-        return ollamaResponse
-          .json()
-          .then((data: { models?: Array<Record<string, unknown>> }) => {
-            const models = (data.models ?? []).map((model) => ({
-              name: (model.name as string) ?? (model.model as string) ?? "unknown",
-              size: (model.size as number) ?? null,
-              digest: (model.digest as string) ?? null,
-              modifiedAt: (model.modified_at as string) ?? null,
-              details: (model.details as Record<string, unknown>) ?? null,
-            }));
+        return ollamaResponse.json() as Promise<{ models?: Array<Record<string, unknown>> }>;
+      })
+      .then((data) => {
+        if (!data) return;
 
-            successResponse(response, {
-              count: models.length,
-              ollamaBaseUrl: OLLAMA_BASE_URL,
-              models,
-            });
-          });
+        const models = (data.models ?? []).map((model) => ({
+          name: (model.name as string) ?? (model.model as string) ?? "unknown",
+          size: (model.size as number) ?? null,
+          digest: (model.digest as string) ?? null,
+          modifiedAt: (model.modified_at as string) ?? null,
+          details: (model.details as Record<string, unknown>) ?? null,
+        }));
+
+        successResponse(response, {
+          count: models.length,
+          ollamaBaseUrl: OLLAMA_BASE_URL,
+          models,
+        });
       })
       .catch((error: unknown) => {
+        if (response.headersSent) return;
         log.error("info_models_failed", { error: String(error) });
         rejectResponse(response, 502, "Bad Gateway", [
           `Failed to reach Ollama at ${OLLAMA_BASE_URL}: ${String(error)}`,
