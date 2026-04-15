@@ -13,11 +13,9 @@
  */
 
 import { generate } from '../llm/ollama';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { stripCodeFences } from '../shared';
 import type { IDecomposition, ISubtask } from './types';
-
-const log = getLogger('swarm:decomposer');
 
 /* ── Environment ─────────────────────────────────────────────────────── */
 
@@ -83,7 +81,11 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
         `}\n\n` +
         `Task:\n${task}`;
 
-    log.info('decomposer_started', { taskLength: task.length, maxSubtasks: cap });
+    logger.info('decomposer_started', {
+        component: 'swarm.decomposer',
+        taskLength: task.length,
+        maxSubtasks: cap
+    });
 
     return generate(prompt, {
         model: DECOMPOSER_MODEL,
@@ -106,7 +108,8 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
                     .slice(0, cap)
                     .map((raw, i) => normaliseSubtask(raw, i));
 
-                log.info('decomposer_completed', {
+                logger.info('decomposer_completed', {
+                    component: 'swarm.decomposer',
                     subtaskCount: subtasks.length,
                     reasoning: parsed.reasoning?.slice(0, 200)
                 });
@@ -116,12 +119,18 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
                     subtasks
                 };
             } catch (error) {
-                log.warn('decomposer_parse_failed', { error: String(error) });
+                logger.warn('decomposer_parse_failed', {
+                    component: 'swarm.decomposer',
+                    error: String(error)
+                });
                 return buildFallback(task, 'Failed to parse decomposer output.');
             }
         })
         .catch((error: unknown) => {
-            log.warn('decomposer_llm_failed', { error: String(error) });
+            logger.warn('decomposer_llm_failed', {
+                component: 'swarm.decomposer',
+                error: String(error)
+            });
             return buildFallback(task, 'LLM call failed — falling back to single subtask.');
         });
 }
@@ -170,7 +179,7 @@ function normaliseSubtask(raw: unknown, index: number): ISubtask {
  * @returns A minimal {@link IDecomposition} with one subtask.
  */
 function buildFallback(task: string, reason: string): IDecomposition {
-    log.info('decomposer_fallback', { reason });
+    logger.info('decomposer_fallback', { component: 'swarm.decomposer', reason });
     return {
         reasoning: reason,
         subtasks: [

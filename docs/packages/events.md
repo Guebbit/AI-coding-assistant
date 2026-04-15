@@ -22,7 +22,7 @@ sequenceDiagram
     participant Custom as Custom Handler
 
     Agent->>Bus: emit({ type: "agent:step", ... })
-    Bus->>API: logger.info(event)
+    Bus->>API: logger.info(event, { component })
     Bus->>Custom: alerting / metrics
 ```
 
@@ -61,7 +61,7 @@ Use `"*"` to subscribe to **all** event types at once.
 
 ```typescript
 events.on('*', (event) => {
-    logger.info(event.type, event);
+    logger.info(event.type, { component: 'api.events', ...event });
 });
 ```
 

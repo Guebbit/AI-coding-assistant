@@ -25,7 +25,7 @@ import { generateWithMetadata, generate } from '../llm/ollama';
 import { addMemory, getMemory } from '../memory/memory';
 import { emit } from '../events/bus';
 import type { ITool } from '../tools';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { stripCodeFences } from '../shared';
 import { routeModel } from './model-router';
 import type { ModelProfile } from './model-router';
@@ -67,8 +67,6 @@ const DIAGNOSTIC_LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? 'data/diagnostics';
  * Auto-prune threshold for diagnostic log files.
  */
 const DIAGNOSTIC_LOG_MAX_FILES = Number.parseInt(process.env.DIAGNOSTIC_LOG_MAX_FILES ?? '100', 10);
-
-const log = getLogger('agent');
 
 /**
  * The core agent — wraps tools, processors, memory, and an LLM into a
@@ -138,7 +136,8 @@ export class Agent {
                 ? options.maxSteps
                 : MAX_STEPS;
 
-        log.info('agent_run_started', {
+        logger.info('agent_run_started', {
+            component: 'agent',
             task,
             taskLength: task.length,
             maxSteps: effectiveMaxSteps,
@@ -148,7 +147,8 @@ export class Agent {
         /* Load semantic + recent memory relevant to this task. */
         const memoryStartedAt = Date.now();
         const memory = await getMemory(task);
-        log.info('agent_memory_loaded', {
+        logger.info('agent_memory_loaded', {
+            component: 'agent',
             memoryCount: memory.length,
             durationMs: Date.now() - memoryStartedAt
         });
@@ -174,7 +174,8 @@ export class Agent {
             }
 
             const prompt = this.buildPrompt(inputArgs.task, inputArgs.context, inputArgs.memory);
-            log.info('agent_step_started', {
+            logger.info('agent_step_started', {
+                component: 'agent',
                 step,
                 contextLength: inputArgs.context.length,
                 promptLength: prompt.length,
@@ -205,7 +206,8 @@ export class Agent {
                         model: route.model,
                         options: route.options
                     });
-                    log.info('agent_llm_response_received', {
+                    logger.info('agent_llm_response_received', {
+                        component: 'agent',
                         step,
                         responseLength: llmResult.response.length,
                         durationMs: Date.now() - llmStartedAt,
@@ -224,7 +226,11 @@ export class Agent {
                     return llmResult.response;
                 })
                 .catch((error: unknown) => {
-                    log.error('agent_llm_call_failed', { step, error: String(error) });
+                    logger.error('agent_llm_call_failed', {
+                        component: 'agent',
+                        step,
+                        error: String(error)
+                    });
                     emit({ type: 'agent:error', payload: { step, error: String(error) } });
                     throw error;
                 });
@@ -239,7 +245,8 @@ export class Agent {
                 context +=
                     '\nYour previous response was not valid JSON. ' +
                     'Please respond ONLY with a single valid JSON object.';
-                log.warn('agent_invalid_json_response', {
+                logger.warn('agent_invalid_json_response', {
+                    component: 'agent',
                     step,
                     responseLength: response.length,
                     contextLength: context.length
@@ -255,7 +262,8 @@ export class Agent {
                 continue;
             }
 
-            log.info('agent_step_parsed', {
+            logger.info('agent_step_parsed', {
+                component: 'agent',
                 step,
                 action: parsed.action,
                 thoughtLength: parsed.thought.length
@@ -287,7 +295,8 @@ export class Agent {
             // ── Done — no tool action needed ─────────────────────────────────
             if (parsed.action === 'none') {
                 await addMemory(`Task: ${task} → ${parsed.thought}`);
-                log.info('agent_run_completed', {
+                logger.info('agent_run_completed', {
+                    component: 'agent',
                     step,
                     durationMs: Date.now() - runStartedAt,
                     finalThoughtLength: parsed.thought.length
@@ -298,7 +307,7 @@ export class Agent {
                 if (diagnosticEntries.length > 0) {
                     const logPath = await writeDiagnosticLog(diagnosticEntries, task);
                     await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
-                    log.info('agent_diagnostic_log_written', { logPath });
+                    logger.info('agent_diagnostic_log_written', { component: 'agent', logPath });
                 }
 
                 /* Persist run to PostgreSQL (fail-open). */
@@ -315,7 +324,10 @@ export class Agent {
                     diagnosticEntries,
                     status: 'completed'
                 }).catch((error: unknown) =>
-                    log.warn('agent_persist_failed', { error: String(error) })
+                    logger.warn('agent_persist_failed', {
+                        component: 'agent',
+                        error: String(error)
+                    })
                 );
 
                 return parsed.thought;
@@ -324,7 +336,8 @@ export class Agent {
             // ── Find and execute the requested tool ──────────────────────────
             const tool = this.tools.find((t) => t.name === parsed.action);
             if (!tool) {
-                log.warn('agent_unknown_tool', {
+                logger.warn('agent_unknown_tool', {
+                    component: 'agent',
                     step,
                     action: parsed.action,
                     availableTools: this.tools.map((t) => t.name)
@@ -351,13 +364,15 @@ export class Agent {
                     try {
                         resultSize = JSON.stringify(result).length;
                     } catch {
-                        log.warn('agent_tool_result_not_serializable', {
+                        logger.warn('agent_tool_result_not_serializable', {
+                            component: 'agent',
                             step,
                             tool: parsed.action
                         });
                     }
                     const durationMs = Date.now() - toolStartedAt;
-                    log.info('agent_tool_executed', {
+                    logger.info('agent_tool_executed', {
+                        component: 'agent',
                         step,
                         tool: parsed.action,
                         durationMs,
@@ -376,7 +391,8 @@ export class Agent {
                 .catch((error: unknown) => {
                     context += `\nTool "${parsed.action}" failed: ${String(error)}`;
                     const durationMs = Date.now() - toolStartedAt;
-                    log.warn('agent_tool_failed', {
+                    logger.warn('agent_tool_failed', {
+                        component: 'agent',
                         step,
                         tool: parsed.action,
                         error: String(error)
@@ -409,7 +425,8 @@ export class Agent {
 
             emit({ type: 'tool:result', payload: { tool: parsed.action, result } });
             context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
-            log.info('agent_step_finished', {
+            logger.info('agent_step_finished', {
+                component: 'agent',
                 step,
                 durationMs: Date.now() - stepStartedAt,
                 contextLength: context.length
@@ -417,7 +434,8 @@ export class Agent {
         }
 
         /* Loop exhausted without the model returning action "none". */
-        log.warn('agent_max_steps_reached', {
+        logger.warn('agent_max_steps_reached', {
+            component: 'agent',
             durationMs: Date.now() - runStartedAt,
             task
         });
@@ -435,13 +453,16 @@ export class Agent {
         const summary = await generate(debugPrompt, { model: FAST_MODEL, stream: false })
             .then((result) => result.trim() || 'Max steps reached without a conclusive answer.')
             .catch((error: unknown) => {
-                log.warn('agent_self_debug_failed', { error: String(error) });
+                logger.warn('agent_self_debug_failed', {
+                    component: 'agent',
+                    error: String(error)
+                });
                 return 'Max steps reached without a conclusive answer.';
             });
 
         /* Persist the dead-end so future runs can avoid repeating it. */
         await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`).catch((error: unknown) =>
-            log.warn('agent_memory_add_failed', { error: String(error) })
+            logger.warn('agent_memory_add_failed', { component: 'agent', error: String(error) })
         );
 
         /* Write the full diagnostic log with the AI commentary. */
@@ -452,7 +473,10 @@ export class Agent {
                 await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
             })
             .catch((error: unknown) =>
-                log.warn('agent_diagnostic_log_failed', { error: String(error) })
+                logger.warn('agent_diagnostic_log_failed', {
+                    component: 'agent',
+                    error: String(error)
+                })
             );
 
         /* Persist run to PostgreSQL (fail-open). */
@@ -468,7 +492,9 @@ export class Agent {
             toolCalls,
             diagnosticEntries,
             status: 'max_steps'
-        }).catch((error: unknown) => log.warn('agent_persist_failed', { error: String(error) }));
+        }).catch((error: unknown) =>
+            logger.warn('agent_persist_failed', { component: 'agent', error: String(error) })
+        );
 
         emit({
             type: 'agent:max_steps',

@@ -24,12 +24,10 @@ import type { ITool } from '../tools';
 import type { IProcessor } from '../processors/types';
 import { generate } from '../llm/ollama';
 import { emit } from '../events/bus';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { decomposeTask } from '../swarm/decomposer';
 import type { ISubtask, ISubtaskResult } from '../swarm/types';
 import type { ISwarmGraphState } from './state';
-
-const log = getLogger('orchestrator:nodes');
 
 /* ── Environment ─────────────────────────────────────────────────────── */
 
@@ -62,7 +60,8 @@ const MAX_REVIEW_RETRIES = Number.parseInt(process.env.SWARM_MAX_REVIEW_RETRIES 
  */
 export function createDecomposeNode() {
     return async (state: ISwarmGraphState): Promise<Partial<ISwarmGraphState>> => {
-        log.info('graph_node_decompose', {
+        logger.info('graph_node_decompose', {
+            component: 'orchestrator.nodes',
             task: state.task,
             maxSubtasks: state.config.maxSubtasks ?? 6
         });
@@ -71,7 +70,8 @@ export function createDecomposeNode() {
 
         const decomposition = await decomposeTask(state.task, state.config.maxSubtasks);
 
-        log.info('graph_decomposition_complete', {
+        logger.info('graph_decomposition_complete', {
+            component: 'orchestrator.nodes',
             subtaskCount: decomposition.subtasks.length,
             reasoning: decomposition.reasoning
         });
@@ -114,7 +114,7 @@ export function createExecuteSubtasksNode(tools: ITool[], processors: IProcessor
         const { decomposition, config, subtaskResults: existingResults, retryCount } = state;
 
         if (!decomposition) {
-            log.warn('graph_execute_no_decomposition');
+            logger.warn('graph_execute_no_decomposition', { component: 'orchestrator.nodes' });
             return { subtaskResults: [] };
         }
 
@@ -128,7 +128,8 @@ export function createExecuteSubtasksNode(tools: ITool[], processors: IProcessor
                 ? decomposition.subtasks.filter((s) => !successfulIds.has(s.id))
                 : decomposition.subtasks;
 
-        log.info('graph_execute_subtasks_started', {
+        logger.info('graph_execute_subtasks_started', {
+            component: 'orchestrator.nodes',
             total: decomposition.subtasks.length,
             toRun: subtasksToRun.length,
             retryCount
@@ -153,7 +154,8 @@ export function createExecuteSubtasksNode(tools: ITool[], processors: IProcessor
 
             if (ready.length === 0) {
                 /* Circular dependency or dangling reference — break deadlock. */
-                log.warn('graph_execute_dependency_deadlock', {
+                logger.warn('graph_execute_dependency_deadlock', {
+                    component: 'orchestrator.nodes',
                     remaining: [...remaining.keys()]
                 });
                 for (const subtask of remaining.values()) {
@@ -199,7 +201,8 @@ export function createReviewNode() {
         const failedCount = subtaskResults.filter((r) => !r.success).length;
         const totalCount = subtaskResults.length;
 
-        log.info('graph_review', {
+        logger.info('graph_review', {
+            component: 'orchestrator.nodes',
             total: totalCount,
             failed: failedCount,
             retryCount,
@@ -208,13 +211,17 @@ export function createReviewNode() {
 
         if (failedCount === 0) {
             /* All subtasks passed — no retry needed. */
-            log.info('graph_review_passed', { total: totalCount });
+            logger.info('graph_review_passed', {
+                component: 'orchestrator.nodes',
+                total: totalCount
+            });
             return { reviewPassed: true };
         }
 
         if (retryCount < MAX_REVIEW_RETRIES) {
             /* Failures detected and retries remain — trigger retry. */
-            log.info('graph_review_retry_triggered', {
+            logger.info('graph_review_retry_triggered', {
+                component: 'orchestrator.nodes',
                 failedCount,
                 retriesRemaining: MAX_REVIEW_RETRIES - retryCount
             });
@@ -225,7 +232,8 @@ export function createReviewNode() {
         }
 
         /* Retries exhausted — accept partial results and continue to synthesis. */
-        log.warn('graph_review_retries_exhausted', {
+        logger.warn('graph_review_retries_exhausted', {
+            component: 'orchestrator.nodes',
             failedCount,
             totalCount,
             retryCount
@@ -252,7 +260,8 @@ export function createSynthesizeNode() {
 
         const answer = await synthesise(task, subtaskResults);
 
-        log.info('graph_synthesize_complete', {
+        logger.info('graph_synthesize_complete', {
+            component: 'orchestrator.nodes',
             subtaskCount: subtaskResults.length,
             totalDurationMs
         });
@@ -303,7 +312,8 @@ async function executeOneSubtask(
     const startedAt = Date.now();
     const profile = config.profileOverride ?? subtask.profile;
 
-    log.info('graph_subtask_started', {
+    logger.info('graph_subtask_started', {
+        component: 'orchestrator.nodes',
         subtaskId: subtask.id,
         profile,
         description: subtask.description.slice(0, 120)
@@ -325,7 +335,8 @@ async function executeOneSubtask(
         .run(enrichedTask, { profile })
         .then((answer) => {
             const durationMs = Date.now() - startedAt;
-            log.info('graph_subtask_completed', {
+            logger.info('graph_subtask_completed', {
+                component: 'orchestrator.nodes',
                 subtaskId: subtask.id,
                 durationMs,
                 answerLength: answer.length
@@ -339,7 +350,8 @@ async function executeOneSubtask(
         .catch((error: unknown) => {
             const durationMs = Date.now() - startedAt;
             const errorMessage = String(error);
-            log.warn('graph_subtask_failed', {
+            logger.warn('graph_subtask_failed', {
+                component: 'orchestrator.nodes',
                 subtaskId: subtask.id,
                 durationMs,
                 error: errorMessage
@@ -420,7 +432,8 @@ async function synthesise(task: string, subtaskResults: ISubtaskResult[]): Promi
         `If any subtask failed, acknowledge the gap and provide what you can.\n` +
         `Be concise but thorough.`;
 
-    log.info('graph_synthesis_started', {
+    logger.info('graph_synthesis_started', {
+        component: 'orchestrator.nodes',
         subtaskCount: subtaskResults.length,
         successCount: successfulResults.length
     });
@@ -428,7 +441,10 @@ async function synthesise(task: string, subtaskResults: ISubtaskResult[]): Promi
     return generate(synthesisPrompt, { model: SYNTHESIS_MODEL, stream: false })
         .then((answer) => answer.trim())
         .catch((error: unknown) => {
-            log.warn('graph_synthesis_failed', { error: String(error) });
+            logger.warn('graph_synthesis_failed', {
+                component: 'orchestrator.nodes',
+                error: String(error)
+            });
             /* Graceful degradation — concatenate subtask answers. */
             return successfulResults.map((r) => r.answer).join('\n\n---\n\n');
         });

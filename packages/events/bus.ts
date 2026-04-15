@@ -17,7 +17,7 @@
  * @module events/bus
  */
 
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 
 /**
  * Shape of every event that flows through the bus.
@@ -38,8 +38,6 @@ type EventHandler = (event: IAgentEvent) => void;
 
 /** Internal registry: event type → ordered list of handlers. */
 const handlers = new Map<string, EventHandler[]>();
-
-const log = getLogger('events');
 
 /**
  * Subscribe to events of a specific type.
@@ -90,7 +88,8 @@ export function emit(event: IAgentEvent): void {
         try {
             h(event);
         } catch (error) {
-            log.error('event_handler_failed', {
+            logger.error('event_handler_failed', {
+                component: 'events.bus',
                 eventType: event.type,
                 error: String(error)
             });

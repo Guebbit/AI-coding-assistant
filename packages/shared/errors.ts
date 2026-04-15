@@ -4,7 +4,7 @@
  * @module shared/errors
  */
 
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 
 /**
  * Extended application error carrying HTTP semantics and operational metadata.
@@ -36,8 +36,8 @@ export class ExtendedError extends Error {
         this.errors = errors;
 
         if (!isOperational) {
-            const logger = getLogger('error');
             logger.error({
+                component: 'shared.errors',
                 message: this.message,
                 stack: this.stack,
                 name: this.name,

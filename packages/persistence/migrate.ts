@@ -29,9 +29,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getPool, closePool } from './db';
-import { getLogger } from '../logger/logger';
-
-const log = getLogger('persistence:migrate');
+import { logger } from '../logger/logger';
 
 /** Directory containing `*.sql` migration files. */
 const MIGRATIONS_DIR = path.join(fileURLToPath(new URL('.', import.meta.url)), 'migrations');
@@ -65,7 +63,10 @@ export async function runMigrations(): Promise<void> {
             const entries = await fs.readdir(MIGRATIONS_DIR);
             files = entries.filter((f: string) => f.endsWith('.sql')).sort();
         } catch {
-            log.warn('persistence_migrate_dir_not_found', { dir: MIGRATIONS_DIR });
+            logger.warn('persistence_migrate_dir_not_found', {
+                component: 'persistence.migrate',
+                dir: MIGRATIONS_DIR
+            });
             return;
         }
 
@@ -76,7 +77,10 @@ export async function runMigrations(): Promise<void> {
                 [filename]
             );
             if (rows.length > 0) {
-                log.info('persistence_migrate_skip', { filename });
+                logger.info('persistence_migrate_skip', {
+                    component: 'persistence.migrate',
+                    filename
+                });
                 continue;
             }
 
@@ -91,15 +95,22 @@ export async function runMigrations(): Promise<void> {
                     filename
                 ]);
                 await client.query('COMMIT');
-                log.info('persistence_migrate_applied', { filename });
+                logger.info('persistence_migrate_applied', {
+                    component: 'persistence.migrate',
+                    filename
+                });
             } catch (error: unknown) {
                 await client.query('ROLLBACK');
-                log.warn('persistence_migrate_failed', { filename, error: String(error) });
+                logger.warn('persistence_migrate_failed', {
+                    component: 'persistence.migrate',
+                    filename,
+                    error: String(error)
+                });
                 throw error;
             }
         }
 
-        log.info('persistence_migrate_done');
+        logger.info('persistence_migrate_done', { component: 'persistence.migrate' });
     } finally {
         client.release();
     }
@@ -114,14 +125,19 @@ const isMain =
     (process.argv[1].endsWith('migrate.ts') || process.argv[1].endsWith('migrate.js'));
 
 if (isMain) {
-    const cliLog = getLogger('persistence:migrate:cli');
     runMigrations()
         .then(() => {
-            cliLog.info('persistence_migrate_cli_done', { message: 'Migrations complete.' });
+            logger.info('persistence_migrate_cli_done', {
+                component: 'persistence.migrate.cli',
+                message: 'Migrations complete.'
+            });
             return closePool();
         })
         .catch((error: unknown) => {
-            cliLog.warn('persistence_migrate_cli_failed', { error: String(error) });
+            logger.warn('persistence_migrate_cli_failed', {
+                component: 'persistence.migrate.cli',
+                error: String(error)
+            });
             process.exit(1);
         });
 }

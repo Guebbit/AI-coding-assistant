@@ -18,9 +18,7 @@
 
 import neo4j, { type Driver, type Session } from 'neo4j-driver';
 import type { GraphQueryRow } from './types';
-import { getLogger } from '../logger/logger';
-
-const log = getLogger('graph:client');
+import { logger } from '../logger/logger';
 
 /* ── Configuration ──────────────────────────────────────────────────── */
 
@@ -86,7 +84,8 @@ export async function runCypher(
         const result = await session.run(cypher, parameters);
         return result.records.map((record) => record.toObject() as GraphQueryRow);
     } catch (error) {
-        log.warn('neo4j_query_failed', {
+        logger.warn('neo4j_query_failed', {
+            component: 'graph.client',
             error: String(error),
             cypher: cypher.slice(0, 200)
         });
@@ -134,6 +133,9 @@ export async function ensureConstraints(): Promise<void> {
         );
     } catch (error) {
         /* Some Neo4j editions / older versions may not support IF NOT EXISTS. */
-        log.warn('neo4j_constraint_setup_failed', { error: String(error) });
+        logger.warn('neo4j_constraint_setup_failed', {
+            component: 'graph.client',
+            error: String(error)
+        });
     }
 }

@@ -21,7 +21,7 @@
 import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import {
   rejectResponse,
   validateTask,
@@ -34,8 +34,6 @@ import {
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { RunRequest } from "../../api/models";
-
-const log = getLogger("stream-endpoints");
 
 /**
  * Register the `POST /run/stream` endpoint on the given Express app.
@@ -122,7 +120,7 @@ export function registerStreamRoutes(app: Express): void {
             break;
         }
       } catch (error) {
-        log.warn("stream_event_write_failed", { error: String(error) });
+        logger.warn("stream_event_write_failed", { component: "api.stream.endpoints", error: String(error) });
       }
     };
 
@@ -132,7 +130,8 @@ export function registerStreamRoutes(app: Express): void {
     const writeEnabled = allowWrite === true;
     const agent = createAgent(writeEnabled);
 
-    log.info("stream_run_started", {
+    logger.info("stream_run_started", {
+      component: "api.stream.endpoints",
       task,
       writeEnabled,
       profile: profile ?? null,
@@ -142,11 +141,11 @@ export function registerStreamRoutes(app: Express): void {
       .run(task, profile ? { profile: profile as ModelProfile } : undefined)
       .then((result) => {
         writeEvent("done", { result });
-        log.info("stream_run_completed", { taskLength: task.length });
+        logger.info("stream_run_completed", { component: "api.stream.endpoints", taskLength: task.length });
       })
       .catch((error: unknown) => {
         writeEvent("error", { error: String(error) });
-        log.error("stream_run_failed", { error: String(error) });
+        logger.error("stream_run_failed", { component: "api.stream.endpoints", error: String(error) });
       })
       .finally(() => {
         off("*", handler);

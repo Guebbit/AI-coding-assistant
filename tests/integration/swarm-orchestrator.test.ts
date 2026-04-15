@@ -26,7 +26,7 @@ vi.mock('../../../packages/diagnostics/index.js', () => ({
     cleanupOldLogs: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock('../../../packages/logger/logger.js', () => ({
-    getLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 
 /* ── fetch queue ─────────────────────────────────────────────────────── */

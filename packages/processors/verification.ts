@@ -23,11 +23,9 @@
 
 import { generate } from '../llm/ollama';
 import { emit } from '../events/bus';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { stripCodeFences } from '../shared';
 import { createProcessor } from './processor-builder';
-
-const log = getLogger('verification-processor');
 
 /** Enabled only when explicitly opted in. */
 const ENABLED = process.env.AGENT_VERIFICATION_ENABLED === 'true';
@@ -87,7 +85,10 @@ export const verificationProcessor = createProcessor({
                 };
             })
             .catch((error: unknown) => {
-                log.warn('verification_call_failed', { error: String(error) });
+                logger.warn('verification_call_failed', {
+                    component: 'processors.verification',
+                    error: String(error)
+                });
                 /* Fail open — do not block the agent on a verification error. */
                 return null;
             });
@@ -96,7 +97,8 @@ export const verificationProcessor = createProcessor({
         const { valid, issue } = verifyResult;
 
         if (!valid && issue) {
-            log.warn('verification_failed', {
+            logger.warn('verification_failed', {
+                component: 'processors.verification',
                 step: args.stepNumber,
                 action: args.action,
                 issue

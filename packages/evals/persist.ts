@@ -37,9 +37,7 @@
 import { saveEvalResult, fetchRecentRuns } from '../persistence/db';
 import type { IEvalResultRecord, IAgentRunRecord, ISwarmRunRecord } from '../persistence/types';
 import type { IScorer, IScorerRunInput } from './types';
-import { getLogger } from '../logger/logger';
-
-const log = getLogger('evals:persist');
+import { logger } from '../logger/logger';
 
 /**
  * Extended scorer input that includes optional run association fields.
@@ -70,7 +68,11 @@ export async function scoreAndPersist(
     try {
         scorerResult = await scorer.score(input);
     } catch (error: unknown) {
-        log.warn('evals_scorer_failed', { scorer: scorer.id, error: String(error) });
+        logger.warn('evals_scorer_failed', {
+            component: 'evals.persist',
+            scorer: scorer.id,
+            error: String(error)
+        });
         return null;
     }
 

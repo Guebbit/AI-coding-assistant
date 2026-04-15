@@ -18,7 +18,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import ts from "typescript";
 import { generate } from "../../packages/llm/ollama";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import { rejectResponse, successResponse, t } from "../../packages/shared";
 import type {
   AutocompleteRequest,
@@ -28,8 +28,6 @@ import type {
   PageReviewRequest,
   PageReviewResponse,
 } from "../../api/models";
-
-const log = getLogger("api-ide");
 
 /** Names of the IDE endpoints, used as keys for rate-limit and timeout maps. */
 type EndpointName = "autocomplete" | "lint-conventions" | "page-review";
@@ -779,7 +777,8 @@ export function registerIdeRoutes(application: express.Express): void {
         successResponse(response, typedPayload);
       })
       .catch((error: unknown) => {
-        log.error("autocomplete_failed", {
+        logger.error("autocomplete_failed", {
+          component: "api.ide",
           error: String(error),
           language,
         });
@@ -862,7 +861,8 @@ export function registerIdeRoutes(application: express.Express): void {
               .slice(0, parsed.data.maxFindings);
           })
           .catch((error: unknown) => {
-            log.warn("lint_conventions_llm_enrichment_failed", {
+            logger.warn("lint_conventions_llm_enrichment_failed", {
+              component: "api.ide",
               error: String(error),
             });
             return [] as IFinding[];
@@ -892,7 +892,8 @@ export function registerIdeRoutes(application: express.Express): void {
       const typedPayload: LintResponse = payload;
       successResponse(response, typedPayload);
     }).catch((error: unknown) => {
-      log.error("lint_conventions_failed", {
+      logger.error("lint_conventions_failed", {
+        component: "api.ide",
         error: String(error),
         language,
         filePath,
@@ -971,7 +972,8 @@ export function registerIdeRoutes(application: express.Express): void {
         successResponse(response, typedPayload);
       })
       .catch((error: unknown) => {
-        log.error("page_review_failed", {
+        logger.error("page_review_failed", {
+          component: "api.ide",
           error: String(error),
           language,
           filePath,

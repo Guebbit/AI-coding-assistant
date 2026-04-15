@@ -14,7 +14,7 @@
 import type { Express, Request, Response } from "express";
 import { on, off } from "../../packages/events/bus";
 import type { IAgentEvent } from "../../packages/events/bus";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import {
   rejectResponse,
   successResponse,
@@ -30,8 +30,6 @@ import { createSwarmOrchestrator, VALID_PROFILES } from "./agents";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import type { ISwarmConfig } from "../../packages/swarm/types";
 import type { SwarmRequest, SwarmResponse } from "../../api/models";
-
-const log = getLogger("swarm-endpoints");
 
 /**
  * Parse and validate the shared request body fields for swarm endpoints.
@@ -101,7 +99,8 @@ export function registerSwarmRoutes(app: Express): void {
       return;
     }
 
-    log.info("swarm_request_received", {
+    logger.info("swarm_request_received", {
+      component: "api.swarm.endpoints",
       task,
       maxSubtasks: config.maxSubtasks,
       allowWrite: config.allowWrite,
@@ -113,7 +112,8 @@ export function registerSwarmRoutes(app: Express): void {
     orchestrator
       .run(task, config)
       .then((result) => {
-        log.info("swarm_request_completed", {
+        logger.info("swarm_request_completed", {
+          component: "api.swarm.endpoints",
           taskLength: task.length,
           subtaskCount: result.subtaskResults.length,
           totalDurationMs: result.totalDurationMs,
@@ -142,7 +142,11 @@ export function registerSwarmRoutes(app: Express): void {
         successResponse(res, response);
       })
       .catch((reason: unknown) => {
-        log.error("swarm_request_failed", { error: String(reason), requestId: req.requestId });
+        logger.error("swarm_request_failed", {
+          component: "api.swarm.endpoints",
+          error: String(reason),
+          requestId: req.requestId
+        });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(reason)]);
       });
   });
@@ -242,14 +246,15 @@ export function registerSwarmRoutes(app: Express): void {
             break;
         }
       } catch (error) {
-        log.warn("swarm_stream_event_write_failed", { error: String(error) });
+        logger.warn("swarm_stream_event_write_failed", { component: "api.swarm.endpoints", error: String(error) });
       }
     };
 
     on("*", handler);
 
     /* ── Run the swarm ────────────────────────────────────────────── */
-    log.info("swarm_stream_started", {
+    logger.info("swarm_stream_started", {
+      component: "api.swarm.endpoints",
       task,
       maxSubtasks: config.maxSubtasks,
       allowWrite: config.allowWrite,
@@ -266,11 +271,11 @@ export function registerSwarmRoutes(app: Express): void {
           totalDurationMs: result.totalDurationMs,
           subtaskCount: result.subtaskResults.length,
         });
-        log.info("swarm_stream_completed", { taskLength: task.length });
+        logger.info("swarm_stream_completed", { component: "api.swarm.endpoints", taskLength: task.length });
       })
       .catch((error: unknown) => {
         writeEvent("error", { error: String(error) });
-        log.error("swarm_stream_failed", { error: String(error) });
+        logger.error("swarm_stream_failed", { component: "api.swarm.endpoints", error: String(error) });
       })
       .finally(() => {
         off("*", handler);

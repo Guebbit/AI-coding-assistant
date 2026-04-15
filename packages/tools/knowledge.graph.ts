@@ -25,11 +25,9 @@ import { createTool } from './tool-builder';
 import { extractEntitiesAndRelationships } from '../graph/extractor';
 import { runCypher, isGraphAvailable, ensureConstraints } from '../graph/client';
 import { resolveSafePath } from '../shared/path-safety';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import type { IGraphEntity, IGraphRelationship, IKnowledgeGraphIngestResult } from '../graph/types';
 import fs from 'fs/promises';
-
-const log = getLogger('tool:knowledge_graph');
 
 /* ── Neo4j Cypher helpers ───────────────────────────────────────────── */
 
@@ -129,7 +127,7 @@ export const knowledgeGraphTool = createTool({
             const safePath = resolveSafePath(filePath);
             content = await fs.readFile(safePath, 'utf8');
         } else {
-            log.warn('knowledge_graph_no_input', {});
+            logger.warn('knowledge_graph_no_input', { component: 'tools.knowledge_graph' });
             return { entitiesMerged: 0, relationshipsMerged: 0, persisted: false };
         }
 
@@ -137,7 +135,8 @@ export const knowledgeGraphTool = createTool({
         const extraction = await extractEntitiesAndRelationships(content);
 
         if (extraction.entities.length === 0 && extraction.relationships.length === 0) {
-            log.info('knowledge_graph_empty_extraction', {
+            logger.info('knowledge_graph_empty_extraction', {
+                component: 'tools.knowledge_graph',
                 contentLength: content.length
             });
             return { entitiesMerged: 0, relationshipsMerged: 0, persisted: false };
@@ -146,7 +145,8 @@ export const knowledgeGraphTool = createTool({
         /* 3. Persist to Neo4j (fail-open) ----------------------------- */
         const available = await isGraphAvailable();
         if (!available) {
-            log.warn('knowledge_graph_neo4j_unavailable', {
+            logger.warn('knowledge_graph_neo4j_unavailable', {
+                component: 'tools.knowledge_graph',
                 entities: extraction.entities.length,
                 relationships: extraction.relationships.length
             });
@@ -170,7 +170,8 @@ export const knowledgeGraphTool = createTool({
             await mergeRelationship(relationship, sourcePath);
         }
 
-        log.info('knowledge_graph_ingest_done', {
+        logger.info('knowledge_graph_ingest_done', {
+            component: 'tools.knowledge_graph',
             entitiesMerged: extraction.entities.length,
             relationshipsMerged: extraction.relationships.length,
             source: sourcePath ?? null

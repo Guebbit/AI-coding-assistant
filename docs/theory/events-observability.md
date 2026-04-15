@@ -62,7 +62,7 @@ sequenceDiagram
 import { logger } from './logger';
 
 // Now agent depends on logger — harder to test, harder to replace
-logger.info('step done', { step, action });
+logger.info('step done', { component: 'agent', step, action });
 ```
 
 ### With events (loose coupling):
@@ -72,7 +72,7 @@ logger.info('step done', { step, action });
 events.emit({ type: 'agent:step', step, action });
 
 // api/index.ts
-events.on('*', (event) => logger.info(event));
+events.on('*', (event) => logger.info(event.type, { component: 'api.events', ...event }));
 ```
 
 The agent knows nothing about logging. You can swap the logger, add metrics, or send events to a WebSocket — all without touching `agent.ts`.

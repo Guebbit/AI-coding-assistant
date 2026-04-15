@@ -18,11 +18,9 @@
 
 import type express from "express";
 import { imageClassifyTool, speechToTextTool, readPdfTool } from "../../packages/tools/index";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import { rejectResponse, successResponse, t } from "../../packages/shared";
 import { upload } from "./middlewares/multer";
-
-const log = getLogger("api-upload");
 
 /**
  * Register upload-based routes on the Express app.
@@ -47,7 +45,8 @@ export function registerUploadRoutes(app: express.Express): void {
       return;
     }
 
-    log.info("upload_image_classify", {
+    logger.info("upload_image_classify", {
+      component: "api.upload",
       filename: req.file.originalname,
       size: req.file.size,
       requestId: req.requestId,
@@ -63,7 +62,11 @@ export function registerUploadRoutes(app: express.Express): void {
         successResponse(res, result);
       })
       .catch((error: unknown) => {
-        log.error("upload_image_classify_failed", { error: String(error), requestId: req.requestId });
+        logger.error("upload_image_classify_failed", {
+          component: "api.upload",
+          error: String(error),
+          requestId: req.requestId
+        });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
       });
   });
@@ -85,7 +88,8 @@ export function registerUploadRoutes(app: express.Express): void {
       return;
     }
 
-    log.info("upload_speech_to_text", {
+    logger.info("upload_speech_to_text", {
+      component: "api.upload",
       filename: req.file.originalname,
       size: req.file.size,
       requestId: req.requestId,
@@ -103,7 +107,11 @@ export function registerUploadRoutes(app: express.Express): void {
         successResponse(res, result);
       })
       .catch((error: unknown) => {
-        log.error("upload_speech_to_text_failed", { error: String(error), requestId: req.requestId });
+        logger.error("upload_speech_to_text_failed", {
+          component: "api.upload",
+          error: String(error),
+          requestId: req.requestId
+        });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
       });
   });
@@ -122,7 +130,8 @@ export function registerUploadRoutes(app: express.Express): void {
       return;
     }
 
-    log.info("upload_read_pdf", {
+    logger.info("upload_read_pdf", {
+      component: "api.upload",
       filename: req.file.originalname,
       size: req.file.size,
       requestId: req.requestId,
@@ -136,12 +145,13 @@ export function registerUploadRoutes(app: express.Express): void {
         successResponse(res, result);
       })
       .catch((error: unknown) => {
-        log.error("upload_read_pdf_failed", { error: String(error), requestId: req.requestId });
+        logger.error("upload_read_pdf_failed", { component: "api.upload", error: String(error), requestId: req.requestId });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
       });
   });
 
-  log.info("upload_routes_registered", {
+  logger.info("upload_routes_registered", {
+    component: "api.upload",
     routes: ["/upload/image-classify", "/upload/speech-to-text", "/upload/read-pdf"],
   });
 }

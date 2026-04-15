@@ -670,7 +670,7 @@ SSE events for `/run/swarm/stream`:
 │   │   └── migrations/
 │   │       └── 001_initial.sql — agent_runs, swarm_runs, eval_results schema
 │   └── logger/
-│       └── logger.ts         — getLogger(name); winston wrapper
+│       └── logger.ts         — root `logger`; include `component` metadata inline per log call
 ├── docker-compose.yml        — compose stack for Ollama + Qdrant + PostgreSQL + Neo4j
 ├── .env.example              — compose env template
 ├── vitest.config.ts          — Vitest config for unit + integration tests (`npm test`)
@@ -917,7 +917,7 @@ When writing code in this repository, the AI **must** follow these conventions:
     - **Enum members** — `PascalCase` or `UPPER_CASE`: `Fast`, `Reasoning`, `MAX_RETRIES`.
     - **Type aliases** — `PascalCase` (no prefix): `ModelProfile`, `EndpointName`.
     - **Classes** — `PascalCase` (no prefix): `Agent`.
-    - **Functions** — `camelCase`: `getLogger`, `createAgent`, `resolveSafePath`.
+    - **Functions** — `camelCase`: `createAgent`, `resolveSafePath`, `validateTask`.
     - **Variables** — `camelCase` or `UPPER_CASE` (for module-level constants): `context`, `MAX_STEPS`.
     - **Parameters** — `camelCase` (leading underscore allowed for unused params): `task`, `_unused`.
     - **Class properties** — `camelCase` or `UPPER_CASE` (leading underscore allowed for private fields).

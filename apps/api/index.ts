@@ -29,7 +29,7 @@ import helmet from "helmet";
 import { MulterError } from "multer";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import { on } from "../../packages/events/bus";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import {
   envInt,
   ExtendedError,
@@ -53,11 +53,9 @@ import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
 import type { HealthResponse, RunRequest, RunResponse } from "../../api/models";
 import enTranslation from "../../packages/shared/locales/en.json";
 
-const log = getLogger("api");
-
 /* ── Observability: log every agent/tool event to stdout ─────────────── */
 on("*", (event) => {
-  log.info("event_emitted", { eventType: event.type, payload: event.payload });
+  logger.info("event_emitted", { component: "api.events", eventType: event.type, payload: event.payload });
 });
 
 /* ── HTTP server ─────────────────────────────────────────────────────── */
@@ -123,14 +121,20 @@ app.post("/run", (req, res) => {
     return;
   }
 
-  log.info("run_request_received", { task, profile: profile ?? null, requestId: req.requestId });
+  logger.info("run_request_received", {
+    component: "api.server",
+    task,
+    profile: profile ?? null,
+    requestId: req.requestId
+  });
   const writeEnabled = allowWrite === true;
   const agent = createAgent(writeEnabled);
 
   agent
     .run(task, profile ? { profile: profile as ModelProfile } : undefined)
     .then((result) => {
-      log.info("run_request_completed", {
+      logger.info("run_request_completed", {
+        component: "api.server",
         taskLength: task.length,
         writeEnabled,
         profile: profile ?? null,
@@ -140,7 +144,7 @@ app.post("/run", (req, res) => {
       successResponse(res, response);
     })
     .catch((error: unknown) => {
-      log.error("run_request_failed", { error: String(error), requestId: req.requestId });
+      logger.error("run_request_failed", { component: "api.server", error: String(error), requestId: req.requestId });
       rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
     });
 });
@@ -160,7 +164,12 @@ app.get("/health", (_req, res) => {
  * 404 catch-all — unmatched routes.
  */
 app.use((request: Request, response: Response) => {
-  log.warn("route_not_found", { method: request.method, path: request.path, requestId: request.requestId });
+  logger.warn("route_not_found", {
+    component: "api.server",
+    method: request.method,
+    path: request.path,
+    requestId: request.requestId
+  });
   rejectResponse(response, 404, t("error.not_found"));
 });
 
@@ -172,7 +181,8 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
   if (response.headersSent) return;
 
   if (error instanceof MulterError) {
-    log.error({
+    logger.error({
+      component: "api.server",
       requestId: request.requestId,
       message: error.message,
       code: error.code,
@@ -187,7 +197,8 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
     return;
   }
 
-  log.error({
+  logger.error({
+    component: "api.server",
     requestId: request.requestId,
     message: error.message,
     stack: error.stack,
@@ -202,19 +213,22 @@ const PORT = envInt(process.env.PORT, 3001);
 /* Run DB migrations on startup (fail-open — a DB outage must not prevent the
  * API from starting). */
 runMigrations().catch((error: unknown) =>
-  log.warn(t("info.migrations_failed"), { error: String(error) })
+  logger.warn(t("info.migrations_failed"), { component: "api.server", error: String(error) })
 );
 
-validateRecommendedEnvironment(log);
+validateRecommendedEnvironment({
+  warn: (message: string, meta?: object) => logger.warn(message, { component: "api.environment", ...meta })
+});
 
 initI18n({ en: { translation: enTranslation } })
   .catch((error: unknown) => {
-    log.warn("i18n_init_failed", { error: String(error) });
+    logger.warn("i18n_init_failed", { component: "api.server", error: String(error) });
   })
   .finally(() => {
     app.listen(PORT, () => {
-      log.info(t("info.server_started"), { url: `http://localhost:${PORT}` });
-      log.info("ollama_configured", {
+      logger.info(t("info.server_started"), { component: "api.server", url: `http://localhost:${PORT}` });
+      logger.info("ollama_configured", {
+        component: "api.server",
         ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
       });
     });
@@ -226,13 +240,13 @@ initI18n({ en: { translation: enTranslation } })
 const unhandledRejections = new Map<Promise<unknown>, unknown>();
 process
   .on("unhandledRejection", (reason, promise) => {
-    log.error({ message: "unhandledRejection", reason: String(reason) });
+    logger.error({ component: "api.server", message: "unhandledRejection", reason: String(reason) });
     unhandledRejections.set(promise, reason);
   })
   .on("rejectionHandled", (promise) => {
     unhandledRejections.delete(promise);
   })
   .on("uncaughtException", (error, origin) => {
-    log.error({ message: error.message, stack: error.stack, name: error.name, origin });
+    logger.error({ component: "api.server", message: error.message, stack: error.stack, name: error.name, origin });
     if (process.env.NODE_ENV === "production") process.exit(1);
   });

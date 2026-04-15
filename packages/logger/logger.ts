@@ -1,10 +1,9 @@
 /**
  * Centralised logging configuration built on Winston.
  *
- * Provides a single root logger and a factory (`getLogger`) that
- * creates per-component child loggers. All output goes to the
- * console — structured JSON by default, or a colorised
- * human-readable format when `LOG_PRETTY=true`.
+ * Provides a single root logger instance used across the service.
+ * All output goes to the console — structured JSON by default, or a
+ * colorised human-readable format when `LOG_PRETTY=true`.
  *
  * Environment variables:
  * - `LOG_ENABLED` (`true`/`false`, default `true`) — master kill-switch.
@@ -15,7 +14,7 @@
  * @module logger/logger
  */
 
-import { createLogger, format, transports, type Logger } from 'winston';
+import { createLogger, format, transports } from 'winston';
 
 /**
  * Parse a string environment variable as a boolean.
@@ -75,9 +74,8 @@ const prettyFormat = format.combine(
 /**
  * Root Winston logger shared across the entire application.
  *
- * Direct use is discouraged — prefer `getLogger("component-name")` so
- * that every log line carries a `component` metadata field for easy
- * filtering.
+ * Callers should include an explicit `component` metadata field on each
+ * log call so every log line remains traceable to a subsystem.
  */
 export const logger = createLogger({
     level: LOG_LEVEL,
@@ -92,16 +90,3 @@ export const logger = createLogger({
         })
     ]
 });
-
-/**
- * Create a child logger scoped to a specific component.
- *
- * The returned logger automatically injects `{ component }` into every
- * log entry, making it trivial to filter by subsystem in production.
- *
- * @param component - Short identifier for the subsystem (e.g. `"agent"`, `"memory"`).
- * @returns A Winston `Logger` instance with the component metadata attached.
- */
-export function getLogger(component: string): Logger {
-    return logger.child({ component });
-}

@@ -14,11 +14,9 @@
  */
 
 import type express from "express";
-import { getLogger } from "../../packages/logger/logger";
+import { logger } from "../../packages/logger/logger";
 import { rejectResponse, successResponse } from "../../packages/shared";
 import { VALID_PROFILES } from "./agents";
-
-const log = getLogger("api-info");
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -266,7 +264,7 @@ export function registerInfoRoutes(application: express.Express): void {
   /* ── GET /info/modes ────────────────────────────────────────────── */
 
   application.get("/info/modes", (_request, response) => {
-    log.info("info_modes_requested");
+    logger.info("info_modes_requested", { component: "api.info" });
 
     const modes = [...VALID_PROFILES].map((profile) => {
       const { envVar, model } = resolveProfileModel(profile);
@@ -287,7 +285,7 @@ export function registerInfoRoutes(application: express.Express): void {
   /* ── GET /info/models ───────────────────────────────────────────── */
 
   application.get("/info/models", (_request, response) => {
-    log.info("info_models_requested");
+    logger.info("info_models_requested", { component: "api.info" });
 
     fetch(`${OLLAMA_BASE_URL}/api/tags`)
       .then((ollamaResponse) => {
@@ -296,7 +294,8 @@ export function registerInfoRoutes(application: express.Express): void {
             .text()
             .catch(() => "")
             .then((body) => {
-              log.error("ollama_tags_failed", {
+              logger.error("ollama_tags_failed", {
+                component: "api.info",
                 status: ollamaResponse.status,
                 body: body.slice(0, 500),
               });
@@ -326,7 +325,7 @@ export function registerInfoRoutes(application: express.Express): void {
       })
       .catch((error: unknown) => {
         if (response.headersSent) return;
-        log.error("info_models_failed", { error: String(error) });
+        logger.error("info_models_failed", { component: "api.info", error: String(error) });
         rejectResponse(response, 502, "Bad Gateway", [
           `Failed to reach Ollama at ${OLLAMA_BASE_URL}: ${String(error)}`,
         ]);
@@ -336,7 +335,7 @@ export function registerInfoRoutes(application: express.Express): void {
   /* ── GET /help ──────────────────────────────────────────────────── */
 
   application.get("/help", (_request, response) => {
-    log.info("help_requested");
+    logger.info("help_requested", { component: "api.info" });
     successResponse(response, {
       description: "Manna AI Agent Platform — REST API quick reference",
       endpointCount: HELP_CATALOGUE.length,

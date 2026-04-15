@@ -36,7 +36,7 @@
  */
 
 import { StateGraph, START, END } from '@langchain/langgraph';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { saveSwarmRun } from '../persistence/db';
 import type { ITool } from '../tools';
 import type { IProcessor } from '../processors/types';
@@ -49,8 +49,6 @@ import {
     createSynthesizeNode,
     reviewRouter
 } from './nodes';
-
-const log = getLogger('orchestrator:graph');
 
 /* ── Graph builder ───────────────────────────────────────────────────── */
 
@@ -130,7 +128,8 @@ export class LangGraphSwarmOrchestrator {
     async run(task: string, config: ISwarmConfig = {}): Promise<ISwarmResult> {
         const startTime = new Date();
 
-        log.info('langgraph_swarm_run_started', {
+        logger.info('langgraph_swarm_run_started', {
+            component: 'orchestrator.graph',
             task,
             taskLength: task.length,
             maxSubtasks: config.maxSubtasks ?? 6,
@@ -157,7 +156,8 @@ export class LangGraphSwarmOrchestrator {
             decomposition: finalState.decomposition!
         };
 
-        log.info('langgraph_swarm_run_completed', {
+        logger.info('langgraph_swarm_run_completed', {
+            component: 'orchestrator.graph',
             totalDurationMs: result.totalDurationMs,
             subtaskCount: result.subtaskResults.length,
             successCount: result.subtaskResults.filter((r) => r.success).length,
@@ -176,7 +176,10 @@ export class LangGraphSwarmOrchestrator {
             totalDurationMs: result.totalDurationMs,
             status: 'completed'
         }).catch((error: unknown) =>
-            log.warn('langgraph_swarm_persist_failed', { error: String(error) })
+            logger.warn('langgraph_swarm_persist_failed', {
+                component: 'orchestrator.graph',
+                error: String(error)
+            })
         );
 
         return result;

@@ -20,11 +20,11 @@ vi.mock('../../../packages/llm/ollama.js', () => ({
 
 /* ── Mock the logger so log output doesn't pollute test output ──────── */
 vi.mock('../../../packages/logger/logger.js', () => ({
-    getLogger: () => ({
+    logger: {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn()
-    })
+    }
 }));
 
 import { generate } from '../../../packages/llm/ollama.js';

@@ -18,11 +18,9 @@
  */
 
 import { z } from 'zod';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { OLLAMA_BASE_URL } from '../llm/config';
 import type { IExtractionResult } from './types';
-
-const log = getLogger('graph:extractor');
 
 /* ── Configuration ──────────────────────────────────────────────────── */
 
@@ -165,7 +163,8 @@ export async function extractEntitiesAndRelationships(text: string): Promise<IEx
         });
 
         if (!res.ok) {
-            log.warn('graph_ner_request_failed', {
+            logger.warn('graph_ner_request_failed', {
+                component: 'graph.extractor',
                 status: res.status,
                 statusText: res.statusText
             });
@@ -182,7 +181,8 @@ export async function extractEntitiesAndRelationships(text: string): Promise<IEx
         const validated = extractionResponseSchema.safeParse(parsed);
 
         if (!validated.success) {
-            log.warn('graph_ner_schema_invalid', {
+            logger.warn('graph_ner_schema_invalid', {
+                component: 'graph.extractor',
                 issues: validated.error.issues.slice(0, 3)
             });
             return empty;
@@ -190,7 +190,10 @@ export async function extractEntitiesAndRelationships(text: string): Promise<IEx
 
         return validated.data;
     } catch (error) {
-        log.warn('graph_ner_extraction_failed', { error: String(error) });
+        logger.warn('graph_ner_extraction_failed', {
+            component: 'graph.extractor',
+            error: String(error)
+        });
         return empty;
     }
 }

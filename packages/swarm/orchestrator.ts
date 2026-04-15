@@ -21,12 +21,10 @@ import type { ITool } from '../tools';
 import type { IProcessor } from '../processors/types';
 import { generate } from '../llm/ollama';
 import { emit } from '../events/bus';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { decomposeTask } from './decomposer';
 import type { IDecomposition, ISubtask, ISubtaskResult, ISwarmConfig, ISwarmResult } from './types';
 import { saveSwarmRun } from '../persistence/db';
-
-const log = getLogger('swarm:orchestrator');
 
 /* ── Environment ─────────────────────────────────────────────────────── */
 
@@ -88,7 +86,8 @@ export class SwarmOrchestrator {
         const runStartedAt = Date.now();
         const startTime = new Date();
 
-        log.info('swarm_run_started', {
+        logger.info('swarm_run_started', {
+            component: 'swarm.orchestrator',
             task,
             taskLength: task.length,
             maxSubtasks: config.maxSubtasks ?? 6,
@@ -100,7 +99,8 @@ export class SwarmOrchestrator {
         /* ── Step 1: Decompose ──────────────────────────────────────────── */
         const decomposition = await decomposeTask(task, config.maxSubtasks);
 
-        log.info('swarm_decomposition_complete', {
+        logger.info('swarm_decomposition_complete', {
+            component: 'swarm.orchestrator',
             subtaskCount: decomposition.subtasks.length,
             reasoning: decomposition.reasoning
         });
@@ -126,7 +126,8 @@ export class SwarmOrchestrator {
 
         const totalDurationMs = Date.now() - runStartedAt;
 
-        log.info('swarm_run_completed', {
+        logger.info('swarm_run_completed', {
+            component: 'swarm.orchestrator',
             totalDurationMs,
             subtaskCount: subtaskResults.length,
             successCount: subtaskResults.filter((r) => r.success).length
@@ -150,7 +151,12 @@ export class SwarmOrchestrator {
             endTime: new Date(),
             totalDurationMs,
             status: 'completed'
-        }).catch((error: unknown) => log.warn('swarm_persist_failed', { error: String(error) }));
+        }).catch((error: unknown) =>
+            logger.warn('swarm_persist_failed', {
+                component: 'swarm.orchestrator',
+                error: String(error)
+            })
+        );
 
         emit({ type: 'swarm:done', payload: { answer, totalDurationMs } });
 
@@ -190,7 +196,8 @@ export class SwarmOrchestrator {
 
             if (ready.length === 0) {
                 /* Circular dependency or dangling reference — execute all remaining. */
-                log.warn('swarm_dependency_deadlock', {
+                logger.warn('swarm_dependency_deadlock', {
+                    component: 'swarm.orchestrator',
                     remaining: [...remaining.keys()]
                 });
                 for (const subtask of remaining.values()) {
@@ -229,7 +236,8 @@ export class SwarmOrchestrator {
         const startedAt = Date.now();
         const profile = config.profileOverride ?? subtask.profile;
 
-        log.info('swarm_subtask_started', {
+        logger.info('swarm_subtask_started', {
+            component: 'swarm.orchestrator',
             subtaskId: subtask.id,
             profile,
             description: subtask.description.slice(0, 120)
@@ -253,7 +261,8 @@ export class SwarmOrchestrator {
             .run(enrichedTask, { profile })
             .then((answer) => {
                 const durationMs = Date.now() - startedAt;
-                log.info('swarm_subtask_completed', {
+                logger.info('swarm_subtask_completed', {
+                    component: 'swarm.orchestrator',
                     subtaskId: subtask.id,
                     durationMs,
                     answerLength: answer.length
@@ -267,7 +276,8 @@ export class SwarmOrchestrator {
             .catch((error: unknown) => {
                 const durationMs = Date.now() - startedAt;
                 const errorMessage = String(error);
-                log.warn('swarm_subtask_failed', {
+                logger.warn('swarm_subtask_failed', {
+                    component: 'swarm.orchestrator',
                     subtaskId: subtask.id,
                     durationMs,
                     error: errorMessage
@@ -353,7 +363,8 @@ export class SwarmOrchestrator {
             `If any subtask failed, acknowledge the gap and provide what you can.\n` +
             `Be concise but thorough.`;
 
-        log.info('swarm_synthesis_started', {
+        logger.info('swarm_synthesis_started', {
+            component: 'swarm.orchestrator',
             subtaskCount: subtaskResults.length,
             successCount: subtaskResults.filter((r) => r.success).length
         });
@@ -361,7 +372,10 @@ export class SwarmOrchestrator {
         return generate(synthesisPrompt, { model: SYNTHESIS_MODEL, stream: false })
             .then((answer) => answer.trim())
             .catch((error: unknown) => {
-                log.warn('swarm_synthesis_failed', { error: String(error) });
+                logger.warn('swarm_synthesis_failed', {
+                    component: 'swarm.orchestrator',
+                    error: String(error)
+                });
                 /* Graceful degradation — concatenate subtask answers. */
                 return subtaskResults
                     .filter((r) => r.success)

@@ -28,10 +28,8 @@
 import { z } from 'zod';
 import { createTool } from './tool-builder';
 import { runCypher, isGraphAvailable } from '../graph/client';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import type { IGraphQueryResult } from '../graph/types';
-
-const log = getLogger('tool:query_knowledge_graph');
 
 /* ── Safety: block write Cypher ─────────────────────────────────────── */
 
@@ -142,7 +140,9 @@ export const queryKnowledgeGraphTool = createTool({
         /* ── Availability check ─────────────────────────────────────── */
         const available = await isGraphAvailable();
         if (!available) {
-            log.warn('query_knowledge_graph_neo4j_unavailable', {});
+            logger.warn('query_knowledge_graph_neo4j_unavailable', {
+                component: 'tools.query_knowledge_graph'
+            });
             return {
                 rows: [],
                 rowCount: 0,
@@ -192,7 +192,8 @@ export const queryKnowledgeGraphTool = createTool({
         /* ── Execute ─────────────────────────────────────────────────── */
         const rows = await runCypher(cypherToRun, queryParameters);
 
-        log.info('query_knowledge_graph_done', {
+        logger.info('query_knowledge_graph_done', {
+            component: 'tools.query_knowledge_graph',
             mode: entity ? 'entity' : relationship ? 'relationship' : 'cypher',
             rowCount: rows.length
         });

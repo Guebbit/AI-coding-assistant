@@ -18,12 +18,10 @@
  * @module processors/tool-reranker
  */
 
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { createProcessor } from './processor-builder';
 import { envInt, cosineSimilarity } from '../shared';
 import { getEmbedding } from '../llm/embeddings';
-
-const log = getLogger('tool-reranker-processor');
 
 /** Enabled only when explicitly opted in. */
 const ENABLED = process.env.TOOL_RERANKER_ENABLED === 'true';
@@ -89,7 +87,10 @@ export function createToolRerankerProcessor(
                         })
                     );
                     cacheInitialised = true;
-                    log.info('tool_reranker_cache_built', { toolCount: args.tools.length });
+                    logger.info('tool_reranker_cache_built', {
+                        component: 'processors.tool_reranker',
+                        toolCount: args.tools.length
+                    });
                 }
             };
 
@@ -104,7 +105,8 @@ export function createToolRerankerProcessor(
                         }))
                         .sort((a, b) => b.score - a.score);
                     const topTools = scored.slice(0, TOP_N).map((t) => t.name);
-                    log.info('tool_reranker_filtered', {
+                    logger.info('tool_reranker_filtered', {
+                        component: 'processors.tool_reranker',
                         step: args.stepNumber,
                         original: args.tools.length,
                         retained: topTools.length
@@ -113,7 +115,10 @@ export function createToolRerankerProcessor(
                 })
                 .catch((error: unknown) => {
                     /* Fail open — return the original tool list if reranking errors. */
-                    log.warn('tool_reranker_failed', { error: String(error) });
+                    logger.warn('tool_reranker_failed', {
+                        component: 'processors.tool_reranker',
+                        error: String(error)
+                    });
                     return undefined;
                 });
         }

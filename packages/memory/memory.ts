@@ -15,7 +15,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { getEmbedding } from '../llm/embeddings';
 import type { IMemoryEntry } from './types';
 
@@ -32,8 +32,6 @@ const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
 
 /** Qdrant collection name where memory vectors are stored. */
 const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? 'agent_memory';
-
-const log = getLogger('memory');
 
 /* ── In-process state ────────────────────────────────────────────────── */
 
@@ -73,7 +71,8 @@ function addToRecentMemory(entry: string): void {
  * @param startedAt - Timestamp (ms) when the operation began.
  */
 function logMemoryAddedLocalOnly(startedAt: number): void {
-    log.info('memory_added_local_only', {
+    logger.info('memory_added_local_only', {
+        component: 'memory',
         recentCount: recentMemory.length,
         durationMs: Date.now() - startedAt
     });
@@ -85,7 +84,10 @@ function logMemoryAddedLocalOnly(startedAt: number): void {
  * @param startedAt - Timestamp (ms) when the operation began.
  */
 function logMemoryClearedRecentOnly(startedAt: number): void {
-    log.info('memory_cleared_recent_only', { durationMs: Date.now() - startedAt });
+    logger.info('memory_cleared_recent_only', {
+        component: 'memory',
+        durationMs: Date.now() - startedAt
+    });
 }
 
 /**
@@ -148,7 +150,8 @@ export async function addMemory(entry: string): Promise<void> {
                     }
                 ]
             });
-            log.info('memory_added', {
+            logger.info('memory_added', {
+                component: 'memory',
                 recentCount: recentMemory.length,
                 vectorSize,
                 durationMs: Date.now() - startedAt
@@ -156,7 +159,8 @@ export async function addMemory(entry: string): Promise<void> {
         })
         .catch((error: unknown) => {
             qdrantEnabled = false;
-            log.warn('memory_qdrant_disabled', {
+            logger.warn('memory_qdrant_disabled', {
+                component: 'memory',
                 error: String(error),
                 message: 'Falling back to in-memory only'
             });
@@ -182,7 +186,8 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
     const recent = recentMemory.slice(-cappedN);
 
     if (!qdrantEnabled || query.trim() === '') {
-        log.info('memory_read_recent_only', {
+        logger.info('memory_read_recent_only', {
+            component: 'memory',
             queryLength: query.length,
             returnedCount: recent.length,
             qdrantEnabled,
@@ -219,7 +224,8 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
                 }
             }
             const output = merged.slice(0, cappedN);
-            log.info('memory_read_hybrid', {
+            logger.info('memory_read_hybrid', {
+                component: 'memory',
                 queryLength: query.length,
                 recentCount: recent.length,
                 semanticCount: semantic.length,
@@ -229,7 +235,8 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
             return output;
         })
         .catch((error: unknown) => {
-            log.warn('memory_qdrant_search_failed', {
+            logger.warn('memory_qdrant_search_failed', {
+                component: 'memory',
                 error: String(error),
                 queryLength: query.length,
                 returnedCount: recent.length,
@@ -257,10 +264,14 @@ export async function clearMemory(): Promise<void> {
         .deleteCollection(QDRANT_COLLECTION)
         .then(() => {
             vectorSize = null;
-            log.info('memory_cleared', { durationMs: Date.now() - startedAt });
+            logger.info('memory_cleared', {
+                component: 'memory',
+                durationMs: Date.now() - startedAt
+            });
         })
         .catch((error: unknown) => {
-            log.warn('memory_clear_failed', {
+            logger.warn('memory_clear_failed', {
+                component: 'memory',
                 error: String(error),
                 durationMs: Date.now() - startedAt
             });
@@ -316,7 +327,8 @@ export async function addStructuredMemory(
                     }
                 ]
             });
-            log.info('memory_structured_added', {
+            logger.info('memory_structured_added', {
+                component: 'memory',
                 id,
                 role: fullEntry.role,
                 recentCount: recentMemory.length,
@@ -326,7 +338,8 @@ export async function addStructuredMemory(
         })
         .catch((error: unknown) => {
             qdrantEnabled = false;
-            log.warn('memory_qdrant_disabled', {
+            logger.warn('memory_qdrant_disabled', {
+                component: 'memory',
                 error: String(error),
                 message: 'Falling back to in-memory only'
             });
@@ -360,7 +373,8 @@ export function optimizeContextWindow(entries: string[], maxChars = 8_000): stri
         total += entry.length;
     }
 
-    log.info('memory_context_optimized', {
+    logger.info('memory_context_optimized', {
+        component: 'memory',
         inputCount: entries.length,
         outputCount: result.length,
         totalChars: total,

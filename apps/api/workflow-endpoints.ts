@@ -30,7 +30,7 @@ import { z } from 'zod';
 import type { Express, Request, Response } from 'express';
 import { on, off } from '../../packages/events/bus';
 import type { IAgentEvent } from '../../packages/events/bus';
-import { getLogger } from '../../packages/logger/logger';
+import { logger } from '../../packages/logger/logger';
 import {
     envInt,
     rejectResponse,
@@ -48,8 +48,6 @@ import type {
     WorkflowRequest as OpenApiWorkflowRequest,
     WorkflowResponse as OpenApiWorkflowResponse,
 } from '../../api/models';
-
-const log = getLogger('workflow-endpoints');
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -343,7 +341,8 @@ export function registerWorkflowRoutes(app: Express): void {
             return;
         }
 
-        log.info('workflow_request_received', {
+        logger.info('workflow_request_received', {
+            component: 'api.workflow.endpoints',
             stepCount: parsed.steps.length,
             carry: parsed.carry,
             allowWrite: parsed.allowWrite,
@@ -353,7 +352,8 @@ export function registerWorkflowRoutes(app: Express): void {
 
         runWorkflow(parsed)
             .then((workflowResponse) => {
-                log.info('workflow_request_completed', {
+                logger.info('workflow_request_completed', {
+                    component: 'api.workflow.endpoints',
                     stepCount: workflowResponse.steps.length,
                     allSucceeded: workflowResponse.allSucceeded,
                     totalDurationMs: workflowResponse.totalDurationMs,
@@ -363,7 +363,7 @@ export function registerWorkflowRoutes(app: Express): void {
                 successResponse(res, typedResponse);
             })
             .catch((error: unknown) => {
-                log.error('workflow_request_failed', { error: String(error) });
+                logger.error('workflow_request_failed', { component: 'api.workflow.endpoints', error: String(error) });
                 rejectResponse(res, 500, t('error.internal_server_error'), [String(error)]);
             });
     });
@@ -481,13 +481,14 @@ export function registerWorkflowRoutes(app: Express): void {
                         break;
                 }
             } catch (error) {
-                log.warn('workflow_stream_event_write_failed', { error: String(error) });
+                logger.warn('workflow_stream_event_write_failed', { component: 'api.workflow.endpoints', error: String(error) });
             }
         };
 
         on('*', handler);
 
-        log.info('workflow_stream_started', {
+        logger.info('workflow_stream_started', {
+            component: 'api.workflow.endpoints',
             stepCount: parsed.steps.length,
             carry: parsed.carry,
             allowWrite: parsed.allowWrite,
@@ -509,7 +510,8 @@ export function registerWorkflowRoutes(app: Express): void {
             .then((workflowResponse) => {
                 const typedResponse: OpenApiWorkflowResponse = workflowResponse;
                 writeEvent('done', typedResponse);
-                log.info('workflow_stream_completed', {
+                logger.info('workflow_stream_completed', {
+                    component: 'api.workflow.endpoints',
                     stepCount: workflowResponse.steps.length,
                     allSucceeded: workflowResponse.allSucceeded,
                     totalDurationMs: workflowResponse.totalDurationMs,
@@ -517,7 +519,7 @@ export function registerWorkflowRoutes(app: Express): void {
             })
             .catch((error: unknown) => {
                 writeEvent('error', { error: String(error) });
-                log.error('workflow_stream_failed', { error: String(error) });
+                logger.error('workflow_stream_failed', { component: 'api.workflow.endpoints', error: String(error) });
             })
             .finally(() => {
                 off('*', handler);
