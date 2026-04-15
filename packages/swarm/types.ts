@@ -11,6 +11,8 @@
  */
 
 import type { ModelProfile } from '../agent/model-router';
+import type { IAgentRunMeta } from '../agent/agent';
+import type { IResponseMeta } from '../shared/response';
 
 /* ── Subtask ─────────────────────────────────────────────────────────── */
 
@@ -77,6 +79,8 @@ export interface ISubtaskResult {
 
     /** Error message if the subtask failed. */
     error?: string;
+    /** Agent run metadata for this subtask when execution reached the agent. */
+    meta?: IAgentRunMeta;
 }
 
 /* ── Swarm result ────────────────────────────────────────────────────── */
@@ -96,6 +100,8 @@ export interface ISwarmResult {
 
     /** The decomposition that drove this run (for diagnostics / logging). */
     decomposition: IDecomposition;
+    /** Aggregated operational metadata for the swarm run. */
+    meta?: IResponseMeta;
 }
 
 /* ── Swarm configuration ─────────────────────────────────────────────── */

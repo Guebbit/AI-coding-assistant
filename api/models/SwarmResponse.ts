@@ -20,6 +20,13 @@ import {
     SwarmResponseDecompositionToJSON,
     SwarmResponseDecompositionToJSONTyped,
 } from './SwarmResponseDecomposition';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { SwarmSubtaskResult } from './SwarmSubtaskResult';
 import {
     SwarmSubtaskResultFromJSON,
@@ -58,6 +65,12 @@ export interface SwarmResponse {
      * @memberof SwarmResponse
      */
     totalDurationMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof SwarmResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -81,6 +94,7 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
         'subtaskResults': json['subtaskResults'] == null ? undefined : ((json['subtaskResults'] as Array<any>).map(SwarmSubtaskResultFromJSON)),
         'decomposition': json['decomposition'] == null ? undefined : SwarmResponseDecompositionFromJSON(json['decomposition']),
         'totalDurationMs': json['totalDurationMs'] == null ? undefined : json['totalDurationMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -99,5 +113,7 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
         'subtaskResults': value['subtaskResults'] == null ? undefined : ((value['subtaskResults'] as Array<any>).map(SwarmSubtaskResultToJSON)),
         'decomposition': SwarmResponseDecompositionToJSON(value['decomposition']),
         'totalDurationMs': value['totalDurationMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
+

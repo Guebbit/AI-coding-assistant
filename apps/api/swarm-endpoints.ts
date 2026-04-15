@@ -90,6 +90,7 @@ export function registerSwarmRoutes(app: Express): void {
    * Response: `{ "result": "...", "subtaskResults": [...], "totalDurationMs": 12345 }`
    */
   app.post("/run/swarm", (req: Request, res: Response) => {
+    const startedAt = new Date();
     const { task, config, error } = parseSwarmBody(
       req.body as Partial<SwarmRequest>,
     );
@@ -138,7 +139,13 @@ export function registerSwarmRoutes(app: Express): void {
           totalDurationMs: result.totalDurationMs,
         };
 
-        successResponse(res, response);
+        successResponse(res, response, 200, "", {
+          ...result.meta,
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+          ...(config.profileOverride ? { profile: config.profileOverride } : {}),
+        });
       })
       .catch((reason: unknown) => {
         logger.error("swarm_request_failed", {
@@ -167,6 +174,7 @@ export function registerSwarmRoutes(app: Express): void {
    * - `error`          — the swarm run failed
    */
   app.post("/run/swarm/stream", (req: Request, res: Response) => {
+    const startedAt = new Date();
     const { task, config, error } = parseSwarmBody(
       req.body as Partial<SwarmRequest>,
     );
@@ -212,6 +220,13 @@ export function registerSwarmRoutes(app: Express): void {
           answer: result.answer,
           totalDurationMs: result.totalDurationMs,
           subtaskCount: result.subtaskResults.length,
+          meta: {
+            ...result.meta,
+            startedAt: startedAt.toISOString(),
+            durationMs: Date.now() - startedAt.getTime(),
+            requestId: req.requestId,
+            ...(config.profileOverride ? { profile: config.profileOverride } : {}),
+          },
         });
         logger.info("swarm_stream_completed", { component: "api.swarm.endpoints", taskLength: task.length });
       })

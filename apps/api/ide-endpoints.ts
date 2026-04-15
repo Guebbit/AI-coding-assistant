@@ -17,9 +17,9 @@ import type express from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import ts from "typescript";
-import { generate } from "../../packages/llm/ollama";
+import { generateWithMetadata } from "../../packages/llm/ollama";
 import { logger } from "../../packages/logger/logger";
-import { rejectResponse, successResponse, t } from "../../packages/shared";
+import { type IResponseMeta, rejectResponse, successResponse, t } from "../../packages/shared";
 import type {
   AutocompleteRequest,
   AutocompleteResponse,
@@ -688,6 +688,27 @@ function sendRateLimitedResponse(
 }
 
 /**
+ * Build standardized response metadata for IDE endpoints.
+ *
+ * @param startedAt - Request start timestamp.
+ * @param requestId - Request correlation id.
+ * @param base - Optional additional metadata fields.
+ * @returns Normalized response metadata.
+ */
+function buildIdeResponseMeta(
+  startedAt: Date,
+  requestId?: string,
+  base: Partial<IResponseMeta> = {},
+): IResponseMeta {
+  return {
+    startedAt: startedAt.toISOString(),
+    durationMs: Date.now() - startedAt.getTime(),
+    requestId,
+    ...base,
+  };
+}
+
+/**
  * Register the IDE-specific routes on the Express application.
  *
  * Called once from `apps/api/index.ts` at startup.  This function
@@ -714,7 +735,7 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const startedAt = Date.now();
+    const startedAt = new Date();
     const prefix = parsed.data.prefix;
     const suffix = parsed.data.suffix;
     const language = parsed.data.language?.trim() ?? "plaintext";
@@ -727,11 +748,13 @@ export function registerIdeRoutes(application: express.Express): void {
         model: cacheHit.model,
         language: cacheHit.language,
         cached: true,
-        latencyMs: Date.now() - startedAt,
+        latencyMs: Date.now() - startedAt.getTime(),
         createdAtIso: cacheHit.createdAtIso,
       };
       const typedPayload: AutocompleteResponse = payload;
-      successResponse(response, typedPayload);
+      successResponse(response, typedPayload, 200, "", buildIdeResponseMeta(startedAt, request.requestId, {
+        model: cacheHit.model,
+      }));
       return;
     }
 
@@ -742,7 +765,7 @@ export function registerIdeRoutes(application: express.Express): void {
       `Code before cursor:\n${prefix}`;
 
     withTimeout(
-      generate(prompt, {
+      generateWithMetadata(prompt, {
         model: DEFAULT_AUTOCOMPLETE_MODEL,
         stream: false,
         suffix,
@@ -755,14 +778,18 @@ export function registerIdeRoutes(application: express.Express): void {
       endpointTimeoutMs.autocomplete,
       "autocomplete",
     )
-      .then((completion) => {
-        const completionTrimmed = completion.trim();
+      .then((llmResult) => {
+        const completionTrimmed = llmResult.response.trim();
+        const totalTokens =
+          typeof llmResult.promptEvalCount === "number" && typeof llmResult.evalCount === "number"
+            ? llmResult.promptEvalCount + llmResult.evalCount
+            : undefined;
         const payload = {
           completion: completionTrimmed,
           model: DEFAULT_AUTOCOMPLETE_MODEL,
           language,
           cached: false,
-          latencyMs: Date.now() - startedAt,
+          latencyMs: Date.now() - startedAt.getTime(),
           createdAtIso: new Date().toISOString(),
         };
         autocompleteCache.set(cacheKey, {
@@ -774,7 +801,12 @@ export function registerIdeRoutes(application: express.Express): void {
         });
         pruneAutocompleteCache();
         const typedPayload: AutocompleteResponse = payload;
-        successResponse(response, typedPayload);
+        successResponse(response, typedPayload, 200, "", buildIdeResponseMeta(startedAt, request.requestId, {
+          model: llmResult.model,
+          ...(typeof llmResult.promptEvalCount === "number" ? { promptTokens: llmResult.promptEvalCount } : {}),
+          ...(typeof llmResult.evalCount === "number" ? { completionTokens: llmResult.evalCount } : {}),
+          ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+        }));
       })
       .catch((error: unknown) => {
         logger.error("autocomplete_failed", {
@@ -803,7 +835,7 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const startedAt = Date.now();
+    const startedAt = new Date();
     const filePath = parsed.data.filename?.trim() || "in-memory.ts";
     const language = inferLanguage(parsed.data.language, filePath);
     const deterministicFindings = [
@@ -816,10 +848,12 @@ export function registerIdeRoutes(application: express.Express): void {
     const llmModelUsed = parsed.data.includeLlm
       ? parsed.data.model?.trim() || DEFAULT_REVIEW_MODEL
       : undefined;
+    let llmPromptTokens: number | undefined;
+    let llmCompletionTokens: number | undefined;
 
     const llmFindingsPromise = parsed.data.includeLlm
       ? withTimeout(
-          generate(
+          generateWithMetadata(
             `You are a strict code reviewer for conventions and linting.\n` +
               `Return ONLY JSON as an array of findings.\n` +
               `Each finding object must have: severity (error|warning|info), category, message, optional line, optional column, optional rule.\n` +
@@ -840,8 +874,10 @@ export function registerIdeRoutes(application: express.Express): void {
           endpointTimeoutMs["lint-conventions"],
           "lint-conventions",
         )
-          .then((rawLlmResponse) => {
-            const parsedLlmResponse = JSON.parse(rawLlmResponse);
+          .then((llmResult) => {
+            llmPromptTokens = llmResult.promptEvalCount;
+            llmCompletionTokens = llmResult.evalCount;
+            const parsedLlmResponse = JSON.parse(llmResult.response);
             const asArray = Array.isArray(parsedLlmResponse)
               ? parsedLlmResponse
               : Array.isArray(parsedLlmResponse.findings)
@@ -879,10 +915,19 @@ export function registerIdeRoutes(application: express.Express): void {
         summary,
         findings,
         llmModelUsed,
-        latencyMs: Date.now() - startedAt,
+        latencyMs: Date.now() - startedAt.getTime(),
       };
       const typedPayload: LintResponse = payload;
-      successResponse(response, typedPayload);
+      const totalTokens =
+        typeof llmPromptTokens === "number" && typeof llmCompletionTokens === "number"
+          ? llmPromptTokens + llmCompletionTokens
+          : undefined;
+      successResponse(response, typedPayload, 200, "", buildIdeResponseMeta(startedAt, request.requestId, {
+        ...(llmModelUsed ? { model: llmModelUsed } : {}),
+        ...(typeof llmPromptTokens === "number" ? { promptTokens: llmPromptTokens } : {}),
+        ...(typeof llmCompletionTokens === "number" ? { completionTokens: llmCompletionTokens } : {}),
+        ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+      }));
     }).catch((error: unknown) => {
       logger.error("lint_conventions_failed", {
         component: "api.ide",
@@ -911,7 +956,7 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const startedAt = Date.now();
+    const startedAt = new Date();
     const requestId = randomUUID();
     const filePath = parsed.data.filename?.trim() ?? "in-memory";
     const language = inferLanguage(parsed.data.language, filePath);
@@ -929,7 +974,7 @@ export function registerIdeRoutes(application: express.Express): void {
       `Code:\n${parsed.data.code}`;
 
     withTimeout(
-      generate(prompt, {
+      generateWithMetadata(prompt, {
         model,
         stream: false,
         format: "json",
@@ -941,8 +986,12 @@ export function registerIdeRoutes(application: express.Express): void {
       endpointTimeoutMs["page-review"],
       "page-review",
     )
-      .then((rawReview) => {
-        const categories = parsePageReviewBody(rawReview);
+      .then((llmResult) => {
+        const categories = parsePageReviewBody(llmResult.response);
+        const totalTokens =
+          typeof llmResult.promptEvalCount === "number" && typeof llmResult.evalCount === "number"
+            ? llmResult.promptEvalCount + llmResult.evalCount
+            : undefined;
         const payload = {
           requestId,
           model,
@@ -950,10 +999,15 @@ export function registerIdeRoutes(application: express.Express): void {
           filePath,
           findings: Object.values(categories).flat(),
           categories,
-          latencyMs: Date.now() - startedAt,
+          latencyMs: Date.now() - startedAt.getTime(),
         };
         const typedPayload: PageReviewResponse = payload;
-        successResponse(response, typedPayload);
+        successResponse(response, typedPayload, 200, "", buildIdeResponseMeta(startedAt, request.requestId, {
+          model: llmResult.model,
+          ...(typeof llmResult.promptEvalCount === "number" ? { promptTokens: llmResult.promptEvalCount } : {}),
+          ...(typeof llmResult.evalCount === "number" ? { completionTokens: llmResult.evalCount } : {}),
+          ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+        }));
       })
       .catch((error: unknown) => {
         logger.error("page_review_failed", {

@@ -126,6 +126,48 @@ export class LangGraphSwarmOrchestrator {
             totalDurationMs: finalState.totalDurationMs,
             decomposition: finalState.decomposition!
         };
+        const modelsUsed = new Set<string>();
+        let promptTokens: number | undefined;
+        let completionTokens: number | undefined;
+        let totalSteps = 0;
+        let totalToolCalls = 0;
+        let maxContextLength = 0;
+        let memoryUsed = false;
+        for (const subtaskResult of result.subtaskResults) {
+            if (!subtaskResult.meta) continue;
+            for (const model of subtaskResult.meta.models ?? []) {
+                modelsUsed.add(model);
+            }
+            if (typeof subtaskResult.meta.promptTokens === 'number') {
+                promptTokens = (promptTokens ?? 0) + subtaskResult.meta.promptTokens;
+            }
+            if (typeof subtaskResult.meta.completionTokens === 'number') {
+                completionTokens = (completionTokens ?? 0) + subtaskResult.meta.completionTokens;
+            }
+            totalSteps += subtaskResult.meta.steps ?? 0;
+            totalToolCalls += subtaskResult.meta.toolCalls ?? 0;
+            maxContextLength = Math.max(maxContextLength, subtaskResult.meta.contextLength ?? 0);
+            memoryUsed = memoryUsed || subtaskResult.meta.memoryUsed === true;
+        }
+        const models = [...modelsUsed];
+        const totalTokens =
+            typeof promptTokens === 'number' && typeof completionTokens === 'number'
+                ? promptTokens + completionTokens
+                : undefined;
+        result.meta = {
+            startedAt: startTime.toISOString(),
+            durationMs: result.totalDurationMs,
+            ...(models.length > 0
+                ? { models, model: models.length === 1 ? models[0] : undefined }
+                : {}),
+            ...(typeof promptTokens === 'number' ? { promptTokens } : {}),
+            ...(typeof completionTokens === 'number' ? { completionTokens } : {}),
+            ...(typeof totalTokens === 'number' ? { totalTokens } : {}),
+            ...(totalSteps > 0 ? { steps: totalSteps } : {}),
+            ...(totalToolCalls > 0 ? { toolCalls: totalToolCalls } : {}),
+            ...(maxContextLength > 0 ? { contextLength: maxContextLength } : {}),
+            memoryUsed
+        };
 
         logger.info('langgraph_swarm_run_completed', {
             component: 'orchestrator.graph',

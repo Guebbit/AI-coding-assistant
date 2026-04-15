@@ -6,6 +6,23 @@
 
 This page is the authoritative human-readable reference for every HTTP endpoint exposed by the Manna API server.
 
+All JSON success responses use a shared envelope:
+
+```json
+{
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {},
+    "meta": {
+        "startedAt": "2026-04-15T21:00:00.000Z",
+        "durationMs": 42
+    }
+}
+```
+
+`meta` is optional and endpoint-dependent. It may include duration, request ID, model/profile, token counts, step counts, tool-call counts, and context length when available.
+
 ---
 
 ## Visual tree
@@ -88,8 +105,17 @@ Simple liveness check. No LLM call. Safe to poll from monitoring tools and Docke
 
 ```json
 {
-    "status": "ok",
-    "timestamp": "2024-01-15T10:30:00.000Z"
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "status": "ok",
+        "timestamp": "2024-01-15T10:30:00.000Z"
+    },
+    "meta": {
+        "startedAt": "2024-01-15T10:29:59.998Z",
+        "durationMs": 2
+    }
 }
 ```
 
@@ -119,7 +145,24 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
 
 ```json
 {
-    "result": "The agent's final answer as a string."
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "The agent's final answer as a string."
+    },
+    "meta": {
+        "startedAt": "2024-01-15T10:30:00.000Z",
+        "durationMs": 1533,
+        "requestId": "req_123",
+        "model": "llama3.1:8b-instruct-q8_0",
+        "promptTokens": 420,
+        "completionTokens": 180,
+        "totalTokens": 600,
+        "steps": 2,
+        "toolCalls": 1,
+        "contextLength": 931
+    }
 }
 ```
 

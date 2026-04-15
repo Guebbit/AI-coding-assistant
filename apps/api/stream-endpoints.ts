@@ -97,8 +97,14 @@ export function registerStreamRoutes(app: Express): void {
 
     agent
       .run(task, profile ? { profile: profile as ModelProfile } : undefined)
-      .then((result) => {
-        writeEvent("done", { result });
+      .then((runResult) => {
+        writeEvent("done", {
+          result: runResult.answer,
+          meta: {
+            ...runResult.meta,
+            requestId: req.requestId,
+          },
+        });
         logger.info("stream_run_completed", { component: "api.stream.endpoints", taskLength: task.length });
       })
       .catch((error: unknown) => {

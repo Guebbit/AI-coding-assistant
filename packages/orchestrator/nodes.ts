@@ -331,19 +331,25 @@ async function executeOneSubtask(
 
     return agent
         .run(enrichedTask, { profile })
-        .then((answer) => {
+        .then((runResult) => {
             const durationMs = Date.now() - startedAt;
             logger.info('graph_subtask_completed', {
                 component: 'orchestrator.nodes',
                 subtaskId: subtask.id,
                 durationMs,
-                answerLength: answer.length
+                answerLength: runResult.answer.length
             });
             emit({
                 type: 'swarm:subtask_done',
                 payload: { subtaskId: subtask.id, durationMs }
             });
-            return { subtask, answer, durationMs, success: true as const };
+            return {
+                subtask,
+                answer: runResult.answer,
+                durationMs,
+                success: true as const,
+                meta: runResult.meta
+            };
         })
         .catch((error: unknown) => {
             const durationMs = Date.now() - startedAt;

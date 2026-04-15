@@ -264,6 +264,7 @@ export function registerInfoRoutes(application: express.Express): void {
   /* ── GET /info/modes ────────────────────────────────────────────── */
 
   application.get("/info/modes", (_request, response) => {
+    const startedAt = new Date();
     logger.info("info_modes_requested", { component: "api.info" });
 
     const modes = [...VALID_PROFILES].map((profile) => {
@@ -279,12 +280,17 @@ export function registerInfoRoutes(application: express.Express): void {
     successResponse(response, {
       count: modes.length,
       modes,
+    }, 200, "", {
+      startedAt: startedAt.toISOString(),
+      durationMs: Date.now() - startedAt.getTime(),
+      requestId: _request.requestId,
     });
   });
 
   /* ── GET /info/models ───────────────────────────────────────────── */
 
   application.get("/info/models", (_request, response) => {
+    const startedAt = new Date();
     logger.info("info_models_requested", { component: "api.info" });
 
     fetch(`${OLLAMA_BASE_URL}/api/tags`)
@@ -321,6 +327,10 @@ export function registerInfoRoutes(application: express.Express): void {
           count: models.length,
           ollamaBaseUrl: OLLAMA_BASE_URL,
           models,
+        }, 200, "", {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: _request.requestId,
         });
       })
       .catch((error: unknown) => {
@@ -335,11 +345,16 @@ export function registerInfoRoutes(application: express.Express): void {
   /* ── GET /help ──────────────────────────────────────────────────── */
 
   application.get("/help", (_request, response) => {
+    const startedAt = new Date();
     logger.info("help_requested", { component: "api.info" });
     successResponse(response, {
       description: "Manna AI Agent Platform — REST API quick reference",
       endpointCount: HELP_CATALOGUE.length,
       endpoints: HELP_CATALOGUE,
+    }, 200, "", {
+      startedAt: startedAt.toISOString(),
+      durationMs: Date.now() - startedAt.getTime(),
+      requestId: _request.requestId,
     });
   });
 }

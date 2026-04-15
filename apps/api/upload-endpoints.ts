@@ -28,7 +28,7 @@ import {
   readPdfTool
 } from "../../packages/tools/index";
 import { logger } from "../../packages/logger/logger";
-import { rejectResponse, successResponse, t } from "../../packages/shared";
+import { type IResponseMeta, rejectResponse, successResponse, t } from "../../packages/shared";
 import { upload } from "./middlewares/multer";
 
 /**
@@ -56,14 +56,15 @@ interface IUploadImageProcessingResult {
 function sendImageOrJson(
   request: Request,
   response: Response,
-  result: IUploadImageProcessingResult
+  result: IUploadImageProcessingResult,
+  meta?: IResponseMeta
 ): void {
   if (request.headers.accept?.includes("image/png")) {
     response.status(200).type("image/png").send(Buffer.from(result.image, "base64"));
     return;
   }
 
-  response.status(200).json(result);
+  successResponse(response, result, 200, "", meta);
 }
 
 /**
@@ -84,6 +85,7 @@ export function registerUploadRoutes(app: express.Express): void {
    * Response: `{ model, response }` where `response` is the model's description.
    */
   app.post("/upload/image-classify", upload.single("file"), (req, res) => {
+    const startedAt = new Date();
     if (!req.file) {
       rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
       return;
@@ -103,7 +105,11 @@ export function registerUploadRoutes(app: express.Express): void {
         model: req.body?.model,
       })
       .then((result) => {
-        successResponse(res, result);
+        successResponse(res, result, 200, "", {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+        });
       })
       .catch((error: unknown) => {
         logger.error("upload_image_classify_failed", {
@@ -128,6 +134,7 @@ export function registerUploadRoutes(app: express.Express): void {
    * - JSON `{ image, duration_ms, model }` otherwise.
    */
   app.post("/upload/image-sketch", upload.single("file"), (req, res) => {
+    const startedAt = new Date();
     if (!req.file) {
       rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
       return;
@@ -147,7 +154,12 @@ export function registerUploadRoutes(app: express.Express): void {
         negative_prompt: req.body?.negative_prompt,
       })
       .then((result) => {
-        sendImageOrJson(req, res, result as IUploadImageProcessingResult);
+        sendImageOrJson(req, res, result as IUploadImageProcessingResult, {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+          model: (result as IUploadImageProcessingResult).model,
+        });
       })
       .catch((error: unknown) => {
         logger.error("upload_image_sketch_failed", {
@@ -172,6 +184,7 @@ export function registerUploadRoutes(app: express.Express): void {
    * - JSON `{ image, duration_ms, model }` otherwise.
    */
   app.post("/upload/image-colorize", upload.single("file"), (req, res) => {
+    const startedAt = new Date();
     if (!req.file) {
       rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
       return;
@@ -191,7 +204,12 @@ export function registerUploadRoutes(app: express.Express): void {
         negative_prompt: req.body?.negative_prompt,
       })
       .then((result) => {
-        sendImageOrJson(req, res, result as IUploadImageProcessingResult);
+        sendImageOrJson(req, res, result as IUploadImageProcessingResult, {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+          model: (result as IUploadImageProcessingResult).model,
+        });
       })
       .catch((error: unknown) => {
         logger.error("upload_image_colorize_failed", {
@@ -215,6 +233,7 @@ export function registerUploadRoutes(app: express.Express): void {
    * Response: `{ model, text }` where `text` is the transcribed content.
    */
   app.post("/upload/speech-to-text", upload.single("file"), (req, res) => {
+    const startedAt = new Date();
     if (!req.file) {
       rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
       return;
@@ -236,7 +255,11 @@ export function registerUploadRoutes(app: express.Express): void {
         prompt: req.body?.prompt,
       })
       .then((result) => {
-        successResponse(res, result);
+        successResponse(res, result, 200, "", {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+        });
       })
       .catch((error: unknown) => {
         logger.error("upload_speech_to_text_failed", {
@@ -257,6 +280,7 @@ export function registerUploadRoutes(app: express.Express): void {
    * Response: `{ pageCount, text }` with the extracted content.
    */
   app.post("/upload/read-pdf", upload.single("file"), (req, res) => {
+    const startedAt = new Date();
     if (!req.file) {
       rejectResponse(res, 400, "Bad Request", [t("error.file_required")]);
       return;
@@ -274,7 +298,11 @@ export function registerUploadRoutes(app: express.Express): void {
         data: req.file.buffer.toString("base64"),
       })
       .then((result) => {
-        successResponse(res, result);
+        successResponse(res, result, 200, "", {
+          startedAt: startedAt.toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          requestId: req.requestId,
+        });
       })
       .catch((error: unknown) => {
         logger.error("upload_read_pdf_failed", { component: "api.upload", error: String(error), requestId: req.requestId });

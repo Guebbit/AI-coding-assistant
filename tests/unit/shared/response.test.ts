@@ -11,7 +11,26 @@ describe('generateSuccess', () => {
             success: true,
             status: 200,
             message: '',
-            data: { value: 1 }
+            data: { value: 1 },
+            meta: undefined
+        });
+    });
+
+    it('includes meta when provided', () => {
+        expect(
+            generateSuccess({ value: 1 }, 200, '', {
+                durationMs: 42,
+                startedAt: '2026-01-01T00:00:00.000Z'
+            })
+        ).toEqual({
+            success: true,
+            status: 200,
+            message: '',
+            data: { value: 1 },
+            meta: {
+                durationMs: 42,
+                startedAt: '2026-01-01T00:00:00.000Z'
+            }
         });
     });
 });

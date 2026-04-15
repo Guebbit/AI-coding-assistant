@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -43,6 +51,12 @@ export interface AutocompleteResponse {
      * @memberof AutocompleteResponse
      */
     latencyMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof AutocompleteResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -66,6 +80,7 @@ export function AutocompleteResponseFromJSONTyped(json: any, ignoreDiscriminator
         'completion': json['completion'] == null ? undefined : json['completion'],
         'cached': json['cached'] == null ? undefined : json['cached'],
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -84,6 +99,7 @@ export function AutocompleteResponseFromJSONTyped(json: any, ignoreDiscriminator
         'completion': value['completion'],
         'cached': value['cached'],
         'latencyMs': value['latencyMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

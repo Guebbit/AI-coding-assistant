@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -25,6 +33,12 @@ export interface UploadImageClassify200Response {
      * @memberof UploadImageClassify200Response
      */
     result?: string;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof UploadImageClassify200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -45,6 +59,7 @@ export function UploadImageClassify200ResponseFromJSONTyped(json: any, ignoreDis
     return {
         
         'result': json['result'] == null ? undefined : json['result'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -60,6 +75,7 @@ export function UploadImageClassify200ResponseFromJSONTyped(json: any, ignoreDis
     return {
         
         'result': value['result'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

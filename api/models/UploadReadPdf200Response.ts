@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -31,6 +39,12 @@ export interface UploadReadPdf200Response {
      * @memberof UploadReadPdf200Response
      */
     pages?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof UploadReadPdf200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -52,6 +66,7 @@ export function UploadReadPdf200ResponseFromJSONTyped(json: any, ignoreDiscrimin
         
         'text': json['text'] == null ? undefined : json['text'],
         'pages': json['pages'] == null ? undefined : json['pages'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -68,6 +83,7 @@ export function UploadReadPdf200ResponseFromJSONTyped(json: any, ignoreDiscrimin
         
         'text': value['text'],
         'pages': value['pages'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

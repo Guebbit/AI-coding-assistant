@@ -111,7 +111,7 @@ export class CoreApi extends runtime.BaseAPI {
     }
 
     /**
-     * Same as `POST /run` but streams agent lifecycle events in real time as Server-Sent Events (SSE).  The connection stays open until the agent completes (on `done`, `error`, or `max_steps` event). The original `POST /run` endpoint is completely unchanged.  **SSE event types**: - `step` — emitted after each LLM response: `{ step, action, thought }` - `tool` — emitted after each tool execution: `{ tool, result? }` or `{ tool, error }` - `route` — emitted when a model profile is selected: `{ profile, model, reason }` - `done` — final answer ready: `{ result }` - `error` — agent threw: `{ error }` - `max_steps` — loop exhausted: `{ task, summary }` 
+     * Same as `POST /run` but streams agent lifecycle events in real time as Server-Sent Events (SSE).  The connection stays open until the agent completes (on `done`, `error`, or `max_steps` event). The original `POST /run` endpoint is completely unchanged.  **SSE event types**: - `step` — emitted after each LLM response: `{ step, action, thought }` - `tool` — emitted after each tool execution: `{ tool, result? }` or `{ tool, error }` - `route` — emitted when a model profile is selected: `{ profile, model, reason }` - `done` — final answer ready: `{ result, meta? }` - `error` — agent threw: `{ error }` - `max_steps` — loop exhausted: `{ task, summary }` 
      * Submit a task and receive Server-Sent Events
      */
     async postRunStreamRaw(requestParameters: PostRunStreamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
@@ -144,7 +144,7 @@ export class CoreApi extends runtime.BaseAPI {
     }
 
     /**
-     * Same as `POST /run` but streams agent lifecycle events in real time as Server-Sent Events (SSE).  The connection stays open until the agent completes (on `done`, `error`, or `max_steps` event). The original `POST /run` endpoint is completely unchanged.  **SSE event types**: - `step` — emitted after each LLM response: `{ step, action, thought }` - `tool` — emitted after each tool execution: `{ tool, result? }` or `{ tool, error }` - `route` — emitted when a model profile is selected: `{ profile, model, reason }` - `done` — final answer ready: `{ result }` - `error` — agent threw: `{ error }` - `max_steps` — loop exhausted: `{ task, summary }` 
+     * Same as `POST /run` but streams agent lifecycle events in real time as Server-Sent Events (SSE).  The connection stays open until the agent completes (on `done`, `error`, or `max_steps` event). The original `POST /run` endpoint is completely unchanged.  **SSE event types**: - `step` — emitted after each LLM response: `{ step, action, thought }` - `tool` — emitted after each tool execution: `{ tool, result? }` or `{ tool, error }` - `route` — emitted when a model profile is selected: `{ profile, model, reason }` - `done` — final answer ready: `{ result, meta? }` - `error` — agent threw: `{ error }` - `max_steps` — loop exhausted: `{ task, summary }` 
      * Submit a task and receive Server-Sent Events
      */
     async postRunStream(requestParameters: PostRunStreamRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {

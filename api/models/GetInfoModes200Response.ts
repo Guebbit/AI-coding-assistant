@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { GetInfoModes200ResponseModesInner } from './GetInfoModes200ResponseModesInner';
 import {
     GetInfoModes200ResponseModesInnerFromJSON,
@@ -39,6 +46,12 @@ export interface GetInfoModes200Response {
      * @memberof GetInfoModes200Response
      */
     modes?: Array<GetInfoModes200ResponseModesInner>;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof GetInfoModes200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -60,6 +73,7 @@ export function GetInfoModes200ResponseFromJSONTyped(json: any, ignoreDiscrimina
         
         'count': json['count'] == null ? undefined : json['count'],
         'modes': json['modes'] == null ? undefined : ((json['modes'] as Array<any>).map(GetInfoModes200ResponseModesInnerFromJSON)),
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -76,6 +90,7 @@ export function GetInfoModes200ResponseFromJSONTyped(json: any, ignoreDiscrimina
         
         'count': value['count'],
         'modes': value['modes'] == null ? undefined : ((value['modes'] as Array<any>).map(GetInfoModes200ResponseModesInnerToJSON)),
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

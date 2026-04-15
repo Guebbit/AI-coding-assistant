@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -37,6 +45,12 @@ export interface PageReviewResponse {
      * @memberof PageReviewResponse
      */
     latencyMs?: number;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof PageReviewResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -59,6 +73,7 @@ export function PageReviewResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'requestId': json['requestId'] == null ? undefined : json['requestId'],
         'findings': json['findings'] == null ? undefined : json['findings'],
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -76,6 +91,7 @@ export function PageReviewResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'requestId': value['requestId'],
         'findings': value['findings'],
         'latencyMs': value['latencyMs'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -31,6 +39,12 @@ export interface HealthResponse {
      * @memberof HealthResponse
      */
     timestamp: Date;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof HealthResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -54,6 +68,7 @@ export function HealthResponseFromJSONTyped(json: any, ignoreDiscriminator: bool
         
         'status': json['status'],
         'timestamp': (new Date(json['timestamp'])),
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -70,6 +85,7 @@ export function HealthResponseFromJSONTyped(json: any, ignoreDiscriminator: bool
         
         'status': value['status'],
         'timestamp': ((value['timestamp']).toISOString()),
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 import type { GetInfoModels200ResponseModelsInner } from './GetInfoModels200ResponseModelsInner';
 import {
     GetInfoModels200ResponseModelsInnerFromJSON,
@@ -45,6 +52,12 @@ export interface GetInfoModels200Response {
      * @memberof GetInfoModels200Response
      */
     models?: Array<GetInfoModels200ResponseModelsInner>;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof GetInfoModels200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -67,6 +80,7 @@ export function GetInfoModels200ResponseFromJSONTyped(json: any, ignoreDiscrimin
         'count': json['count'] == null ? undefined : json['count'],
         'ollamaBaseUrl': json['ollamaBaseUrl'] == null ? undefined : json['ollamaBaseUrl'],
         'models': json['models'] == null ? undefined : ((json['models'] as Array<any>).map(GetInfoModels200ResponseModelsInnerFromJSON)),
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -84,6 +98,7 @@ export function GetInfoModels200ResponseFromJSONTyped(json: any, ignoreDiscrimin
         'count': value['count'],
         'ollamaBaseUrl': value['ollamaBaseUrl'],
         'models': value['models'] == null ? undefined : ((value['models'] as Array<any>).map(GetInfoModels200ResponseModelsInnerToJSON)),
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

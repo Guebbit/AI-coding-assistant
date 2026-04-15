@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
+
 /**
  * 
  * @export
@@ -25,6 +33,12 @@ export interface UploadSpeechToText200Response {
      * @memberof UploadSpeechToText200Response
      */
     text?: string;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof UploadSpeechToText200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -45,6 +59,7 @@ export function UploadSpeechToText200ResponseFromJSONTyped(json: any, ignoreDisc
     return {
         
         'text': json['text'] == null ? undefined : json['text'],
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -60,6 +75,7 @@ export function UploadSpeechToText200ResponseFromJSONTyped(json: any, ignoreDisc
     return {
         
         'text': value['text'],
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

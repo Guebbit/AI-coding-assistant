@@ -20,6 +20,13 @@ import {
     GetHelp200ResponseEndpointsInnerToJSON,
     GetHelp200ResponseEndpointsInnerToJSONTyped,
 } from './GetHelp200ResponseEndpointsInner';
+import type { ResponseMeta } from './ResponseMeta';
+import {
+    ResponseMetaFromJSON,
+    ResponseMetaFromJSONTyped,
+    ResponseMetaToJSON,
+    ResponseMetaToJSONTyped,
+} from './ResponseMeta';
 
 /**
  * 
@@ -45,6 +52,12 @@ export interface GetHelp200Response {
      * @memberof GetHelp200Response
      */
     endpoints?: Array<GetHelp200ResponseEndpointsInner>;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof GetHelp200Response
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -67,6 +80,7 @@ export function GetHelp200ResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'description': json['description'] == null ? undefined : json['description'],
         'endpointCount': json['endpointCount'] == null ? undefined : json['endpointCount'],
         'endpoints': json['endpoints'] == null ? undefined : ((json['endpoints'] as Array<any>).map(GetHelp200ResponseEndpointsInnerFromJSON)),
+        'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
 
@@ -84,6 +98,7 @@ export function GetHelp200ResponseFromJSONTyped(json: any, ignoreDiscriminator: 
         'description': value['description'],
         'endpointCount': value['endpointCount'],
         'endpoints': value['endpoints'] == null ? undefined : ((value['endpoints'] as Array<any>).map(GetHelp200ResponseEndpointsInnerToJSON)),
+        'meta': ResponseMetaToJSON(value['meta']),
     };
 }
 

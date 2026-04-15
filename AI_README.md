@@ -417,7 +417,7 @@ Headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connecti
 | `step`      | `agent:step`                  | `{ step, action, thought }` (thought truncated at 300 chars) |
 | `tool`      | `tool:result` or `tool:error` | `{ tool, result? }` or `{ tool, error }`                     |
 | `route`     | `agent:model_routed`          | `{ profile, model, reason }`                                 |
-| `done`      | `agent:done`                  | `{ result }`                                                 |
+| `done`      | `agent:done`                  | `{ result, meta? }`                                          |
 | `error`     | `agent:error`                 | `{ error }`                                                  |
 | `max_steps` | `agent:max_steps`             | `{ task, summary }`                                          |
 
@@ -472,17 +472,17 @@ Request body:
 
 SSE events for `/run/swarm/stream`:
 
-| SSE event       | Trigger                      | Data shape                                  |
-| --------------- | ---------------------------- | ------------------------------------------- |
-| `decomposed`    | `swarm:decomposed`           | `{ subtaskCount, reasoning, subtasks }`     |
-| `subtask_start` | `swarm:subtask_start`        | `{ subtaskId, profile }`                    |
-| `subtask_done`  | `swarm:subtask_done`         | `{ subtaskId, durationMs }`                 |
-| `subtask_error` | `swarm:subtask_error`        | `{ subtaskId, error }`                      |
-| `step`          | `agent:step`                 | `{ step, action, thought }`                 |
-| `tool`          | `tool:result` / `tool:error` | `{ tool, result? }` or `{ tool, error }`    |
-| `route`         | `agent:model_routed`         | `{ profile, model, reason }`                |
-| `done`          | `swarm:done`                 | `{ result, totalDurationMs, subtaskCount }` |
-| `error`         | swarm run failed             | `{ error }`                                 |
+| SSE event       | Trigger                      | Data shape                                         |
+| --------------- | ---------------------------- | -------------------------------------------------- |
+| `decomposed`    | `swarm:decomposed`           | `{ subtaskCount, reasoning, subtasks }`            |
+| `subtask_start` | `swarm:subtask_start`        | `{ subtaskId, profile }`                           |
+| `subtask_done`  | `swarm:subtask_done`         | `{ subtaskId, durationMs }`                        |
+| `subtask_error` | `swarm:subtask_error`        | `{ subtaskId, error }`                             |
+| `step`          | `agent:step`                 | `{ step, action, thought }`                        |
+| `tool`          | `tool:result` / `tool:error` | `{ tool, result? }` or `{ tool, error }`           |
+| `route`         | `agent:model_routed`         | `{ profile, model, reason }`                       |
+| `done`          | `swarm:done`                 | `{ result, totalDurationMs, subtaskCount, meta? }` |
+| `error`         | swarm run failed             | `{ error }`                                        |
 
 ---
 
