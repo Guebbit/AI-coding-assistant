@@ -137,25 +137,29 @@ export async function addMemory(entry: string): Promise<void> {
     }
 
     await getEmbedding(entry)
-        .then(async (vector) => {
+        .then((vector) => {
             vectorSize = vector.length;
-            await ensureCollection(vector.length);
-            await qdrant.upsert(QDRANT_COLLECTION, {
-                wait: true,
-                points: [
-                    {
-                        id: randomUUID(),
-                        vector,
-                        payload: { text: entry, createdAt: new Date().toISOString() }
-                    }
-                ]
-            });
-            logger.info('memory_added', {
-                component: 'memory',
-                recentCount: recentMemory.length,
-                vectorSize,
-                durationMs: Date.now() - startedAt
-            });
+            return ensureCollection(vector.length)
+                .then(() =>
+                    qdrant.upsert(QDRANT_COLLECTION, {
+                        wait: true,
+                        points: [
+                            {
+                                id: randomUUID(),
+                                vector,
+                                payload: { text: entry, createdAt: new Date().toISOString() }
+                            }
+                        ]
+                    })
+                )
+                .then(() => {
+                    logger.info('memory_added', {
+                        component: 'memory',
+                        recentCount: recentMemory.length,
+                        vectorSize,
+                        durationMs: Date.now() - startedAt
+                    });
+                });
         })
         .catch((error: unknown) => {
             qdrantEnabled = false;
@@ -197,15 +201,16 @@ export async function getMemory(query = '', n = DEFAULT_RETURN_COUNT): Promise<s
     }
 
     return getEmbedding(query)
-        .then(async (queryVector) => {
-            await ensureCollection(queryVector.length);
-
-            const results = await qdrant.search(QDRANT_COLLECTION, {
-                vector: queryVector,
-                limit: cappedN,
-                with_payload: true
-            });
-
+        .then((queryVector) =>
+            ensureCollection(queryVector.length).then(() =>
+                qdrant.search(QDRANT_COLLECTION, {
+                    vector: queryVector,
+                    limit: cappedN,
+                    with_payload: true
+                })
+            )
+        )
+        .then((results) => {
             /* Extract text payloads from Qdrant search results. */
             const semantic = results
                 .map((point) => {
@@ -309,32 +314,36 @@ export async function addStructuredMemory(
     }
 
     await getEmbedding(fullEntry.content)
-        .then(async (vector) => {
+        .then((vector) => {
             vectorSize = vector.length;
-            await ensureCollection(vector.length);
-            await qdrant.upsert(QDRANT_COLLECTION, {
-                wait: true,
-                points: [
-                    {
+            return ensureCollection(vector.length)
+                .then(() =>
+                    qdrant.upsert(QDRANT_COLLECTION, {
+                        wait: true,
+                        points: [
+                            {
+                                id,
+                                vector,
+                                payload: {
+                                    text: fullEntry.content,
+                                    role: fullEntry.role,
+                                    createdAt: timestamp.toISOString(),
+                                    ...(fullEntry.metadata ?? {})
+                                }
+                            }
+                        ]
+                    })
+                )
+                .then(() => {
+                    logger.info('memory_structured_added', {
+                        component: 'memory',
                         id,
-                        vector,
-                        payload: {
-                            text: fullEntry.content,
-                            role: fullEntry.role,
-                            createdAt: timestamp.toISOString(),
-                            ...(fullEntry.metadata ?? {})
-                        }
-                    }
-                ]
-            });
-            logger.info('memory_structured_added', {
-                component: 'memory',
-                id,
-                role: fullEntry.role,
-                recentCount: recentMemory.length,
-                vectorSize,
-                durationMs: Date.now() - startedAt
-            });
+                        role: fullEntry.role,
+                        recentCount: recentMemory.length,
+                        vectorSize,
+                        durationMs: Date.now() - startedAt
+                    });
+                });
         })
         .catch((error: unknown) => {
             qdrantEnabled = false;

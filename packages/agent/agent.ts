@@ -253,7 +253,7 @@ export class Agent {
                 contextLength: inputArgs.context.length,
                 cumulativeDurationMs: Date.now() - runStartedAt
             })
-                .then(async (route) => {
+                .then((route) => {
                     profilesUsed.add(route.profile);
                     emit({
                         type: 'agent:model_routed',
@@ -265,36 +265,37 @@ export class Agent {
                         }
                     });
                     const llmStartedAt = Date.now();
-                    const llmResult = await generateWithMetadata(prompt, {
+                    return generateWithMetadata(prompt, {
                         model: route.model,
                         options: route.options
+                    }).then((llmResult) => {
+                        llmSteps += 1;
+                        modelsUsed.add(llmResult.model ?? route.model);
+                        if (typeof llmResult.promptEvalCount === 'number') {
+                            promptTokens = (promptTokens ?? 0) + llmResult.promptEvalCount;
+                        }
+                        if (typeof llmResult.evalCount === 'number') {
+                            completionTokens = (completionTokens ?? 0) + llmResult.evalCount;
+                        }
+                        logger.info('agent_llm_response_received', {
+                            component: 'agent',
+                            step,
+                            responseLength: llmResult.response.length,
+                            durationMs: Date.now() - llmStartedAt,
+                            routedProfile: route.profile,
+                            routedReason: route.reason,
+                            model: llmResult.model,
+                            done: llmResult.done,
+                            doneReason: llmResult.doneReason,
+                            totalDurationNs: llmResult.totalDurationNs,
+                            loadDurationNs: llmResult.loadDurationNs,
+                            promptEvalCount: llmResult.promptEvalCount,
+                            promptEvalDurationNs: llmResult.promptEvalDurationNs,
+                            evalCount: llmResult.evalCount,
+                            evalDurationNs: llmResult.evalDurationNs
+                        });
+                        return llmResult.response;
                     });
-                    llmSteps += 1;
-                    modelsUsed.add(llmResult.model ?? route.model);
-                    if (typeof llmResult.promptEvalCount === 'number') {
-                        promptTokens = (promptTokens ?? 0) + llmResult.promptEvalCount;
-                    }
-                    if (typeof llmResult.evalCount === 'number') {
-                        completionTokens = (completionTokens ?? 0) + llmResult.evalCount;
-                    }
-                    logger.info('agent_llm_response_received', {
-                        component: 'agent',
-                        step,
-                        responseLength: llmResult.response.length,
-                        durationMs: Date.now() - llmStartedAt,
-                        routedProfile: route.profile,
-                        routedReason: route.reason,
-                        model: llmResult.model,
-                        done: llmResult.done,
-                        doneReason: llmResult.doneReason,
-                        totalDurationNs: llmResult.totalDurationNs,
-                        loadDurationNs: llmResult.loadDurationNs,
-                        promptEvalCount: llmResult.promptEvalCount,
-                        promptEvalDurationNs: llmResult.promptEvalDurationNs,
-                        evalCount: llmResult.evalCount,
-                        evalDurationNs: llmResult.evalDurationNs
-                    });
-                    return llmResult.response;
                 })
                 .catch((error: unknown) => {
                     logger.error('agent_llm_call_failed', {
@@ -539,9 +540,9 @@ export class Agent {
         /* Write the full diagnostic log with the AI commentary. */
         let diagnosticFile = '';
         await writeDiagnosticLog(diagnosticEntries, task, summary)
-            .then(async (logPath) => {
+            .then((logPath) => {
                 diagnosticFile = logPath;
-                await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
+                return cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
             })
             .catch((error: unknown) =>
                 logger.warn('agent_diagnostic_log_failed', {

@@ -34,7 +34,7 @@ export const readFileTool = createTool({
      * @returns The UTF-8 contents of the file.
      * @throws {Error} When `path` is missing, empty, or escapes the project root.
      */
-    async execute({ path: filePath }) {
-        return await safeReadFile(filePath, 'utf-8');
+    execute({ path: filePath }) {
+        return safeReadFile(filePath, 'utf-8');
     }
 });
