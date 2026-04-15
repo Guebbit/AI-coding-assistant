@@ -152,7 +152,10 @@ export class SwarmOrchestrator {
             totalDurationMs,
             status: 'completed'
         }).catch((error: unknown) =>
-            logger.warn('swarm_persist_failed', { component: 'swarm.orchestrator', error: String(error) })
+            logger.warn('swarm_persist_failed', {
+                component: 'swarm.orchestrator',
+                error: String(error)
+            })
         );
 
         emit({ type: 'swarm:done', payload: { answer, totalDurationMs } });
@@ -369,7 +372,10 @@ export class SwarmOrchestrator {
         return generate(synthesisPrompt, { model: SYNTHESIS_MODEL, stream: false })
             .then((answer) => answer.trim())
             .catch((error: unknown) => {
-                logger.warn('swarm_synthesis_failed', { component: 'swarm.orchestrator', error: String(error) });
+                logger.warn('swarm_synthesis_failed', {
+                    component: 'swarm.orchestrator',
+                    error: String(error)
+                });
                 /* Graceful degradation — concatenate subtask answers. */
                 return subtaskResults
                     .filter((r) => r.success)

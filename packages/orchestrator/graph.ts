@@ -176,7 +176,10 @@ export class LangGraphSwarmOrchestrator {
             totalDurationMs: result.totalDurationMs,
             status: 'completed'
         }).catch((error: unknown) =>
-            logger.warn('langgraph_swarm_persist_failed', { component: 'orchestrator.graph', error: String(error) })
+            logger.warn('langgraph_swarm_persist_failed', {
+                component: 'orchestrator.graph',
+                error: String(error)
+            })
         );
 
         return result;

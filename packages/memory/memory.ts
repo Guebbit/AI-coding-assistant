@@ -84,7 +84,10 @@ function logMemoryAddedLocalOnly(startedAt: number): void {
  * @param startedAt - Timestamp (ms) when the operation began.
  */
 function logMemoryClearedRecentOnly(startedAt: number): void {
-    logger.info('memory_cleared_recent_only', { component: 'memory', durationMs: Date.now() - startedAt });
+    logger.info('memory_cleared_recent_only', {
+        component: 'memory',
+        durationMs: Date.now() - startedAt
+    });
 }
 
 /**
@@ -261,7 +264,10 @@ export async function clearMemory(): Promise<void> {
         .deleteCollection(QDRANT_COLLECTION)
         .then(() => {
             vectorSize = null;
-            logger.info('memory_cleared', { component: 'memory', durationMs: Date.now() - startedAt });
+            logger.info('memory_cleared', {
+                component: 'memory',
+                durationMs: Date.now() - startedAt
+            });
         })
         .catch((error: unknown) => {
             logger.warn('memory_clear_failed', {

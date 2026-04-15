@@ -67,7 +67,10 @@ export function getPool(): pg.Pool {
     if (!_pool) {
         _pool = new pg.Pool(DB_CONFIG);
         _pool.on('error', (error: Error) => {
-            logger.warn('persistence_pool_error', { component: 'persistence.db', error: error.message });
+            logger.warn('persistence_pool_error', {
+                component: 'persistence.db',
+                error: error.message
+            });
         });
     }
     return _pool;
@@ -162,7 +165,11 @@ export async function saveAgentRun(input: IAgentRunInput): Promise<IAgentRunReco
             ]
         );
         const row = rows[0];
-        logger.info('persistence_agent_run_saved', { component: 'persistence.db', id: row.id, status: row.status });
+        logger.info('persistence_agent_run_saved', {
+            component: 'persistence.db',
+            id: row.id,
+            status: row.status
+        });
         return row;
     });
 }
@@ -218,7 +225,11 @@ export async function saveSwarmRun(input: ISwarmRunInput): Promise<ISwarmRunReco
             ]
         );
         const row = rows[0];
-        logger.info('persistence_swarm_run_saved', { component: 'persistence.db', id: row.id, status: row.status });
+        logger.info('persistence_swarm_run_saved', {
+            component: 'persistence.db',
+            id: row.id,
+            status: row.status
+        });
         return row;
     });
 }
@@ -267,7 +278,11 @@ export async function saveEvalResult(input: IEvalResultInput): Promise<IEvalResu
             ]
         );
         const row = rows[0];
-        logger.info('persistence_eval_result_saved', { component: 'persistence.db', id: row.id, scorer: row.scorer });
+        logger.info('persistence_eval_result_saved', {
+            component: 'persistence.db',
+            id: row.id,
+            scorer: row.scorer
+        });
         return row;
     });
 }

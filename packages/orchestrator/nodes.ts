@@ -211,7 +211,10 @@ export function createReviewNode() {
 
         if (failedCount === 0) {
             /* All subtasks passed — no retry needed. */
-            logger.info('graph_review_passed', { component: 'orchestrator.nodes', total: totalCount });
+            logger.info('graph_review_passed', {
+                component: 'orchestrator.nodes',
+                total: totalCount
+            });
             return { reviewPassed: true };
         }
 
@@ -438,7 +441,10 @@ async function synthesise(task: string, subtaskResults: ISubtaskResult[]): Promi
     return generate(synthesisPrompt, { model: SYNTHESIS_MODEL, stream: false })
         .then((answer) => answer.trim())
         .catch((error: unknown) => {
-            logger.warn('graph_synthesis_failed', { component: 'orchestrator.nodes', error: String(error) });
+            logger.warn('graph_synthesis_failed', {
+                component: 'orchestrator.nodes',
+                error: String(error)
+            });
             /* Graceful degradation — concatenate subtask answers. */
             return successfulResults.map((r) => r.answer).join('\n\n---\n\n');
         });

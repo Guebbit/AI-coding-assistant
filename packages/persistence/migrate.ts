@@ -63,7 +63,10 @@ export async function runMigrations(): Promise<void> {
             const entries = await fs.readdir(MIGRATIONS_DIR);
             files = entries.filter((f: string) => f.endsWith('.sql')).sort();
         } catch {
-            logger.warn('persistence_migrate_dir_not_found', { component: 'persistence.migrate', dir: MIGRATIONS_DIR });
+            logger.warn('persistence_migrate_dir_not_found', {
+                component: 'persistence.migrate',
+                dir: MIGRATIONS_DIR
+            });
             return;
         }
 
@@ -74,7 +77,10 @@ export async function runMigrations(): Promise<void> {
                 [filename]
             );
             if (rows.length > 0) {
-                logger.info('persistence_migrate_skip', { component: 'persistence.migrate', filename });
+                logger.info('persistence_migrate_skip', {
+                    component: 'persistence.migrate',
+                    filename
+                });
                 continue;
             }
 
@@ -89,10 +95,17 @@ export async function runMigrations(): Promise<void> {
                     filename
                 ]);
                 await client.query('COMMIT');
-                logger.info('persistence_migrate_applied', { component: 'persistence.migrate', filename });
+                logger.info('persistence_migrate_applied', {
+                    component: 'persistence.migrate',
+                    filename
+                });
             } catch (error: unknown) {
                 await client.query('ROLLBACK');
-                logger.warn('persistence_migrate_failed', { component: 'persistence.migrate', filename, error: String(error) });
+                logger.warn('persistence_migrate_failed', {
+                    component: 'persistence.migrate',
+                    filename,
+                    error: String(error)
+                });
                 throw error;
             }
         }

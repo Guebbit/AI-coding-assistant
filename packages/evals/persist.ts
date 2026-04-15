@@ -68,7 +68,11 @@ export async function scoreAndPersist(
     try {
         scorerResult = await scorer.score(input);
     } catch (error: unknown) {
-        logger.warn('evals_scorer_failed', { component: 'evals.persist', scorer: scorer.id, error: String(error) });
+        logger.warn('evals_scorer_failed', {
+            component: 'evals.persist',
+            scorer: scorer.id,
+            error: String(error)
+        });
         return null;
     }
 

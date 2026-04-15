@@ -190,7 +190,10 @@ export async function extractEntitiesAndRelationships(text: string): Promise<IEx
 
         return validated.data;
     } catch (error) {
-        logger.warn('graph_ner_extraction_failed', { component: 'graph.extractor', error: String(error) });
+        logger.warn('graph_ner_extraction_failed', {
+            component: 'graph.extractor',
+            error: String(error)
+        });
         return empty;
     }
 }

@@ -81,7 +81,11 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
         `}\n\n` +
         `Task:\n${task}`;
 
-    logger.info('decomposer_started', { component: 'swarm.decomposer', taskLength: task.length, maxSubtasks: cap });
+    logger.info('decomposer_started', {
+        component: 'swarm.decomposer',
+        taskLength: task.length,
+        maxSubtasks: cap
+    });
 
     return generate(prompt, {
         model: DECOMPOSER_MODEL,
@@ -115,12 +119,18 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
                     subtasks
                 };
             } catch (error) {
-                logger.warn('decomposer_parse_failed', { component: 'swarm.decomposer', error: String(error) });
+                logger.warn('decomposer_parse_failed', {
+                    component: 'swarm.decomposer',
+                    error: String(error)
+                });
                 return buildFallback(task, 'Failed to parse decomposer output.');
             }
         })
         .catch((error: unknown) => {
-            logger.warn('decomposer_llm_failed', { component: 'swarm.decomposer', error: String(error) });
+            logger.warn('decomposer_llm_failed', {
+                component: 'swarm.decomposer',
+                error: String(error)
+            });
             return buildFallback(task, 'LLM call failed — falling back to single subtask.');
         });
 }

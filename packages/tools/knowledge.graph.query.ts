@@ -140,7 +140,9 @@ export const queryKnowledgeGraphTool = createTool({
         /* ── Availability check ─────────────────────────────────────── */
         const available = await isGraphAvailable();
         if (!available) {
-            logger.warn('query_knowledge_graph_neo4j_unavailable', { component: 'tools.query_knowledge_graph' });
+            logger.warn('query_knowledge_graph_neo4j_unavailable', {
+                component: 'tools.query_knowledge_graph'
+            });
             return {
                 rows: [],
                 rowCount: 0,

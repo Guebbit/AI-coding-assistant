@@ -226,7 +226,11 @@ export class Agent {
                     return llmResult.response;
                 })
                 .catch((error: unknown) => {
-                    logger.error('agent_llm_call_failed', { component: 'agent', step, error: String(error) });
+                    logger.error('agent_llm_call_failed', {
+                        component: 'agent',
+                        step,
+                        error: String(error)
+                    });
                     emit({ type: 'agent:error', payload: { step, error: String(error) } });
                     throw error;
                 });
@@ -320,7 +324,10 @@ export class Agent {
                     diagnosticEntries,
                     status: 'completed'
                 }).catch((error: unknown) =>
-                    logger.warn('agent_persist_failed', { component: 'agent', error: String(error) })
+                    logger.warn('agent_persist_failed', {
+                        component: 'agent',
+                        error: String(error)
+                    })
                 );
 
                 return parsed.thought;
@@ -446,7 +453,10 @@ export class Agent {
         const summary = await generate(debugPrompt, { model: FAST_MODEL, stream: false })
             .then((result) => result.trim() || 'Max steps reached without a conclusive answer.')
             .catch((error: unknown) => {
-                logger.warn('agent_self_debug_failed', { component: 'agent', error: String(error) });
+                logger.warn('agent_self_debug_failed', {
+                    component: 'agent',
+                    error: String(error)
+                });
                 return 'Max steps reached without a conclusive answer.';
             });
 
@@ -463,7 +473,10 @@ export class Agent {
                 await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
             })
             .catch((error: unknown) =>
-                logger.warn('agent_diagnostic_log_failed', { component: 'agent', error: String(error) })
+                logger.warn('agent_diagnostic_log_failed', {
+                    component: 'agent',
+                    error: String(error)
+                })
             );
 
         /* Persist run to PostgreSQL (fail-open). */

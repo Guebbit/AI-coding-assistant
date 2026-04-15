@@ -115,7 +115,10 @@ export function createToolRerankerProcessor(
                 })
                 .catch((error: unknown) => {
                     /* Fail open — return the original tool list if reranking errors. */
-                    logger.warn('tool_reranker_failed', { component: 'processors.tool_reranker', error: String(error) });
+                    logger.warn('tool_reranker_failed', {
+                        component: 'processors.tool_reranker',
+                        error: String(error)
+                    });
                     return undefined;
                 });
         }

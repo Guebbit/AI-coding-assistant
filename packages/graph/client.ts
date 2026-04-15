@@ -133,6 +133,9 @@ export async function ensureConstraints(): Promise<void> {
         );
     } catch (error) {
         /* Some Neo4j editions / older versions may not support IF NOT EXISTS. */
-        logger.warn('neo4j_constraint_setup_failed', { component: 'graph.client', error: String(error) });
+        logger.warn('neo4j_constraint_setup_failed', {
+            component: 'graph.client',
+            error: String(error)
+        });
     }
 }

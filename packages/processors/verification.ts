@@ -85,7 +85,10 @@ export const verificationProcessor = createProcessor({
                 };
             })
             .catch((error: unknown) => {
-                logger.warn('verification_call_failed', { component: 'processors.verification', error: String(error) });
+                logger.warn('verification_call_failed', {
+                    component: 'processors.verification',
+                    error: String(error)
+                });
                 /* Fail open — do not block the agent on a verification error. */
                 return null;
             });
