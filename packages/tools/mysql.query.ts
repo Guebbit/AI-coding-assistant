@@ -23,6 +23,32 @@ import mysql from 'mysql2/promise';
 import type { ExecuteValues } from 'mysql2';
 import { createDbTool as createDatabaseTool, validateSqlInput } from './base-db-tool';
 
+/** Shared MySQL pool reused across tool calls. */
+let mysqlPool: mysql.Pool | null = null;
+
+/**
+ * Lazily create (once) and return the shared MySQL pool.
+ *
+ * @returns Shared MySQL promise pool.
+ */
+function getMySqlPool(): mysql.Pool {
+    if (!mysqlPool) {
+        mysqlPool = mysql.createPool({
+            host: process.env.MYSQL_HOST ?? 'localhost',
+            port: Number.parseInt(process.env.MYSQL_PORT ?? '3306', 10),
+            user: process.env.MYSQL_USER ?? 'root',
+            password: process.env.MYSQL_PASSWORD ?? '',
+            database: process.env.MYSQL_DATABASE ?? '',
+            /* Never allow multi-statement execution (defence-in-depth). */
+            multipleStatements: false,
+            waitForConnections: true,
+            connectionLimit: 5,
+            queueLimit: 0
+        });
+    }
+    return mysqlPool;
+}
+
 /**
  * Tool instance for executing read-only MySQL queries.
  *
@@ -40,7 +66,7 @@ export const mysqlQueryTool = createDatabaseTool({
     validateInput: validateSqlInput,
 
     /**
-     * Open a connection, execute the SELECT query, and return the result rows.
+     * Execute the SELECT query via a shared connection pool and return rows.
      *
      * @param input        - Validated tool input.
      * @param input.sql    - SQL query string (begins with `SELECT`).
@@ -49,21 +75,8 @@ export const mysqlQueryTool = createDatabaseTool({
      * @throws {Error} When the connection fails or the query errors.
      */
     async run({ sql, params }) {
-        const connection = await mysql.createConnection({
-            host: process.env.MYSQL_HOST ?? 'localhost',
-            port: Number.parseInt(process.env.MYSQL_PORT ?? '3306', 10),
-            user: process.env.MYSQL_USER ?? 'root',
-            password: process.env.MYSQL_PASSWORD ?? '',
-            database: process.env.MYSQL_DATABASE ?? '',
-            /* Never allow multi-statement execution (defence-in-depth). */
-            multipleStatements: false
-        });
-
-        try {
-            const [rows] = await connection.execute(sql, params as ExecuteValues[]);
-            return rows;
-        } finally {
-            await connection.end();
-        }
+        const pool = getMySqlPool();
+        const [rows] = await pool.execute(sql, params as ExecuteValues[]);
+        return rows;
     }
 });

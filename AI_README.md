@@ -177,10 +177,10 @@ Profiles: `fast` | `reasoning` | `code` | `default`
 
 Two modes (env `AGENT_MODEL_ROUTER_MODE`):
 
-| Mode              | Mechanism                               | Notes                                   |
-| ----------------- | --------------------------------------- | --------------------------------------- |
-| `rules` (default) | keyword scan of `task + context`        | synchronous, zero LLM cost              |
-| `model`           | calls `ROUTER_MODEL` with a JSON prompt | async, falls back to `default` on error |
+| Mode              | Mechanism                               | Notes                                                 |
+| ----------------- | --------------------------------------- | ----------------------------------------------------- |
+| `rules` (default) | keyword scan of `task + context`        | synchronous, zero LLM cost; conservative code signals |
+| `model`           | calls `ROUTER_MODEL` with a JSON prompt | async, falls back to `default` on error               |
 
 Profile resolution (env vars → fallback chain):
 
@@ -324,7 +324,7 @@ If `valid === false`, appends the `issue` to the agent's thought so it can self-
 
 Implements `processInputStep`. Active when `TOOL_RERANKER_ENABLED === 'true'`.
 
-On first invocation embeds all tool descriptions via Ollama and caches the vectors. Per step, embeds the task, computes cosine similarity against cached tool embeddings, and filters `args.tools` to the top-N names. Fails open (returns unchanged args on error).
+Each processor instance lazily embeds its tool descriptions and caches vectors keyed by the current tool-set signature. Per step, it embeds the task, computes cosine similarity against cached tool embeddings, and filters `args.tools` to the top-N names. Fails open (returns unchanged args on error).
 
 | Env var                 | Default | Effect                |
 | ----------------------- | ------- | --------------------- |

@@ -45,6 +45,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **`apps/api/agents.ts`**: `createSwarmOrchestrator()` return type changed from `SwarmOrchestrator` to `LangGraphSwarmOrchestrator`. The `run(task, config): Promise<ISwarmResult>` interface is identical — all callers remain backward-compatible.
 - **`docs/packages/index.md`** and **`docs/.vitepress/config.mts`**: Added `orchestrator` package to the documentation navigation.
+- **`packages/tools/semantic.search.ts`**: migrated `semantic_search` to the canonical `createTool` builder with Zod input schema validation (`query`, optional `documents`, optional `paths`, optional `topK`) while preserving output shape and path/document safety limits.
+- **Database query tools** (`packages/tools/mysql.query.ts`, `packages/tools/pg.query.ts`, `packages/tools/mongo.query.ts`): switched from per-call connect/disconnect to lazy shared connection reuse (MySQL pool, PostgreSQL pool, and Mongo connected client) to reduce repeated connection overhead.
+- **`packages/processors/tool-reranker.ts`**: moved reranker embedding cache from module-global state to processor-instance scope and rebuilds cache when the processor tool-set signature changes.
+- **`packages/agent/model-router.ts`**: made `code` vs `reasoning` default option profiles meaningfully distinct and tightened code keyword heuristics to avoid over-routing generic `api`/`sql` mentions.
 
 ### Deprecated
 

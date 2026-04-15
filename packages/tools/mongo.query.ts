@@ -38,6 +38,32 @@ interface IMongoQueryInput extends Record<string, unknown> {
 /** Maximum number of documents returned by a `find` operation. */
 const MAX_FIND_LIMIT = 1_000;
 
+/** Shared Mongo client promise reused across tool calls. */
+let mongoClientPromise: Promise<MongoClient> | null = null;
+
+/**
+ * Lazily connect once and return the shared Mongo client.
+ *
+ * If the initial connect attempt fails, the cached promise is cleared
+ * so a future call can retry.
+ *
+ * @returns Connected shared Mongo client.
+ */
+async function getMongoClient(): Promise<MongoClient> {
+    if (!mongoClientPromise) {
+        const uri = process.env.MONGO_URI ?? 'mongodb://localhost:27017';
+        const client = new MongoClient(uri);
+        mongoClientPromise = client
+            .connect()
+            .then(() => client)
+            .catch((error: unknown) => {
+                mongoClientPromise = null;
+                throw error;
+            });
+    }
+    return mongoClientPromise;
+}
+
 /**
  * Tool instance for executing read-only MongoDB queries.
  *
@@ -111,36 +137,29 @@ export const mongoQueryTool = createDatabaseTool<IMongoQueryInput>({
     },
 
     /**
-     * Connect to MongoDB, run the find/aggregate, disconnect, and return rows.
+     * Run the find/aggregate operation using a shared Mongo client.
      *
      * @param input - Validated tool input.
      * @returns Array of matching documents (JSON-serialisable).
      * @throws {Error} When the connection fails or the operation errors.
      */
     async run({ collection, operation, query, limit }) {
-        const uri = process.env.MONGO_URI ?? 'mongodb://localhost:27017';
         const databaseName = process.env.MONGO_DATABASE ?? '';
 
-        const client = new MongoClient(uri);
-        await client.connect();
+        const client = await getMongoClient();
+        const database = client.db(databaseName || undefined);
+        const col = database.collection(collection);
 
-        try {
-            const database = client.db(databaseName || undefined);
-            const col = database.collection(collection);
-
-            if (operation === 'find') {
-                const filter = (query as Record<string, unknown> | undefined) ?? {};
-                return await col
-                    .find(filter)
-                    .limit(limit ?? 100)
-                    .toArray();
-            }
-
-            /* aggregate */
-            const pipeline = (query as Document[] | undefined) ?? [];
-            return await col.aggregate(pipeline).toArray();
-        } finally {
-            await client.close();
+        if (operation === 'find') {
+            const filter = (query as Record<string, unknown> | undefined) ?? {};
+            return await col
+                .find(filter)
+                .limit(limit ?? 100)
+                .toArray();
         }
+
+        /* aggregate */
+        const pipeline = (query as Document[] | undefined) ?? [];
+        return await col.aggregate(pipeline).toArray();
     }
 });

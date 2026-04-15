@@ -175,12 +175,14 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
                 repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.3)
             };
         case 'code':
+            /* Lower temperature + wider candidate set keeps code deterministic
+             * while still exploring enough token choices for syntax completion. */
             return {
-                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.2),
-                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.8),
-                top_k: envInt(process.env[`${prefix}_TOP_K`], 20),
-                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
-                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.3)
+                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.1),
+                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.9),
+                top_k: envInt(process.env[`${prefix}_TOP_K`], 40),
+                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 6144),
+                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.1)
             };
         default:
             return {
@@ -244,23 +246,35 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
     const codeSignals = [
         'code',
         'refactor',
-        'debug',
-        'bug',
         'typescript',
         'javascript',
         'python',
         'golang',
         'java',
+        'c++',
+        'rust',
         'function',
         'class',
+        'method',
         'test',
+        'unit test',
+        'integration test',
         'compile',
         'stack trace',
+        'exception',
         'repository',
+        'repo',
         'commit',
         'pull request',
-        'api',
-        'sql'
+        'endpoint',
+        'typescript file',
+        'javascript file',
+        '.ts',
+        '.tsx',
+        '.js',
+        '.py',
+        'sql query',
+        'database migration'
     ];
 
     if (codeSignals.some((s) => text.includes(s))) {

@@ -11,10 +11,11 @@
  */
 
 import fs from 'fs/promises';
-import type { ITool } from './types';
+import { z } from 'zod';
 import { resolveSafePath, cosineSimilarity } from '../shared';
 import { getEmbedding } from '../llm/embeddings';
 import { OLLAMA_EMBED_MODEL } from '../llm/config';
+import { createTool } from './tool-builder';
 
 /** Hard cap on the number of documents that can be searched at once. */
 const MAX_DOCUMENTS = 50;
@@ -33,6 +34,19 @@ interface IRankedDocument {
 }
 
 /**
+ * Input schema for semantic search requests.
+ *
+ * Uses schema validation so malformed payloads fail with explicit
+ * validation errors before any file I/O or embedding work begins.
+ */
+const semanticSearchInputSchema = z.object({
+    query: z.string().trim().min(1, '"query" must be a non-empty string'),
+    documents: z.array(z.string()).optional(),
+    paths: z.array(z.string()).optional(),
+    topK: z.number().int().positive().optional()
+});
+
+/**
  * Tool instance for semantic search over inline text and/or files.
  *
  * Input:
@@ -45,11 +59,12 @@ interface IRankedDocument {
  * }
  * ```
  */
-export const semanticSearchTool: ITool = {
-    name: 'semantic_search',
+export const semanticSearchTool = createTool({
+    id: 'semantic_search',
     description:
         'Semantic search over provided text snippets and/or files. ' +
         'Input: { query: string, documents?: string[], paths?: string[], topK?: number }',
+    inputSchema: semanticSearchInputSchema,
 
     /**
      * Embed the query and each document, rank by cosine similarity, return top-K.
@@ -63,10 +78,6 @@ export const semanticSearchTool: ITool = {
      * @throws {Error} When no documents are provided or limits are exceeded.
      */
     async execute({ query, documents, paths, topK }) {
-        if (typeof query !== 'string' || query.trim() === '') {
-            throw new Error('"query" must be a non-empty string');
-        }
-
         /* Collect documents from inline strings and/or file paths. */
         const docs: Array<{ source: string; text: string }> = [];
 
@@ -129,4 +140,4 @@ export const semanticSearchTool: ITool = {
             results: ranked.slice(0, k)
         };
     }
-};
+});

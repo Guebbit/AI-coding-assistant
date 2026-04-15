@@ -21,6 +21,27 @@
 import pg from 'pg';
 import { createDbTool as createDatabaseTool, validateSqlInput } from './base-db-tool';
 
+/** Shared PostgreSQL pool reused across tool calls. */
+let pgPool: pg.Pool | null = null;
+
+/**
+ * Lazily create (once) and return the shared PostgreSQL pool.
+ *
+ * @returns Shared PostgreSQL pool.
+ */
+function getPgPool(): pg.Pool {
+    if (!pgPool) {
+        pgPool = new pg.Pool({
+            host: process.env.PG_HOST ?? 'localhost',
+            port: Number.parseInt(process.env.PG_PORT ?? '5432', 10),
+            user: process.env.PG_USER ?? 'postgres',
+            password: process.env.PG_PASSWORD ?? '',
+            database: process.env.PG_DATABASE ?? ''
+        });
+    }
+    return pgPool;
+}
+
 /**
  * Tool instance for executing read-only PostgreSQL queries.
  *
@@ -42,7 +63,7 @@ export const pgQueryTool = createDatabaseTool({
     validateInput: validateSqlInput,
 
     /**
-     * Open a connection, execute the SELECT query, and return the result rows.
+     * Execute the SELECT query via a shared connection pool and return rows.
      *
      * @param input        - Validated tool input.
      * @param input.sql    - SQL query string (begins with `SELECT`).
@@ -51,21 +72,8 @@ export const pgQueryTool = createDatabaseTool({
      * @throws {Error} When the connection fails or the query errors.
      */
     async run({ sql, params }) {
-        const client = new pg.Client({
-            host: process.env.PG_HOST ?? 'localhost',
-            port: Number.parseInt(process.env.PG_PORT ?? '5432', 10),
-            user: process.env.PG_USER ?? 'postgres',
-            password: process.env.PG_PASSWORD ?? '',
-            database: process.env.PG_DATABASE ?? ''
-        });
-
-        await client.connect();
-
-        try {
-            const result = await client.query(sql, params);
-            return result.rows;
-        } finally {
-            await client.end();
-        }
+        const pool = getPgPool();
+        const result = await pool.query(sql, params);
+        return result.rows;
     }
 });

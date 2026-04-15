@@ -63,10 +63,10 @@ describe('routeModel — rules mode', () => {
         expect(result.model).toBe('code-model');
     });
 
-    it('routes to code profile for task containing "debug"', async () => {
+    it('routes to code profile for task containing "stack trace"', async () => {
         const { routeModel } = await import('../../../packages/agent/model-router.js');
         const result = await routeModel({
-            task: 'debug this bug in the code',
+            task: 'fix this stack trace from a failing TypeScript build',
             context: '',
             step: 0
         });
@@ -81,6 +81,16 @@ describe('routeModel — rules mode', () => {
             step: 0
         });
         expect(result.profile).toBe('code');
+    });
+
+    it('does not route generic "API" questions to code profile', async () => {
+        const { routeModel } = await import('../../../packages/agent/model-router.js');
+        const result = await routeModel({
+            task: 'What is an API?',
+            context: '',
+            step: 0
+        });
+        expect(result.profile).toBe('fast');
     });
 
     it('routes to reasoning profile for task containing "analyze"', async () => {
@@ -160,5 +170,27 @@ describe('routeModel — rules mode', () => {
         expect(options).toHaveProperty('temperature');
         expect(options).toHaveProperty('top_p');
         expect(options).toHaveProperty('num_ctx');
+    });
+
+    it('uses distinct default options for code vs reasoning profiles', async () => {
+        const { routeModel } = await import('../../../packages/agent/model-router.js');
+        const code = await routeModel({
+            task: 'refactor this TypeScript function',
+            context: '',
+            step: 0,
+            forcedProfile: 'code'
+        });
+        const reasoning = await routeModel({
+            task: 'analyze tradeoffs and reasoning',
+            context: '',
+            step: 0,
+            forcedProfile: 'reasoning'
+        });
+
+        expect(code.options).toBeDefined();
+        expect(reasoning.options).toBeDefined();
+        expect(code.options?.temperature).not.toBe(reasoning.options?.temperature);
+        expect(code.options?.top_k).not.toBe(reasoning.options?.top_k);
+        expect(code.options?.repeat_penalty).not.toBe(reasoning.options?.repeat_penalty);
     });
 });
