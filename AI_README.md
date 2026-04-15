@@ -427,7 +427,7 @@ The stream closes automatically when the agent run completes (done / error / max
 
 ## Swarm orchestration
 
-Files: `packages/orchestrator/` (active), `packages/swarm/` (legacy — deprecated)  
+Files: `packages/orchestrator/` and `packages/swarm/`  
 Endpoints: `apps/api/swarm-endpoints.ts`  
 Registered in `apps/api/index.ts` via `registerSwarmRoutes(app)`.
 
@@ -585,16 +585,15 @@ SSE events for `/run/swarm/stream`:
 │   │   ├── agent.ts          — Agent class; core loop; buildPrompt(); MAX_STEPS; per-run maxSteps override; diagnostic accumulation; self-debug on max_steps
 │   │   ├── model-router.ts   — routeModel(); profile resolution; rules vs model mode; budget-aware heuristics
 │   │   └── schemas.ts        — agentStepSchema (Zod); AgentStep type
-│   ├── orchestrator/         — ★ ACTIVE — LangGraph-based swarm orchestrator (replaces swarm/orchestrator.ts)
+│   ├── orchestrator/         — ★ ACTIVE — LangGraph-based swarm orchestrator
 │   │   ├── state.ts          — swarmStateAnnotation (LangGraph Annotation.Root); ISwarmGraphState
 │   │   ├── nodes.ts          — createDecomposeNode(); createExecuteSubtasksNode(); createReviewNode(); createSynthesizeNode(); reviewRouter()
 │   │   ├── graph.ts          — buildSwarmGraph(); LangGraphSwarmOrchestrator class
 │   │   └── index.ts          — re-exports all orchestrator symbols
-│   ├── swarm/                — ⚠ DEPRECATED — legacy custom orchestrator; retained for staged removal
+│   ├── swarm/                — Swarm decomposition types + decomposer used by orchestrator nodes
 │   │   ├── types.ts          — ISubtask, IDecomposition, ISubtaskResult, ISwarmResult, ISwarmConfig
 │   │   ├── decomposer.ts     — decomposeTask(); LLM-based task decomposition (still used by orchestrator)
-│   │   ├── orchestrator.ts   — SwarmOrchestrator class; @deprecated — use LangGraphSwarmOrchestrator
-│   │   └── index.ts          — re-exports all swarm types and classes
+│   │   └── index.ts          — re-exports swarm types and decomposer
 │   ├── diagnostics/
 │   │   ├── types.ts          — IDiagnosticEntry interface
 │   │   ├── writer.ts         — writeDiagnosticLog(); Markdown report writer

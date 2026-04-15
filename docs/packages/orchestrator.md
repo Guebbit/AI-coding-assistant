@@ -150,24 +150,15 @@ packages/orchestrator/
 
 ---
 
-## Migration from legacy SwarmOrchestrator
+## Orchestrator usage
 
-The legacy `SwarmOrchestrator` in `packages/swarm/orchestrator.ts` is **deprecated** and will be removed in a follow-up PR. It remains for reference only.
-
-**Migration steps**:
+Use `LangGraphSwarmOrchestrator` from `packages/orchestrator/graph`:
 
 ```typescript
-// Before
-import { SwarmOrchestrator } from '../swarm/orchestrator';
-const orchestrator = new SwarmOrchestrator(tools, processors);
-
-// After
 import { LangGraphSwarmOrchestrator } from '../orchestrator/graph';
-const orchestrator = new LangGraphSwarmOrchestrator(tools, processors);
-// run() interface is identical — no other changes needed
-```
 
-The `apps/api/agents.ts` factory (`createSwarmOrchestrator`) already returns the new orchestrator type. All other modules that call only `orchestrator.run()` are unaffected.
+const orchestrator = new LangGraphSwarmOrchestrator(tools, processors);
+```
 
 ---
 

@@ -1121,10 +1121,6 @@ components:
                 answer:
                     type: string
                     description: The synthesised final answer.
-                result:
-                    type: string
-                    deprecated: true
-                    description: Deprecated alias for `answer` kept for backward compatibility.
                 subtaskResults:
                     type: array
                     items:

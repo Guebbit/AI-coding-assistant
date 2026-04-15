@@ -794,16 +794,8 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const requestBody = request.body as LintConventionsRequest & {
-      content?: string;
-      filePath?: string;
-    };
-    const normalizedBody = {
-      ...requestBody,
-      code: requestBody.code ?? requestBody.content,
-      filename: requestBody.filename ?? requestBody.filePath,
-    };
-    const parsed = lintConventionsSchema.safeParse(normalizedBody);
+    const requestBody = request.body as LintConventionsRequest;
+    const parsed = lintConventionsSchema.safeParse(requestBody);
     if (!parsed.success) {
       rejectResponse(response, 400, "Bad Request", [
         `Invalid request body: ${JSON.stringify(parsed.error.flatten())}`,
@@ -910,16 +902,8 @@ export function registerIdeRoutes(application: express.Express): void {
       return;
     }
 
-    const requestBody = request.body as PageReviewRequest & {
-      content?: string;
-      filePath?: string;
-    };
-    const normalizedBody = {
-      ...requestBody,
-      code: requestBody.code ?? requestBody.content,
-      filename: requestBody.filename ?? requestBody.filePath,
-    };
-    const parsed = pageReviewSchema.safeParse(normalizedBody);
+    const requestBody = request.body as PageReviewRequest;
+    const parsed = pageReviewSchema.safeParse(requestBody);
     if (!parsed.success) {
       rejectResponse(response, 400, "Bad Request", [
         `Invalid request body: ${JSON.stringify(parsed.error.flatten())}`,

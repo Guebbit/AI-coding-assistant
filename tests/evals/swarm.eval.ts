@@ -6,12 +6,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SwarmOrchestrator } from '../../packages/swarm/orchestrator.js';
+import { LangGraphSwarmOrchestrator } from '../../packages/orchestrator/graph.js';
 
-describe('[eval] SwarmOrchestrator — end-to-end', () => {
+describe('[eval] LangGraphSwarmOrchestrator — end-to-end', () => {
     it('decomposes and synthesises a simple two-part task', async () => {
         /* tools=[], processors=[] */
-        const orchestrator = new SwarmOrchestrator([], []);
+        const orchestrator = new LangGraphSwarmOrchestrator([], []);
         const result = await orchestrator.run(
             'List two capital cities in Europe and one in Asia.',
             { maxSubtasks: 2 }

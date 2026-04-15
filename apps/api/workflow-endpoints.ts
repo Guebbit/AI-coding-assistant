@@ -39,11 +39,11 @@ import {
     sseFrame,
     setupSSEHeaders,
     onSSEClose,
-    SSE_PAYLOAD_MAX_LENGTH,
     t,
 } from '../../packages/shared';
 import { createAgent, VALID_PROFILES } from './agents';
 import type { ModelProfile } from '../../packages/agent/model-router';
+import { writeAgentEventToSse } from './sse-event-bridge';
 import type {
     WorkflowRequest as OpenApiWorkflowRequest,
     WorkflowResponse as OpenApiWorkflowResponse,
@@ -91,12 +91,9 @@ export const workflowRequestSchema = z.object({
      */
     steps: z
         .array(
-            z.union([
-                z.string().min(1, 'Each step task must be a non-empty string'),
-                z.object({
-                    task: z.string().min(1, 'Each step task must be a non-empty string'),
-                }),
-            ]),
+            z.object({
+                task: z.string().min(1, 'Each step task must be a non-empty string'),
+            }),
         )
         .min(1, 'At least one step is required')
         .max(50, 'A workflow may contain at most 50 steps'),
@@ -242,7 +239,7 @@ async function runWorkflow(
 
     for (let i = 0; i < parsed.steps.length; i++) {
         const step = parsed.steps[i];
-        const baseTask = typeof step === 'string' ? step : step.task;
+        const baseTask = step.task;
         const carryPrefix = buildCarryContext(parsed.carry, stepResults);
         const fullTask = carryPrefix ? `${carryPrefix}Current task:\n${baseTask}` : baseTask;
 
@@ -301,13 +298,13 @@ export function registerWorkflowRoutes(app: Express): void {
     /**
      * POST /workflow — run an explicit list of steps sequentially.
      *
-     * Request body:
-     * ```json
-     * {
-     *   "steps": ["read all .ts files", "summarise findings"],
-     *   "carry": "summary",
-     *   "allowWrite": false,
-     *   "profile": "code",
+      * Request body:
+      * ```json
+      * {
+      *   "steps": [{ "task": "read all .ts files" }, { "task": "summarise findings" }],
+      *   "carry": "summary",
+      *   "allowWrite": false,
+      *   "profile": "code",
      *   "maxStepsPerStep": 10
      * }
      * ```
@@ -315,14 +312,8 @@ export function registerWorkflowRoutes(app: Express): void {
      * Response: `{ steps: [...], allSucceeded: bool, totalDurationMs: number }`
      */
     app.post('/workflow', (req: Request, res: Response) => {
-        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
-        const normalizedBody = {
-            ...requestBody,
-            steps: (requestBody.steps ?? []).map((step) =>
-                typeof step === 'string' ? { task: step } : step,
-            ),
-        };
-        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
+        const requestBody = req.body as OpenApiWorkflowRequest;
+        const parseResult = workflowRequestSchema.safeParse(requestBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
@@ -388,14 +379,8 @@ export function registerWorkflowRoutes(app: Express): void {
      * - `error`           — on fatal errors; `{ error }`.
      */
     app.post('/workflow/stream', (req: Request, res: Response) => {
-        const requestBody = req.body as OpenApiWorkflowRequest & { steps?: Array<string | { task: string }> };
-        const normalizedBody = {
-            ...requestBody,
-            steps: (requestBody.steps ?? []).map((step) =>
-                typeof step === 'string' ? { task: step } : step,
-            ),
-        };
-        const parseResult = workflowRequestSchema.safeParse(normalizedBody);
+        const requestBody = req.body as OpenApiWorkflowRequest;
+        const parseResult = workflowRequestSchema.safeParse(requestBody);
 
         if (!parseResult.success) {
             const issues = parseResult.error.issues.map(
@@ -430,56 +415,7 @@ export function registerWorkflowRoutes(app: Express): void {
         /* ── Event bridge for inner agent events ────────────────────── */
         const handler = (event: IAgentEvent): void => {
             try {
-                switch (event.type) {
-                    case 'agent:step': {
-                        const p = event.payload as {
-                            step: number;
-                            parsed: { thought: string; action: string };
-                        };
-                        writeEvent('step', {
-                            workflowIndex: currentWorkflowIndex,
-                            step: p.step,
-                            action: p.parsed.action,
-                            thought: p.parsed.thought.slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:result': {
-                        const p = event.payload as { tool: string; result: unknown };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            result: JSON.stringify(p.result).slice(0, SSE_PAYLOAD_MAX_LENGTH),
-                        });
-                        break;
-                    }
-                    case 'tool:error': {
-                        const p = event.payload as { tool: string; error: string };
-                        writeEvent('tool', {
-                            workflowIndex: currentWorkflowIndex,
-                            tool: p.tool,
-                            error: p.error,
-                        });
-                        break;
-                    }
-                    case 'agent:model_routed': {
-                        const p = event.payload as {
-                            profile: string;
-                            model: string;
-                            reason: string;
-                        };
-                        writeEvent('route', {
-                            workflowIndex: currentWorkflowIndex,
-                            profile: p.profile,
-                            model: p.model,
-                            reason: p.reason,
-                        });
-                        break;
-                    }
-                    default:
-                        /* All other event types are silently ignored. */
-                        break;
-                }
+                writeAgentEventToSse(event, writeEvent, { workflowIndex: currentWorkflowIndex });
             } catch (error) {
                 logger.warn('workflow_stream_event_write_failed', { component: 'api.workflow.endpoints', error: String(error) });
             }

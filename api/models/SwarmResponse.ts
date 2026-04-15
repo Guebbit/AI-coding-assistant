@@ -41,13 +41,6 @@ export interface SwarmResponse {
      */
     answer?: string;
     /**
-     * Deprecated alias for `answer` kept for backward compatibility.
-     * @type {string}
-     * @memberof SwarmResponse
-     * @deprecated
-     */
-    result?: string;
-    /**
      * Individual results for each subtask.
      * @type {Array<SwarmSubtaskResult>}
      * @memberof SwarmResponse
@@ -85,7 +78,6 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
     return {
         
         'answer': json['answer'] == null ? undefined : json['answer'],
-        'result': json['result'] == null ? undefined : json['result'],
         'subtaskResults': json['subtaskResults'] == null ? undefined : ((json['subtaskResults'] as Array<any>).map(SwarmSubtaskResultFromJSON)),
         'decomposition': json['decomposition'] == null ? undefined : SwarmResponseDecompositionFromJSON(json['decomposition']),
         'totalDurationMs': json['totalDurationMs'] == null ? undefined : json['totalDurationMs'],
@@ -104,10 +96,8 @@ export function SwarmResponseFromJSONTyped(json: any, ignoreDiscriminator: boole
     return {
         
         'answer': value['answer'],
-        'result': value['result'],
         'subtaskResults': value['subtaskResults'] == null ? undefined : ((value['subtaskResults'] as Array<any>).map(SwarmSubtaskResultToJSON)),
         'decomposition': SwarmResponseDecompositionToJSON(value['decomposition']),
         'totalDurationMs': value['totalDurationMs'],
     };
 }
-
