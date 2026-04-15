@@ -37,9 +37,8 @@ describe('createToolRerankerProcessor', () => {
     });
 
     it('reuses cache for the same tool set within one processor instance', async () => {
-        const { createToolRerankerProcessor } = await import(
-            '../../../packages/processors/tool-reranker.js'
-        );
+        const { createToolRerankerProcessor } =
+            await import('../../../packages/processors/tool-reranker.js');
         const processor = createToolRerankerProcessor(
             new Map([
                 ['tool_alpha', 'alpha'],
@@ -72,9 +71,8 @@ describe('createToolRerankerProcessor', () => {
     });
 
     it('does not share cache across processor instances with different tool sets', async () => {
-        const { createToolRerankerProcessor } = await import(
-            '../../../packages/processors/tool-reranker.js'
-        );
+        const { createToolRerankerProcessor } =
+            await import('../../../packages/processors/tool-reranker.js');
 
         const firstProcessor = createToolRerankerProcessor(
             new Map([

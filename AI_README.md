@@ -177,10 +177,10 @@ Profiles: `fast` | `reasoning` | `code` | `default`
 
 Two modes (env `AGENT_MODEL_ROUTER_MODE`):
 
-| Mode              | Mechanism                               | Notes                                   |
-| ----------------- | --------------------------------------- | --------------------------------------- |
+| Mode              | Mechanism                               | Notes                                                 |
+| ----------------- | --------------------------------------- | ----------------------------------------------------- |
 | `rules` (default) | keyword scan of `task + context`        | synchronous, zero LLM cost; conservative code signals |
-| `model`           | calls `ROUTER_MODEL` with a JSON prompt | async, falls back to `default` on error |
+| `model`           | calls `ROUTER_MODEL` with a JSON prompt | async, falls back to `default` on error               |
 
 Profile resolution (env vars → fallback chain):
 
