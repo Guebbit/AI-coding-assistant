@@ -99,14 +99,14 @@ This prevents MCP issues from blocking the API server.
 
 ## Quick glossary
 
-| Term | Meaning |
-| --- | --- |
-| MCP | Model Context Protocol |
-| MCP server | Process/service exposing tools via MCP |
-| MCP client | App that discovers/calls MCP tools |
-| `tools/list` | Discover available tool descriptors |
-| `tools/call` | Execute a tool with JSON arguments |
-| Transport | Communication method (`stdio`, `sse`) |
+| Term         | Meaning                                |
+| ------------ | -------------------------------------- |
+| MCP          | Model Context Protocol                 |
+| MCP server   | Process/service exposing tools via MCP |
+| MCP client   | App that discovers/calls MCP tools     |
+| `tools/list` | Discover available tool descriptors    |
+| `tools/call` | Execute a tool with JSON arguments     |
+| Transport    | Communication method (`stdio`, `sse`)  |
 
 ---
 

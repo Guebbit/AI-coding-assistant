@@ -6,7 +6,7 @@ Add servers to `data/mcp-servers.json`, restart API, and MCP tools appear automa
 
 ## 30-second setup checklist
 
-- [ ] Create `/home/runner/work/manna/manna/data/mcp-servers.json`
+- [ ] Create `<project-root>/data/mcp-servers.json`
 - [ ] Add at least one server entry
 - [ ] Set any required environment variables/tokens
 - [ ] Start/restart API
@@ -16,10 +16,10 @@ Add servers to `data/mcp-servers.json`, restart API, and MCP tools appear automa
 
 ## File locations
 
-- Runtime config: `/home/runner/work/manna/manna/data/mcp-servers.json` (gitignored)
-- Example config: `/home/runner/work/manna/manna/data/mcp-servers.json.example`
-- Loader code: `/home/runner/work/manna/manna/packages/mcp/loader.ts`
-- Startup integration: `/home/runner/work/manna/manna/apps/api/agents.ts`
+- Runtime config: `data/mcp-servers.json` (gitignored)
+- Example config: `data/mcp-servers.json.example`
+- Loader code: `packages/mcp/loader.ts`
+- Startup integration: `apps/api/agents.ts`
 
 ---
 
@@ -27,17 +27,17 @@ Add servers to `data/mcp-servers.json`, restart API, and MCP tools appear automa
 
 ```json
 {
-  "servers": [
-    {
-      "name": "github",
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    }
-  ]
+    "servers": [
+        {
+            "name": "github",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-github"],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+            }
+        }
+    ]
 }
 ```
 
@@ -89,11 +89,11 @@ Descriptions are also prefixed:
 
 ## Environment variables
 
-| Variable | Default | What it does |
-| --- | --- | --- |
-| `MCP_ENABLED` | `true` | Global kill switch (`false` disables MCP loading) |
-| `MCP_CONFIG_PATH` | `data/mcp-servers.json` | Config path override |
-| `MCP_CONNECT_TIMEOUT_MS` | `5000` | Connect/list/call timeout per server |
+| Variable                 | Default                 | What it does                                      |
+| ------------------------ | ----------------------- | ------------------------------------------------- |
+| `MCP_ENABLED`            | `true`                  | Global kill switch (`false` disables MCP loading) |
+| `MCP_CONFIG_PATH`        | `data/mcp-servers.json` | Config path override                              |
+| `MCP_CONNECT_TIMEOUT_MS` | `5000`                  | Connect/list/call timeout per server              |
 
 ---
 

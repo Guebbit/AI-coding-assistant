@@ -84,7 +84,12 @@ async function withTimeout<T>(
  */
 function interpolateEnvironmentValue(value: string): string {
     return value.replaceAll(ENV_INTERPOLATION_PATTERN, (_match, variableName: string) => {
-        return process.env[variableName] ?? '';
+        const resolvedValue = process.env[variableName];
+        if (resolvedValue === undefined) {
+            logger.warn('mcp_env_var_missing', { component: 'mcp', variableName });
+            return '';
+        }
+        return resolvedValue;
     });
 }
 
@@ -165,7 +170,7 @@ function createTransport(server: IMCPServerConfig): SSEClientTransport | StdioCl
             command: server.command,
             args: server.args,
             env: interpolateEnvironmentMap(server.env),
-            stderr: 'inherit'
+            stderr: 'ignore'
         });
     }
 
