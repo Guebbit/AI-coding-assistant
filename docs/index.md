@@ -1,33 +1,28 @@
-# AI Coding Assistant Documentation
+# Manna — AI Coding Assistant Documentation
 
 ::: tip TL;DR
-Local-first AI agent API — send a task, get an answer. Ollama models, tool execution, semantic memory.
+Local-first AI agent API — send a task, get an answer. [Ollama](/glossary#ollama) models, tool execution, [semantic memory](/glossary#semantic-search). New to LLM concepts? Start with the [Glossary](/glossary).
 :::
 
-This documentation is now organized into **5 clear tracks**:
+## Documentation tracks
 
-1. **Getting Started & Use Cases** → [/use-the-application](/use-the-application) — setup, plus how to use Manna as an IDE agent, for agentic programming, or as a knowledge base
-2. **API Surface** → [/endpoint-map](/endpoint-map)
-3. **Architecture** → [/theory/how-it-works-layered](/theory/how-it-works-layered)
-4. **Modeling & Routing** → [/model-selection](/model-selection)
-5. **Package Reference** → [/packages/](/packages/)
-6. **Practical Examples** → [/examples/](/examples/) — real-world walkthroughs with curl commands, event logs, and Mermaid diagrams
-
-**New — Library & RAG:**
-
-- [Library Ingestion & Search](/library-ingestion) — multi-PDF ingestion, semantic search, two-pass pipeline
-- [RAG Theory](/theory/RAG) — what RAG is, architectures, when to use
-- [Vector Databases](/theory/VECTOR_DATABASES) — Qdrant, HNSW, practical scaling
+| Track | What you'll find | Start here |
+| --- | --- | --- |
+| **Getting Started** | Setup, use cases, first request | [Use the Application](/use-the-application) |
+| **Practical Examples** | Request → under-the-hood → response walkthroughs | [Examples](/examples/) |
+| **Scenarios** | Hands-on drills (10 min each) | [Scenarios](/scenarios/) |
+| **Architecture & Theory** | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered) |
+| **API Surface** | All HTTP endpoints | [Endpoint Map](/endpoint-map) |
+| **Package Reference** | Code contracts per package | [Packages](/packages/) |
+| **Glossary** | Every technical term explained | [Glossary](/glossary) |
 
 ---
 
 ## What this project is
 
 - Local-first TypeScript agent API (`POST /run`)
-- Agentic loop with tool execution and memory
-- Ollama backend with per-step model routing profiles
-
-### System overview
+- [Agent loop](/glossary#agent-loop) with tool execution and [memory](/glossary#ring-buffer)
+- [Ollama](/glossary#ollama) backend with per-step [model routing](/glossary#model-router)
 
 ```mermaid
 flowchart LR
@@ -43,22 +38,20 @@ flowchart LR
     API -->|response| User
 ```
 
-## If you only read one flow
+## Quick-start path
 
-1. Start here: [/use-the-application](/use-the-application)
-2. Explore the API surface: [/endpoint-map](/endpoint-map)
-3. Understand internals: [/theory/how-it-works-layered](/theory/how-it-works-layered)
-4. Configure models and routing: [/model-selection](/model-selection)
-5. Dive into package/tool contracts: [/packages/](/packages/)
+1. [Set up & run your first request](/use-the-application)
+2. [See a full example walkthrough](/examples/read-and-answer)
+3. [Explore the API endpoints](/endpoint-map)
+4. [Understand the internals](/theory/how-it-works-layered)
+5. [Try a hands-on scenario](/scenarios/)
+6. [Look up any term you don't know](/glossary)
 
 ## Fast links
 
-- Endpoint Map: [/endpoint-map](/endpoint-map)
-- Practical Examples: [/examples/](/examples/)
-- Library Ingestion & Search: [/library-ingestion](/library-ingestion)
-- RAG Theory: [/theory/RAG](/theory/RAG)
-- Vector Databases: [/theory/VECTOR_DATABASES](/theory/VECTOR_DATABASES)
-- Scenarios: [/scenarios](/scenarios)
-- Agent package: [/packages/agent](/packages/agent)
-- LLM package: [/packages/llm](/packages/llm)
-- Tools catalog: [/packages/tools/](/packages/tools/)
+| Area | Links |
+| --- | --- |
+| **Learn** | [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary) |
+| **Theory** | [Agent Loop](/theory/agent-loop) · [RAG](/theory/RAG) · [Vectors](/theory/VECTOR_DATABASES) · [LoRA](/theory/lora-fine-tuning) · [MCP](/theory/MCP) |
+| **Reference** | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) |
+| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion) |
