@@ -55,3 +55,81 @@ concerns without touching the core agent server.
   - Reference: Express http-proxy-middleware + express-rate-limit.
   - Priority: LOW — local-only Manna does not need auth. Implement when deploying publicly.
   - Reference discussion: see prior conversation context (auth middleware Q&A).
+
+
+
+
+TODO: Self-upgrade capability — Swarm-driven tool generation (Phase 5)
+Allow Manna to detect a missing tool/API wrapper at runtime and use the Swarm to
+generate, validate, and activate the new tool — without risking agent health or
+creating git noise.
+
+  WHAT ALREADY EXISTS (no changes needed):
+    • ITool interface + createTool factory       → packages/tools/types.ts, tool-builder.ts
+    • MCP dynamic tool loader                    → packages/mcp/loader.ts (discovers tools at startup)
+    • Agent accepts injected ITool[]             → packages/agent/agent.ts constructor
+    • Swarm task decomposer                      → packages/swarm/decomposer.ts
+    • fs.write + shell tools                     → agent can already write files & run commands
+    • Processor middleware                        → can intercept steps for guardrails
+
+  PHASE 5A — MCP-first self-upgrade (safest, ~1 day)
+  Leverage the existing MCP loader. When the agent needs a missing service:
+    1. Swarm generates a lightweight MCP server script for the new service
+       (small Node/TS file exposing tools via @modelcontextprotocol/sdk).
+    2. Writes it to a staging directory (e.g. data/mcp-staging/<service-name>/).
+    3. Appends an entry to data/mcp-servers.json.
+    4. Triggers MCP reload (new function: reloadMCPTools in packages/mcp/loader.ts).
+    5. New tools appear in the agent's tool list — no restart, no code merge.
+  Guardrails:
+    - Staged servers are disabled by default (add "enabled": false in config).
+    - Human toggles "enabled": true after review.
+    - Health check (packages/mcp/health.ts) must pass before tools are usable.
+  Files to touch:
+    - packages/mcp/loader.ts        → add reloadMCPTools() + "enabled" field support
+    - packages/tools/ (new file)    → mcp.generate.ts meta-tool (~100 LOC)
+
+  PHASE 5B — Native tool registry + codegen (~2-3 days, after 5A is stable)
+  Add a mutable ToolRegistry so the agent can register tools at runtime without restart.
+    Step 1: ToolRegistry class (~50 LOC)
+      - packages/tools/registry.ts
+      - Map<string, ITool> with register / unregister / all / get methods.
+      - Agent constructor takes registry instead of frozen ITool[].
+      - Small refactor in packages/agent/agent.ts (~20 LOC change).
+    Step 2: generate_tool meta-tool (~150 LOC)
+      - packages/tools/tool.generate.ts
+      - Input: serviceName, serviceDescription, apiSpec (OpenAPI snippet or docs URL).
+      - LLM generates tool code using the createTool pattern.
+      - Writes to packages/tools/<serviceName>.ts via fs.write.
+      - Validates: TypeScript compile check or lightweight sandbox eval.
+      - Returns { status: 'pending_review', filePath } by default.
+    Step 3: Activation policy (~50 LOC)
+      - packages/tools/activation-policy.ts
+      - canActivateImmediately(toolCode): boolean
+      - Block if: uses fs, net, child_process, eval, or unknown imports.
+      - Allow if: pure HTTP fetch to allowlisted domains with read-only verbs.
+      - Default: always require review (return false).
+
+  PHASE 5C — Safety & operational guardrails (alongside 5B)
+    - Per-tool budget: max calls/min, max spend, max concurrency.
+    - Kill switch per tool (registry.disable(name)).
+    - Global circuit breaker: if failure rate spikes, degrade gracefully.
+    - Observability: track success rate, p95 latency, token/cost per tool.
+    - Signed tool manifests: registry only loads signed + approved tools.
+
+  PHASE 5D — Git-friendly PR workflow (optional, for production deployments)
+    When generate_tool produces a new tool file:
+      1. Create branch: tooling/add-<service-name>.
+      2. Commit generated tool + tests + threat-model checklist.
+      3. Open PR automatically (requires GitHub token in env).
+      4. CI runs lint/test/security scan.
+      5. Human approval required (CODEOWNERS).
+      6. On merge: tool is disabled by default until manually toggled on.
+    Rules:
+      - One tool per PR, conventional commit label (tool:add).
+      - Auto-changelog entry.
+      - Progressive rollout: off → canary (1-5%) → full.
+      - Automatic rollback on error/latency/security threshold breach.
+
+  ESTIMATED TOTAL: ~250-300 LOC new code + small Agent refactor.
+  RECOMMENDED ORDER: 5A → 5B → 5C → 5D (each phase is independently useful).
+````
