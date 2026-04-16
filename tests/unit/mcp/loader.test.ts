@@ -17,12 +17,12 @@ const stdioCtorMock = vi.fn();
 const sseCtorMock = vi.fn();
 
 vi.mock('../../../packages/logger/logger.js', () => ({
-    getLogger: () => ({
+    logger: {
         info: vi.fn(),
         warn: vi.fn(),
         error: vi.fn(),
         debug: vi.fn()
-    })
+    }
 }));
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({

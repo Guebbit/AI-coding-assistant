@@ -90,34 +90,3 @@ export const logger = createLogger({
         })
     ]
 });
-
-/**
- * Get a component-scoped logger helper.
- *
- * The returned methods automatically inject the provided `component`
- * field into every log entry while preserving arbitrary metadata.
- *
- * @param component - Component name to attach to each log entry.
- * @returns Component-scoped log helpers (`info`, `warn`, `error`, `debug`).
- */
-export function getLogger(component: string): {
-    info: (message: string, meta?: Record<string, unknown>) => void;
-    warn: (message: string, meta?: Record<string, unknown>) => void;
-    error: (message: string, meta?: Record<string, unknown>) => void;
-    debug: (message: string, meta?: Record<string, unknown>) => void;
-} {
-    /**
-     * Merge `component` into a metadata object.
-     *
-     * @param meta - Optional caller-supplied metadata.
-     * @returns Metadata object that always contains `component`.
-     */
-    const withComponent = (meta?: Record<string, unknown>) => ({ component, ...(meta ?? {}) });
-
-    return {
-        info: (message, meta) => logger.info(message, withComponent(meta)),
-        warn: (message, meta) => logger.warn(message, withComponent(meta)),
-        error: (message, meta) => logger.error(message, withComponent(meta)),
-        debug: (message, meta) => logger.debug(message, withComponent(meta))
-    };
-}

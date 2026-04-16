@@ -12,6 +12,7 @@
 import { Agent } from "../../packages/agent/agent";
 import type { ModelProfile } from "../../packages/agent/model-router";
 import { loadMCPTools } from "../../packages/mcp";
+import { logger } from "../../packages/logger/logger";
 import { LangGraphSwarmOrchestrator } from "../../packages/orchestrator/graph";
 import type { IProcessor } from "../../packages/processors/types";
 import {
@@ -38,7 +39,6 @@ import {
   knowledgeGraphTool,
   queryKnowledgeGraphTool,
 } from "../../packages/tools/index";
-import { getLogger } from "../../packages/logger/logger";
 import { verificationProcessor } from "../../packages/processors/verification";
 import { createToolRerankerProcessor } from "../../packages/processors/tool-reranker";
 
@@ -74,9 +74,6 @@ let readOnlyTools = [...nativeReadOnlyTools];
 
 /** Runtime write-enabled tool set (native + MCP write tools, once loaded). */
 let writeTools = [...nativeWriteTools];
-
-/** Component-scoped logger for agent bootstrap steps. */
-const agentsLogger = getLogger("api.agents");
 
 /* ── Tool description map for the reranker ───────────────────────────── */
 
@@ -160,7 +157,8 @@ export async function initializeAgents(): Promise<void> {
     writeTools = [...nativeWriteTools, ...discoveredWriteTools];
     rebuildAgents();
 
-    agentsLogger.info("mcp_tools_loaded", {
+    logger.info("mcp_tools_loaded", {
+      component: "api.agents",
       readTools: readTools.length,
       writeTools: discoveredWriteTools.length,
       totalMCPTools: meta.length,
@@ -169,7 +167,7 @@ export async function initializeAgents(): Promise<void> {
     readOnlyTools = [...nativeReadOnlyTools];
     writeTools = [...nativeWriteTools];
     rebuildAgents();
-    agentsLogger.warn("mcp_tools_load_failed", { error: String(error) });
+    logger.warn("mcp_tools_load_failed", { component: "api.agents", error: String(error) });
   }
 }
 

@@ -11,7 +11,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { z } from 'zod';
-import { getLogger } from '../logger/logger';
+import { logger } from '../logger/logger';
 import { envInt } from '../shared/env';
 import type { ITool } from '../tools/types';
 import { checkMCPServerHealth } from './health';
@@ -25,9 +25,6 @@ const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
 
 /** Regex used to resolve `${VAR_NAME}` placeholders in MCP env entries. */
 const ENV_INTERPOLATION_PATTERN = /\${(\w+)}/g;
-
-/** Shared logger for MCP bridge operations. */
-const mcpLogger = getLogger('mcp');
 
 /** Zod schema for stdio MCP servers. */
 const stdioServerSchema = z.object({
@@ -189,7 +186,8 @@ async function parseMCPConfig(absoluteConfigPath: string): Promise<IMCPConfig | 
     const parsedJson: unknown = JSON.parse(fileContents);
     const parsedConfig = mcpConfigSchema.safeParse(parsedJson);
     if (!parsedConfig.success) {
-        mcpLogger.warn('mcp_config_invalid', {
+        logger.warn('mcp_config_invalid', {
+            component: 'mcp',
             path: absoluteConfigPath,
             errors: parsedConfig.error.issues.map((issue) => issue.message)
         });
@@ -217,7 +215,7 @@ export async function loadMCPTools(configPath?: string): Promise<{
 }> {
     const mcpEnabled = process.env.MCP_ENABLED ?? 'true';
     if (mcpEnabled === 'false') {
-        mcpLogger.info('mcp_loading_disabled');
+        logger.info('mcp_loading_disabled', { component: 'mcp' });
         return { readTools: [], writeTools: [], meta: [] };
     }
 
@@ -229,7 +227,7 @@ export async function loadMCPTools(configPath?: string): Promise<{
     try {
         await access(absoluteConfigPath, fsConstants.F_OK);
     } catch {
-        mcpLogger.info('mcp_config_not_found', { path: absoluteConfigPath });
+        logger.info('mcp_config_not_found', { component: 'mcp', path: absoluteConfigPath });
         return { readTools: [], writeTools: [], meta: [] };
     }
 
@@ -237,7 +235,8 @@ export async function loadMCPTools(configPath?: string): Promise<{
     try {
         config = await parseMCPConfig(absoluteConfigPath);
     } catch (error) {
-        mcpLogger.warn('mcp_config_parse_failed', {
+        logger.warn('mcp_config_parse_failed', {
+            component: 'mcp',
             path: absoluteConfigPath,
             error: String(error)
         });
@@ -277,7 +276,7 @@ export async function loadMCPTools(configPath?: string): Promise<{
                 `MCP server "${server.name}" health timeout (${timeoutMs}ms)`
             );
             if (!healthy) {
-                mcpLogger.warn('mcp_server_unhealthy', { server: server.name });
+                logger.warn('mcp_server_unhealthy', { component: 'mcp', server: server.name });
                 await client.close().catch(() => undefined);
                 continue;
             }
@@ -321,13 +320,15 @@ export async function loadMCPTools(configPath?: string): Promise<{
                 });
             }
 
-            mcpLogger.info('mcp_server_connected', {
+            logger.info('mcp_server_connected', {
+                component: 'mcp',
                 server: server.name,
                 discoveredTools: listedTools.tools.length,
                 writeTools: isWrite
             });
         } catch (error) {
-            mcpLogger.warn('mcp_server_failed', {
+            logger.warn('mcp_server_failed', {
+                component: 'mcp',
                 server: server.name,
                 error: String(error)
             });

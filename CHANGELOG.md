@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- MCP documentation pages for easier onboarding:
+    - `docs/theory/MCP.md` — protocol concept, mental model, and architecture flow
+    - `docs/packages/mcp.md` — setup guide, practical examples, and troubleshooting checklist
+
 - **MCP bridge integration** (`packages/mcp/`):
     - Added startup MCP loader that reads `data/mcp-servers.json`, connects to configured MCP servers, discovers `tools/list`, and wraps each tool as a native `ITool`.
     - MCP tools are namespaced as `mcp_<server>__<tool>` and merged into the same tool registries used by the agent loop and tool reranker.
@@ -62,6 +66,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`docs/packages/orchestrator.md`**: Full documentation page for the new LangGraph orchestrator — graph topology diagram, node descriptions, state shape, retry behaviour, usage examples, migration guide, and instructions for adding new nodes.
 
 ### Changed
+
+- Removed `getLogger()` helper and switched MCP/agent bootstrap logging to inline `logger.*(..., { component })` usage.
 
 - **`apps/api/agents.ts`**: `createSwarmOrchestrator()` return type changed from `SwarmOrchestrator` to `LangGraphSwarmOrchestrator`. The `run(task, config): Promise<ISwarmResult>` interface is identical — all callers remain backward-compatible.
 - **`docs/packages/index.md`** and **`docs/.vitepress/config.mts`**: Added `orchestrator` package to the documentation navigation.

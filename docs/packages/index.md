@@ -65,6 +65,16 @@ Hybrid memory: local ring buffer (20 entries) + Qdrant semantic vector search.
 
 ---
 
+### `mcp` -- External Tool Bridge
+
+Discovers MCP server tools at startup and wraps them as native Manna tools.
+
+**Role**: external tool integration via MCP  
+**Key method**: `loadMCPTools(configPath?) -> { readTools, writeTools, meta }`  
+[Full docs ->](/packages/mcp)
+
+---
+
 ### `events` -- Notification System
 
 In-process pub/sub bus. Components emit events; API subscribes for logging.
@@ -130,6 +140,7 @@ sequenceDiagram
 - [orchestrator -- LangGraph Swarm](/packages/orchestrator)
 - [llm -- Model Connection](/packages/llm)
 - [memory -- Short-term Storage](/packages/memory)
+- [mcp -- MCP Bridge](/packages/mcp)
 - [events -- Notifications](/packages/events)
 - [tools -- Toolbox](/packages/tools/)
 

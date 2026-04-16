@@ -43,6 +43,7 @@ export default withMermaid(
                             text: 'Event-Driven Observability',
                             link: '/theory/events-observability'
                         },
+                        { text: 'MCP Theory', link: '/theory/MCP' },
                         { text: 'Model Selection & Routing', link: '/model-selection' },
                         { text: 'RAG Theory', link: '/theory/RAG' },
                         { text: 'Vector Databases', link: '/theory/VECTOR_DATABASES' }
@@ -56,6 +57,7 @@ export default withMermaid(
                         { text: 'orchestrator — LangGraph Swarm', link: '/packages/orchestrator' },
                         { text: 'llm — Model Connection', link: '/packages/llm' },
                         { text: 'memory — Short-term Storage', link: '/packages/memory' },
+                        { text: 'mcp — MCP Bridge', link: '/packages/mcp' },
                         { text: 'graph — Knowledge Graph', link: '/packages/graph' },
                         { text: 'events — Notifications', link: '/packages/events' },
                         {
