@@ -17,7 +17,8 @@ export default withMermaid(
                 { text: 'Ollama Notes', link: '/infra/ollama-notes' },
                 { text: 'Packages', link: '/packages/' },
                 { text: 'Theory', link: '/theory/agent-loop' },
-                { text: 'Scenarios', link: '/scenarios' }
+                { text: 'Scenarios', link: '/scenarios' },
+                { text: 'Glossary', link: '/glossary' }
             ],
             sidebar: [
                 {
@@ -30,7 +31,8 @@ export default withMermaid(
                         { text: 'Scenarios & Tests', link: '/scenarios' },
                         { text: 'Ollama Models', link: '/infra/ollama-models' },
                         { text: 'Ollama Notes', link: '/infra/ollama-notes' },
-                        { text: 'Modelfile Example', link: '/infra/modelfile-example' }
+                        { text: 'Modelfile Example', link: '/infra/modelfile-example' },
+                        { text: 'Glossary', link: '/glossary' }
                     ]
                 },
                 {
