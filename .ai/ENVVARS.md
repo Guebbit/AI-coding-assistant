@@ -23,6 +23,7 @@
 `NEO4J_{URI=bolt://localhost:7687,USER=neo4j,PASSWORD=manna,DATABASE=neo4j}` — graph endpoint/auth/database
 `GRAPH_NER_MODEL=AGENT_MODEL_FAST` — NER extraction model
 `PORT=3001` — API server port
+`MANNA_PORT=3001` — compose API port override; mapped `${MANNA_PORT}:${MANNA_PORT}` and forwarded to container `PORT` for the Express API
 `CORS_ORIGIN=*` — allowed CORS origin(s)
 `MANNA_{DEFAULT_LOCALE=en,FALLBACK_LOCALE=en}` — locale selection
 `RATE_LIMIT_{WINDOW_MS=900000,MAX=100}` — per-IP rate limit window/max

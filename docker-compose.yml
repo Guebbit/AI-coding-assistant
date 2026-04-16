@@ -4,10 +4,13 @@
 # Services:
 #   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
 #   qdrant        — Local vector database for agent memory
+#   manna         — Manna Express API (containerized apps/api server)
 #
 # Usage:
 #   1. Copy .env.example → .env and fill in values
 #   2. From repo root: docker compose --env-file .env up -d
+#   3. Set MANNA_PORT in .env (default 3001) to change API host/container port
+#   4. API will be available at http://localhost:${MANNA_PORT:-3001}
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -91,6 +94,31 @@ services:
             timeout: 10s
             retries: 3
             start_period: 30s
+
+    manna:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - '${MANNA_PORT:-3001}:${MANNA_PORT:-3001}'
+        environment:
+            PORT: ${MANNA_PORT:-3001}
+            MANNA_DB_HOST: postgres
+            MANNA_DB_PORT: ${MANNA_DB_PORT:-5432}
+            MANNA_DB_USER: ${MANNA_DB_USER:-manna}
+            MANNA_DB_PASSWORD: ${MANNA_DB_PASSWORD:-manna}
+            MANNA_DB_NAME: ${MANNA_DB_NAME:-manna}
+            NEO4J_URI: bolt://neo4j:7687
+            NEO4J_USER: ${NEO4J_USER:-neo4j}
+            NEO4J_PASSWORD: ${NEO4J_PASSWORD:-manna}
+            OLLAMA_BASE_URL: http://ollama:11434
+            QDRANT_URL: http://qdrant:6333
+        depends_on:
+            postgres:
+                condition: service_healthy
+            neo4j:
+                condition: service_healthy
+        restart: unless-stopped
 
 volumes:
     ollama-data:
