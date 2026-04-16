@@ -20,7 +20,7 @@ flowchart LR
 The LLM only "reads" the passages you gave it in the prompt. It cannot access knowledge outside of those passages (if you prompt it correctly). This gives you:
 
 - **Recency** — the database can be updated any time without retraining the model.
-- **Verifiability** — every claim in the answer maps back to a specific source chunk.
+- **Verifiability** — every claim in the answer maps back to a specific source [chunk](/glossary#chunk).
 - **Privacy** — documents never leave your infrastructure.
 - **Reduced hallucination** — the model is constrained to evidence you provide.
 
@@ -45,7 +45,7 @@ flowchart TD
 | Chunk size (tokens)         | Too small → each chunk lacks context. Too large → less precise retrieval. 300–800 tokens is typical.  |
 | Overlap between chunks      | Prevents splitting a key sentence at a boundary. 10–20 % overlap is common.                           |
 | Metadata attached to chunks | Source file, page number, section, date — enables post-retrieval filtering.                           |
-| Embedding model             | Must be the same model at ingestion and query time. Changing models requires re-embedding everything. |
+| [Embedding](/glossary#embedding) model             | Must be the same model at ingestion and query time. Changing models requires re-embedding everything. |
 
 ---
 
@@ -68,7 +68,7 @@ flowchart TD
 | Approach            | When to use                          | Pros                         | Cons                                            |
 | ------------------- | ------------------------------------ | ---------------------------- | ----------------------------------------------- |
 | **Plain LLM**       | General knowledge, no private data   | Zero setup                   | No private data, stale cutoff, can hallucinate  |
-| **Fine-tuning**     | Domain style/behaviour, not facts    | Internalises domain patterns | Expensive, no source citations, hard to update  |
+| **[Fine-tuning](/glossary#fine-tuning)**     | Domain style/behaviour, not facts    | Internalises domain patterns | Expensive, no source citations, hard to update  |
 | **RAG**             | Private documents, factual retrieval | Cheap, updatable, citable    | Retrieval can fail; multi-hop reasoning is hard |
 | **RAG + fine-tune** | Large specialised domains            | Best factual accuracy        | Most expensive to build and maintain            |
 
@@ -84,7 +84,7 @@ flowchart TD
 SQLite / JSON file  ←→  numpy cosine similarity  ←→  Ollama LLM
 ```
 
-For a few hundred documents this is perfectly sufficient. No separate vector DB required.
+For a few hundred documents this is perfectly sufficient. No separate [vector DB](/glossary#vector-database) required.
 
 ### Standard (Team / production)
 
@@ -101,8 +101,8 @@ flowchart LR
 
 Pure semantic search misses keyword-specific matches. Hybrid search combines:
 
-- **Semantic (dense)**: embedding cosine similarity — captures meaning
-- **Keyword (sparse/BM25)**: exact token overlap — captures specific terms, names, acronyms
+- **Semantic (dense)**: embedding [cosine similarity](/glossary#cosine-similarity) — captures meaning
+- **Keyword (sparse/[BM25](/glossary#bm25))**: exact token overlap — captures specific terms, names, acronyms
 
 Most modern vector DBs (Qdrant, Weaviate, Elasticsearch) support hybrid scoring natively.
 

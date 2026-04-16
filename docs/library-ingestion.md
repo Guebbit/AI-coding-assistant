@@ -1,19 +1,19 @@
 # Library Ingestion & Semantic Search
 
 ::: tip TL;DR
-Build a semantic search engine over a collection of PDFs. One embedding per article summary → instant, fully-cited article discovery. No hallucination — you read the original source, the AI just finds it.
+Build a semantic search engine over a collection of PDFs. One [embedding](/glossary#embedding) per article summary → instant, fully-cited article discovery. No hallucination — you read the original source, the AI just finds it.
 :::
 
 ## Overview
 
 This page documents the **multi-library ingestion and search** architecture: a system for importing PDF collections (magazines, books, research papers), indexing them by article summary, and exposing semantic search over the index.
 
-The design emerged from a use-case discussion around building a local knowledge assistant for **Scientific American** back-issues. The core idea: instead of full RAG (embed every paragraph and let the LLM synthesise an answer), store a **summary + metadata per article** and return a ranked list of articles for the user to read directly.
+The design emerged from a use-case discussion around building a local knowledge assistant for **Scientific American** back-issues. The core idea: instead of full [RAG](/glossary#rag) (embed every paragraph and let the LLM synthesise an answer), store a **summary + metadata per article** and return a ranked list of articles for the user to read directly.
 
 **Related theory pages:**
 
 - [RAG theory](/theory/RAG) — what RAG is, when full RAG is appropriate
-- [Vector Databases](/theory/VECTOR_DATABASES) — how Qdrant and ANN search work
+- [Vector Databases](/theory/VECTOR_DATABASES) — how [Qdrant](/glossary#qdrant) and ANN search work
 
 ---
 
@@ -22,7 +22,7 @@ The design emerged from a use-case discussion around building a local knowledge 
 | Full RAG                                   | Summary Index (this approach)                         |
 | ------------------------------------------ | ----------------------------------------------------- |
 | Needs perfect PDF text extraction          | Only needs "good enough" extraction for summarisation |
-| Thousands of chunks to embed & search      | One embedding per article (50–100 / year)             |
+| Thousands of [chunks](/glossary#chunk) to embed & search      | One embedding per article (50–100 / year)             |
 | LLM synthesises answers from fragments     | **You** read the original article — no synthesis risk |
 | Complex chunking & retrieval tuning        | Simple summary + metadata store                       |
 | Citation is approximate ("around page 84") | Citation is **exact** (stored at ingestion time)      |

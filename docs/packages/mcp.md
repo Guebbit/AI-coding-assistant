@@ -196,7 +196,7 @@ Try:
 
 - increase `MCP_CONNECT_TIMEOUT_MS`
 - reduce server load
-- verify remote SSE server latency
+- verify remote [SSE](/glossary#sse) server latency
 
 ---
 

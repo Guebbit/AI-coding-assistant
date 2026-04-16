@@ -1,7 +1,7 @@
 # Model Selection & Routing
 
 ::: tip TL;DR
-Each agent step is routed to the best model profile (fast / reasoning / code / default) via keyword rules or a small classifier model.
+Each agent step is routed to the best [model profile](/glossary#model-profile) (fast / reasoning / code / default) via keyword rules or a small classifier model.
 :::
 
 ## The one-sentence version

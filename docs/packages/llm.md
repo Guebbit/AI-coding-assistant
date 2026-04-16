@@ -1,7 +1,7 @@
 # llm -- The AI Model Connection
 
 ::: tip TL;DR
-Thin HTTP wrapper around Ollama. Sends prompts, gets text. Forces JSON format for reliable parsing.
+Thin HTTP wrapper around [Ollama](/glossary#ollama). Sends prompts, gets text. Forces [JSON](/glossary#json-contract) format for reliable parsing.
 :::
 
 ## What

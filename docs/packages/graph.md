@@ -1,7 +1,7 @@
 # graph — Knowledge Graph (Neo4j)
 
 ::: tip TL;DR
-GraphRAG layer: entity/relationship extraction via Ollama NER → persisted to Neo4j. Two tools: `knowledge_graph` (ingest) and `query_knowledge_graph` (traverse). Fails open — if Neo4j is down, the agent continues uninterrupted.
+[GraphRAG](/glossary#graphrag) layer: entity/relationship extraction via Ollama [NER](/glossary#ner) → persisted to Neo4j. Two tools: `knowledge_graph` (ingest) and `query_knowledge_graph` (traverse). Fails open — if Neo4j is down, the agent continues uninterrupted.
 :::
 
 ## What
@@ -203,7 +203,7 @@ RETURN person.name, r.type AS relationship, tech.name AS technology
 | ---------------------------------------- | --------------------------------------- |
 | "Find documents similar to this text"    | `semantic_search` (Qdrant)              |
 | "What is X related to?"                  | `query_knowledge_graph` (Neo4j)         |
-| "List all entities of type Technology"   | `query_knowledge_graph` (Cypher)        |
+| "List all entities of type Technology"   | `query_knowledge_graph` ([Cypher](/glossary#cypher))        |
 | "Find everything about a topic"          | Both — combine semantic + graph results |
 | "Multi-hop: A relates to B relates to C" | `query_knowledge_graph` (Cypher)        |
 | "Recall what I did in a past run"        | Memory ring buffer / Qdrant             |

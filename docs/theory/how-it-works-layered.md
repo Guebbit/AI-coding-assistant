@@ -111,8 +111,8 @@ If this is enough to get started, stop here and go run a task.
 
 ### Memory (`packages/memory/memory.ts`)
 
-- `addMemory(entry)`: saves outcomes to Qdrant + local ring buffer
-- `getMemory(query)`: semantic similarity search to retrieve relevant past results
+- `addMemory(entry)`: saves outcomes to [Qdrant](/glossary#qdrant) + local [ring buffer](/glossary#ring-buffer)
+- `getMemory(query)`: [semantic similarity](/glossary#semantic-search) search to retrieve relevant past results
 - Falls back to local-only if Qdrant is unavailable
 
 ### Events (`packages/events/bus.ts`)

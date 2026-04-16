@@ -8,7 +8,7 @@ Vector databases store high-dimensional float arrays (embeddings) and retrieve t
 
 A **vector database** is a storage engine optimised for one operation: given a query vector `q`, return the K stored vectors most similar to `q` — fast, even across millions of entries.
 
-"Vectors" here are the numerical representations produced by embedding models: arrays of 384–4096 floating-point numbers (depending on the model). Each dimension encodes some semantic feature of the original text or image. Nearby vectors in this high-dimensional space represent semantically similar content.
+"Vectors" here are the numerical representations produced by [embedding](/glossary#embedding) models: arrays of 384–4096 floating-point numbers (depending on the model). Each dimension encodes some semantic feature of the original text or image. Nearby vectors in this high-dimensional space represent semantically similar content.
 
 ```mermaid
 flowchart TD
@@ -24,7 +24,7 @@ flowchart TD
     cat -.semantic similarity.- dog
 ```
 
-The database must answer: _"which stored vectors are closest to my query vector?"_ — a task called **Approximate Nearest Neighbour (ANN) search**.
+The database must answer: _"which stored vectors are closest to my query vector?"_ — a task called **Approximate Nearest Neighbour ([ANN](/glossary#ann)) search**.
 
 ---
 
@@ -33,7 +33,7 @@ The database must answer: _"which stored vectors are closest to my query vector?
 | Feature             | SQL (relational)              | NoSQL (document / key-value)           | Vector DB                                   |
 | ------------------- | ----------------------------- | -------------------------------------- | ------------------------------------------- |
 | **Query type**      | Exact match, range, joins     | Exact match, full-text                 | Nearest-neighbour (semantic similarity)     |
-| **Index structure** | B-tree, hash                  | Hash / inverted index                  | ANN index (HNSW, IVF, …)                    |
+| **Index structure** | B-tree, hash                  | Hash / inverted index                  | ANN index ([HNSW](/glossary#hnsw), [IVF](/glossary#ivf), …)                    |
 | **Filtering**       | `WHERE col = val`             | JSON path match                        | Post-filter on metadata attached to vectors |
 | **Best for**        | Structured data, transactions | Flexible schema, high write throughput | Semantic search, embeddings, RAG            |
 | **Scaling axis**    | Rows × columns                | Documents                              | Vectors × dimensions                        |
@@ -90,7 +90,7 @@ Clusters vectors into `nlist` Voronoi cells at build time. At query time, only `
 
 Computes cosine/dot-product distance against every stored vector. Exact (not approximate). Only practical for < 100 K vectors in-memory.
 
-This is what a pure `numpy` cosine similarity implementation does — perfectly fine for personal-scale projects (< 10 K articles, < 500 K chunks).
+This is what a pure `numpy` [cosine similarity](/glossary#cosine-similarity) implementation does — perfectly fine for personal-scale projects (< 10 K articles, < 500 K chunks).
 
 ---
 

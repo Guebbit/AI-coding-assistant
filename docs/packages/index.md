@@ -1,7 +1,7 @@
 # Packages Overview
 
 ::: tip TL;DR
-5 packages: agent (loop), llm (Ollama), memory (Qdrant + buffer), events (pub/sub), tools (actions). API wires them together.
+5 packages: agent (loop), llm (Ollama), memory ([Qdrant](/glossary#qdrant) + buffer), events ([pub/sub](/glossary#pub-sub)), tools (actions). API wires them together.
 :::
 
 The API app wires small focused packages. Each package has a single responsibility.
@@ -57,7 +57,7 @@ Thin HTTP wrapper around Ollama. Sends prompts, gets text responses.
 
 ### `memory` -- Short-term Storage
 
-Hybrid memory: local ring buffer (20 entries) + Qdrant semantic vector search.
+Hybrid memory: local [ring buffer](/glossary#ring-buffer) (20 entries) + Qdrant semantic vector search.
 
 **Role**: context continuity across runs  
 **Key methods**: `addMemory(entry)`, `getMemory(query, n)`  

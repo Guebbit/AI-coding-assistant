@@ -1,48 +1,8 @@
-# Ollama Notes — Brief but Complete
+# Ollama Setup & Reference
 
 ::: tip TL;DR
-Quick reference for Ollama setup: GPU drivers, container runtime, model management, VRAM expectations.
+Quick reference for running Ollama locally. For LLM concepts, see the [Glossary](/glossary).
 :::
-
-This page is a compact reference for running Ollama locally, understanding key LLM concepts, and avoiding common setup mistakes.
-
-## Core concepts in plain words
-
-### Weights
-
-- Weights are the learned numbers inside the model.
-- They store what the model has learned during training.
-- Changing weights means retraining or fine-tuning.
-
-### Quantization
-
-- Quantization compresses weights (for example Q4, Q5, Q6).
-- Benefit: much lower VRAM usage and faster loading.
-- Tradeoff: slight quality loss at lower bit precision.
-
-### Tokens
-
-- Models process text as tokens (word pieces, not full words).
-- Context window = max input + output tokens per request.
-- Large prompts + large responses increase memory usage.
-
-## VRAM expectations (quick reference)
-
-Approximate ranges depend on model family and quantization:
-
-| Model class | Typical VRAM need (quantized) | Notes                                               |
-| ----------- | ----------------------------: | --------------------------------------------------- |
-| 1B–4B       |                           Low | Good for first tests and weak hardware              |
-| 7B–8B       |                        Medium | Strong default for daily local usage                |
-| 13B         |                   Medium-high | Usually one model loaded at a time on 24 GB         |
-| 30B+        |                          High | Can become unstable on consumer single-GPU setups   |
-| 70B         |                     Very high | Usually requires multi-GPU or remote infrastructure |
-
-Practical rule on 24 GB VRAM:
-
-- Safe: one 7B–13B quantized model
-- Risky: 30B quantized
-- Usually unrealistic locally: 70B
 
 ## Setup prerequisites
 
@@ -73,7 +33,7 @@ What matters:
 
 - `--gpus=all`: enables CUDA acceleration
 - persistent volume: keeps downloaded models
-- `OLLAMA_MAX_LOADED_MODELS=1`: avoids VRAM overload
+- `OLLAMA_MAX_LOADED_MODELS=1`: avoids [VRAM](/glossary#vram) overload
 - `OLLAMA_NUM_PARALLEL=1`: safer for constrained systems
 
 This repository's compose file is `docker-compose.yml` at the repo root; use that path whenever docs mention the Ollama/Open WebUI compose setup.
@@ -93,23 +53,29 @@ Inside a chat session:
 
 For first validation, use a small model first, then scale up.
 
-## Customization options (what is realistic locally)
+## VRAM expectations (quick reference)
 
-### LoRA / Fine-tuning
+Approximate ranges depend on model family and [quantization](/glossary#quantization):
 
-- Modifies behavior with adapter layers
-- Useful for style/domain adaptation
-- More practical than full retraining
+| Model class | Typical [VRAM](/glossary#vram) need (quantized) | Notes                                               |
+| ----------- | -----------------------------------------------: | --------------------------------------------------- |
+| 1B–4B       |                                              Low | Good for first tests and weak hardware              |
+| 7B–8B       |                                           Medium | Strong default for daily local usage                |
+| 13B         |                                      Medium-high | Usually one model loaded at a time on 24 GB         |
+| 30B+        |                                             High | Can become unstable on consumer single-GPU setups   |
+| 70B         |                                        Very high | Usually requires multi-GPU or remote infrastructure |
 
-### RAG (Retrieval-Augmented Generation)
+Practical rule on 24 GB [VRAM](/glossary#vram):
 
-- Does not change weights
-- Injects your own documents at query time
-- Best for private knowledge and frequently updated data
+- Safe: one 7B–13B [quantized](/glossary#quantization) model
+- Risky: 30B quantized
+- Usually unrealistic locally: 70B
 
-### Full training from scratch
+## Customization options
 
-- Usually not realistic on single consumer GPUs
+- **LoRA / Fine-tuning** → [Theory](/theory/lora-fine-tuning) | [Practical guide](/theory/lora-practical)
+- **RAG** → [Theory](/theory/RAG) | [Library Ingestion](/library-ingestion)
+- **Modelfile** → [Modelfile Example](/infra/modelfile-example)
 
 ## Troubleshooting
 
@@ -121,9 +87,9 @@ For first validation, use a small model first, then scale up.
 
 ### Out-of-memory (OOM)
 
-- Use smaller model or lower quantization footprint
+- Use smaller model or lower [quantization](/glossary#quantization) footprint
 - Keep `OLLAMA_MAX_LOADED_MODELS=1`
-- Reduce context size and output tokens
+- Reduce [context](/glossary#context-window) size and output [tokens](/glossary#token)
 
 ### Slow response
 
@@ -135,3 +101,9 @@ For first validation, use a small model first, then scale up.
 
 - Ollama model library: https://ollama.com/library
 - Hugging Face model pages: https://huggingface.co/
+
+## Key concepts
+
+For full definitions, see the [Glossary](/glossary):
+
+[Weights](/glossary#weights) · [Quantization](/glossary#quantization) · [Tokens](/glossary#token) · [Context Window](/glossary#context-window) · [VRAM](/glossary#vram)

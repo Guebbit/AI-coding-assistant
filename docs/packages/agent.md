@@ -6,7 +6,7 @@ The orchestration loop — builds prompt, routes to model, asks LLM, runs tool, 
 
 ## What
 
-The agent is the orchestration loop. It makes decisions in a loop and routes each step to the most appropriate model profile.
+The agent is the orchestration loop. It makes decisions in a loop and routes each step to the most appropriate [model profile](/glossary#model-profile).
 
 > Think of it as a manager that knows what tools are available, asks "what should I do next?", and delegates the actual work.
 

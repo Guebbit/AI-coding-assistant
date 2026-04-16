@@ -1,7 +1,7 @@
 # memory -- Short-term Storage
 
 ::: tip TL;DR
-Hybrid memory: local ring buffer (20 entries) + Qdrant vector search. Falls back to local-only if Qdrant is down.
+Hybrid memory: local [ring buffer](/glossary#ring-buffer) (20 entries) + [Qdrant](/glossary#qdrant) vector search. Falls back to local-only if Qdrant is down.
 :::
 
 ## What
@@ -51,7 +51,7 @@ await memory.addMemory({
 Both stores are updated:
 
 1. Ring buffer: prepend, evict oldest if > 20
-2. Qdrant: embed the entry with Ollama, store vector + text
+2. Qdrant: [embed](/glossary#embedding) the entry with Ollama, store vector + text
 
 ### getMemory
 
@@ -65,7 +65,7 @@ const memories = await memory.getMemory('npm scripts configuration', 5);
 What Qdrant does:
 
 1. Embed the query with Ollama (`OLLAMA_EMBED_MODEL`)
-2. Find the closest stored vectors (cosine similarity)
+2. Find the closest stored vectors ([cosine similarity](/glossary#cosine-similarity))
 3. Return top N results
 
 ### clearMemory
