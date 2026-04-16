@@ -129,6 +129,48 @@ mcp_github__list_pull_requests
 
 ---
 
+## Copy/paste quickstart (3 ready scenarios)
+
+Use these prompts as-is in `POST /run`.
+
+### 1) GitHub scenario
+
+```text
+List the 5 most recent open pull requests in Guebbit/manna and return: PR number, title, author, and URL.
+```
+
+Expected MCP tool family:
+
+```text
+mcp_github__*
+```
+
+### 2) Filesystem scenario
+
+```text
+Read package.json and tsconfig.json from this repository and summarize the scripts, TypeScript target, and module settings in 6 bullet points.
+```
+
+Expected MCP tool family:
+
+```text
+mcp_filesystem__*
+```
+
+### 3) Browser scenario
+
+```text
+Open https://modelcontextprotocol.io and summarize what MCP is in 5 simple bullets for a beginner.
+```
+
+Expected MCP tool family:
+
+```text
+mcp_browser__*
+```
+
+---
+
 ## Troubleshooting (fast)
 
 ### "No MCP tools loaded"
