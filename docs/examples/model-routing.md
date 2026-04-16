@@ -181,7 +181,7 @@ flowchart TD
     I --> M[Look up model for profile]
     K --> M
     L --> M
-    M --> N["Fallback: profile var → AGENT_MODEL_DEFAULT → OLLAMA_MODEL → llama3"]
+    M --> N["Fallback: profile var → AGENT_MODEL_DEFAULT → OLLAMA_MODEL → llama3.1:8b"]
 ```
 
 ---

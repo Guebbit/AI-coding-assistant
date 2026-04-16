@@ -77,7 +77,7 @@ Routing/model fallback summary
 
 - Profiles: `fast|reasoning|code|default`
 - Router mode (`AGENT_MODEL_ROUTER_MODE`): `rules` (default) or `model`
-- Fallback chain per profile: profile var -> `AGENT_MODEL_DEFAULT` -> `OLLAMA_MODEL` -> `llama3`
+- Fallback chain per profile: profile var -> `AGENT_MODEL_DEFAULT` -> `OLLAMA_MODEL` -> `llama3.1:8b`
 
 Update protocol
 

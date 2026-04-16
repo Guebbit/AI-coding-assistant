@@ -95,7 +95,7 @@ flowchart TD
 Ollama supports loading LoRA adapters via a **Modelfile**:
 
 ```dockerfile
-FROM llama3
+FROM llama3.1:8b
 ADAPTER ./my-lora-adapter.gguf
 ```
 

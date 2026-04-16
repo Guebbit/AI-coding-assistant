@@ -57,10 +57,10 @@ sequenceDiagram
 
 ```json
 { "type": "agent:start",        "task": "Show me the 5 most recent orders with customer names" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "mysql_query", "thought": "I'll join the orders and customers tables, order by date descending, and limit to 5." }
 { "type": "tool:result",        "tool": "mysql_query", "result": "[{\"id\":1042,\"created_at\":\"2026-04-15\",\"total\":149.99,\"customer_name\":\"Alice Chen\"},{\"id\":1041,\"created_at\":\"2026-04-14\",\"total\":89.50,\"customer_name\":\"Bob Rivera\"},{\"id\":1040,\"created_at\":\"2026-04-14\",\"total\":234.00,\"customer_name\":\"Carol Zhang\"},{\"id\":1039,\"created_at\":\"2026-04-13\",\"total\":55.00,\"customer_name\":\"Dave Okafor\"},{\"id\":1038,\"created_at\":\"2026-04-12\",\"total\":178.25,\"customer_name\":\"Eve Johansson\"}]" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "Here are the 5 most recent orders..." }
 { "type": "agent:done",         "answer": "Here are the 5 most recent orders:..." }
 ```
@@ -92,7 +92,7 @@ The `mysql_query` tool validates this is a `SELECT` statement before executing. 
     "meta": {
         "startedAt": "2026-04-15T16:00:00.000Z",
         "durationMs": 2104,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 2,
         "toolCalls": 1,
         "contextLength": 891
@@ -142,10 +142,10 @@ sequenceDiagram
 
 ````json
 { "type": "agent:start",        "task": "Delete all orders older than 2025" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "mysql_query", "thought": "I'll delete old orders with a DELETE query." }
 { "type": "tool:error",         "tool": "mysql_query", "error": "Only SELECT statements are allowed" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "I'm unable to delete data — the database tool only allows SELECT queries for safety. You would need to run this directly on your database." }
 { "type": "agent:done",         "answer": "I can't delete data — the mysql_query tool only allows SELECT queries for safety. To remove old orders, run this directly on your database:\n\n```sql\nDELETE FROM orders WHERE created_at < '2025-01-01';\n```\n\n⚠️ Back up your data first." }
 ````

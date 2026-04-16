@@ -10,7 +10,7 @@
  * **Configuration** (all optional):
  * - `NEO4J_URI`      (default `bolt://localhost:7687`)
  * - `NEO4J_USER`     (default `neo4j`)
- * - `NEO4J_PASSWORD` (default `manna`)
+ * - `NEO4J_PASSWORD` (default `put-your-password-here`)
  * - `NEO4J_DATABASE` (default `neo4j`)
  *
  * @module graph/client

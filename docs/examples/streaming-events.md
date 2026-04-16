@@ -73,7 +73,7 @@ This is what arrives on the wire, byte for byte:
 
 ```
 event: route
-data: {"profile":"default","model":"llama3.1:8b-instruct-q8_0","reason":"no_forced_profile"}
+data: {"profile":"default","model":"llama3.1:8b","reason":"no_forced_profile"}
 
 event: step
 data: {"step":0,"action":"read_file","thought":"I need to read package.json to find the available npm scripts."}
@@ -82,7 +82,7 @@ event: tool
 data: {"tool":"read_file","result":"{\n  \"name\": \"my-project\",\n  \"scripts\": {\n    \"dev\": \"tsx watch src/index.ts\",\n    \"build\": \"tsc\",\n    \"typecheck\": \"tsc --noEmit\",\n    \"lint\": \"eslint .\",\n    \"test\": \"vitest run\",\n    \"docs:dev\": \"vitepress dev docs\"\n  }\n}"}
 
 event: route
-data: {"profile":"default","model":"llama3.1:8b-instruct-q8_0","reason":"no_forced_profile"}
+data: {"profile":"default","model":"llama3.1:8b","reason":"no_forced_profile"}
 
 event: step
 data: {"step":1,"action":"none","thought":"The project has 6 npm scripts: dev, build, typecheck, lint, test, and docs:dev."}

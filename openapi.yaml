@@ -676,7 +676,7 @@ paths:
                                                 model:
                                                     type: string
                                                     description: Resolved Ollama model for this profile.
-                                                    example: 'llama3.1:8b-instruct-q8_0'
+                                                    example: 'llama3.1:8b'
                                                 envVar:
                                                     type: string
                                                     description: Environment variable that configures this profile's model.
@@ -718,7 +718,7 @@ paths:
                                             properties:
                                                 name:
                                                     type: string
-                                                    example: 'llama3.1:8b-instruct-q8_0'
+                                                    example: 'llama3.1:8b'
                                                 size:
                                                     type: integer
                                                     nullable: true

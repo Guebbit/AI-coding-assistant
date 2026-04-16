@@ -15,7 +15,7 @@ They are intentionally excluded from `npm test` (CI) because they are slow and r
 
 ```bash
 # Pull a fast model for testing
-ollama pull llama3.1:8b-instruct-q8_0
+ollama pull llama3.1:8b
 
 # Start Qdrant (optional — memory-only mode works without it)
 podman run -p 6333:6333 qdrant/qdrant

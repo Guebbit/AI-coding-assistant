@@ -34,7 +34,7 @@ export interface IResolveModelOptions {
 
     /**
      * Final hardcoded fallback when no env var is available.
-     * Default: `"llama3"`.
+     * Default: `"llama3.1:8b"`.
      */
     hardDefault?: string;
 }
@@ -55,7 +55,7 @@ export function resolveModel(profile: ModelProfile, options: IResolveModelOption
 
     const includeAgentDefault = options.includeAgentDefault !== false;
     const includeOllamaFallback = options.includeOllamaFallback !== false;
-    const hardDefault = options.hardDefault?.trim() || 'llama3';
+    const hardDefault = options.hardDefault?.trim() || 'llama3.1:8b';
 
     const defaultChain = [
         includeAgentDefault ? process.env.AGENT_MODEL_DEFAULT : undefined,

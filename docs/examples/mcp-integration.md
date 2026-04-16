@@ -101,10 +101,10 @@ sequenceDiagram
 
 ```json
 { "type": "agent:start",        "task": "List open PRs in my-org/my-repo and summarize them" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "mcp_github__list_pull_requests", "thought": "I'll use the GitHub MCP tool to fetch open pull requests for this repository." }
 { "type": "tool:result",        "tool": "mcp_github__list_pull_requests", "result": "[{\"number\":142,\"title\":\"Add OAuth2 support\",\"author\":\"alice\",\"labels\":[\"feature\"],\"created_at\":\"2026-04-10\"},{\"number\":139,\"title\":\"Fix rate limiter edge case\",\"author\":\"bob\",\"labels\":[\"bug\"],\"created_at\":\"2026-04-08\"},{\"number\":137,\"title\":\"Update TypeScript to 5.9\",\"author\":\"carol\",\"labels\":[\"chore\"],\"created_at\":\"2026-04-05\"}]" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "Here are the 3 open PRs with summaries..." }
 { "type": "agent:done",         "answer": "..." }
 ```
@@ -142,7 +142,7 @@ The agent doesn't know or care that `mcp_github__list_pull_requests` comes from 
     "meta": {
         "startedAt": "2026-04-15T17:15:00.000Z",
         "durationMs": 2845,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 2,
         "toolCalls": 1,
         "contextLength": 1203

@@ -55,10 +55,10 @@ sequenceDiagram
 
 ```json
 { "type": "agent:start",        "task": "Fetch the Ollama homepage and summarize what it does in 3 bullets" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "browser_fetch", "thought": "I'll fetch the Ollama homepage to get its content." }
 { "type": "tool:result",        "tool": "browser_fetch", "result": "Title: Ollama\n\nGet up and running with large language models. Download Ollama for macOS, Linux, and Windows. Run Llama 3.1, Phi 3, Mistral, Gemma 2, and other models locally. Ollama bundles model weights, configuration, and data into a single package, defined by a Modelfile. It optimizes setup and configuration details, including GPU usage... [truncated at 5000 chars]" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "Here are 3 bullets summarizing Ollama..." }
 { "type": "agent:done",         "answer": "..." }
 ```
@@ -88,7 +88,7 @@ In the event log above, notice the `[truncated at 5000 chars]` marker at the end
     "meta": {
         "startedAt": "2026-04-15T16:30:00.000Z",
         "durationMs": 3215,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 2,
         "toolCalls": 1,
         "contextLength": 2104

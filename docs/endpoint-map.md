@@ -155,7 +155,7 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
         "startedAt": "2024-01-15T10:30:00.000Z",
         "durationMs": 1533,
         "requestId": "req_123",
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "promptTokens": 420,
         "completionTokens": 180,
         "totalTokens": 600,
@@ -909,7 +909,7 @@ Lists all available Manna agent routing profiles (modes), the Ollama model each 
     "modes": [
         {
             "profile": "fast",
-            "model": "llama3.1:8b-instruct-q8_0",
+            "model": "llama3.1:8b",
             "envVar": "AGENT_MODEL_FAST",
             "description": "Low-latency model for simple, quick tasks. Fully GPU-resident for sub-second response."
         }
@@ -937,7 +937,7 @@ Proxies Ollama's `GET /api/tags` and returns all locally available models with s
     "ollamaBaseUrl": "http://localhost:11434",
     "models": [
         {
-            "name": "llama3.1:8b-instruct-q8_0",
+            "name": "llama3.1:8b",
             "size": 8538212864,
             "digest": "a1b2c3...",
             "modifiedAt": "2024-12-01T10:00:00Z",

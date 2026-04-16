@@ -17,7 +17,7 @@ import { OLLAMA_BASE_URL, OLLAMA_MODEL } from './config';
  * Every field is optional — sensible defaults are applied when omitted.
  */
 export interface IGenerateOptions {
-    /** Ollama model name (default: `OLLAMA_MODEL` env var or `"llama3"`). */
+    /** Ollama model name (default: `OLLAMA_MODEL` env var or `"llama3.1:8b"`). */
     model?: string;
 
     /** Whether to stream the response token-by-token (default: `false`). */

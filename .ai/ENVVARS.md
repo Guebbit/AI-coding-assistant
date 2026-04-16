@@ -1,7 +1,7 @@
 # Environment variable catalog
 
 `OLLAMA_BASE_URL=http://localhost:11434` — Ollama API endpoint
-`OLLAMA_MODEL=llama3` — base model fallback
+`OLLAMA_MODEL=llama3.1:8b` — base model fallback
 `OLLAMA_EMBED_MODEL=nomic-embed-text` — embeddings for memory/search
 `AGENT_MODEL_ROUTER_MODE=rules` — `rules` or `model`
 `AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — router model

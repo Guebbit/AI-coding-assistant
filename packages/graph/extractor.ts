@@ -11,7 +11,7 @@
  * result rather than throwing.
  *
  * **Configuration** (all optional):
- * - `GRAPH_NER_MODEL`  (default: value of `AGENT_MODEL_FAST`, then `"llama3.1:8b-instruct-q8_0"`)
+ * - `GRAPH_NER_MODEL`  (default: value of `AGENT_MODEL_FAST`, then `"llama3.1:8b"`)
  * - `OLLAMA_BASE_URL`  (default `http://localhost:11434`)
  *
  * @module graph/extractor
@@ -35,7 +35,7 @@ const NER_MODEL = resolveModel('fast', {
     preferredModel: process.env.GRAPH_NER_MODEL,
     includeAgentDefault: false,
     includeOllamaFallback: false,
-    hardDefault: 'llama3.1:8b-instruct-q8_0'
+    hardDefault: 'llama3.1:8b'
 });
 
 /* ── Zod schemas for the LLM response ──────────────────────────────── */

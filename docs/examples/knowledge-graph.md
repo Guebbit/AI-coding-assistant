@@ -91,13 +91,13 @@ Vector search ([Qdrant](/glossary#qdrant)) would find documents _containing_ "Ty
 
 ```json
 { "type": "agent:start",        "task": "What technologies are related to TypeScript in our docs?" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "query_knowledge_graph", "thought": "I'll query the knowledge graph for entities related to TypeScript." }
 { "type": "tool:result",        "tool": "query_knowledge_graph", "result": "{\"rows\":[{\"name\":\"Zod\",\"type\":\"Library\",\"relationship\":\"RELATES_TO\"},{\"name\":\"ESM\",\"type\":\"Module System\",\"relationship\":\"RELATES_TO\"},{\"name\":\"Ollama\",\"type\":\"Tool\",\"relationship\":\"RELATES_TO\"},{\"name\":\"Node.js\",\"type\":\"Runtime\",\"relationship\":\"RELATES_TO\"},{\"name\":\"vitest\",\"type\":\"Test Framework\",\"relationship\":\"RELATES_TO\"},{\"name\":\"Express\",\"type\":\"Framework\",\"relationship\":\"RELATES_TO\"}],\"rowCount\":6}" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "query_knowledge_graph", "thought": "Now I'll find how many documents reference each related entity to give a more useful answer." }
 { "type": "tool:result",        "tool": "query_knowledge_graph", "result": "{\"rows\":[{\"entity\":\"Zod\",\"docCount\":3},{\"entity\":\"ESM\",\"docCount\":5},{\"entity\":\"Ollama\",\"docCount\":8},{\"entity\":\"Node.js\",\"docCount\":6},{\"entity\":\"vitest\",\"docCount\":2},{\"entity\":\"Express\",\"docCount\":4}],\"rowCount\":6,\"query\":\"MATCH (e:Entity {name:'TypeScript'})-[:RELATES_TO]-(related) WITH related MATCH (related)-[:MENTIONED_IN]->(d) RETURN related.name AS entity, count(d) AS docCount ORDER BY docCount DESC\"}" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 3, "action": "none", "thought": "TypeScript is related to 6 technologies in the knowledge graph..." }
 { "type": "agent:done",         "answer": "..." }
 ```
@@ -121,7 +121,7 @@ The `query_knowledge_graph` tool blocks mutating [Cypher](/glossary#cypher) keyw
     "meta": {
         "startedAt": "2026-04-15T17:30:00.000Z",
         "durationMs": 4210,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 3,
         "toolCalls": 2,
         "contextLength": 1842

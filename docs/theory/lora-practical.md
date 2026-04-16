@@ -60,13 +60,13 @@ LoRA training expects a dataset of **instruction / input / output** examples in 
 
 Pick a base model that already does well at your target task — LoRA _adjusts_ behaviour, it doesn't teach from scratch.
 
-| Task                  | Recommended base models               | Why                                  |
-| --------------------- | ------------------------------------- | ------------------------------------ |
-| **Code generation**   | `Qwen2.5-Coder`, `CodeLlama`          | Pre-trained on code, strong baseline |
-| **General assistant** | `Llama3`, `Mistral`                   | Well-rounded, widely supported       |
-| **Multilingual**      | `Qwen2.5`, `Aya`                      | Strong non-English performance       |
-| **Long context**      | `Qwen2.5` (32K–128K), `Llama3` (128K) | Native long-context support          |
-| **Small/edge**        | `Phi-3-mini`, `Gemma-2B`              | Runs on minimal hardware             |
+| Task                  | Recommended base models                    | Why                                  |
+| --------------------- |--------------------------------------------| ------------------------------------ |
+| **Code generation**   | `Qwen2.5-Coder`, `CodeLlama`               | Pre-trained on code, strong baseline |
+| **General assistant** | `Llama3.1:8b`, `Mistral`                   | Well-rounded, widely supported       |
+| **Multilingual**      | `Qwen2.5`, `Aya`                           | Strong non-English performance       |
+| **Long context**      | `Qwen2.5` (32K–128K), `Llama3.1:8b` (128K) | Native long-context support          |
+| **Small/edge**        | `Phi-3-mini`, `Gemma-2B`                   | Runs on minimal hardware             |
 
 ::: tip Match the size to your hardware
 Check the [hardware requirements table](/theory/lora-fine-tuning#what-you-need-hardware) before picking. A 7B model is the sweet spot for most consumer GPUs.

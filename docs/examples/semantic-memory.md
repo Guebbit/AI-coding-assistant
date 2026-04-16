@@ -61,10 +61,10 @@ sequenceDiagram
 
 ```json
 { "type": "agent:start",        "task": "What database does this project use?" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "read_file", "thought": "I'll check docker-compose.yml for database service definitions." }
 { "type": "tool:result",        "tool": "read_file", "result": "services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_DB: myapp\n      POSTGRES_USER: admin\n    ports:\n      - '5432:5432'\n  ..." }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "The project uses PostgreSQL 16, configured in docker-compose.yml." }
 { "type": "agent:done",         "answer": "The project uses **PostgreSQL 16**, running as a Docker service. The database is named `myapp` with user `admin`, exposed on port 5432." }
 ```
@@ -130,7 +130,7 @@ sequenceDiagram
 
 ```json
 { "type": "agent:start",        "task": "What version of Postgres is configured?" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "none", "thought": "Based on previous context, the project uses PostgreSQL version 16, as configured in docker-compose.yml." }
 { "type": "agent:done",         "answer": "PostgreSQL **16**, configured in docker-compose.yml as the `db` service with image `postgres:16`." }
 ```
@@ -179,7 +179,7 @@ flowchart LR
     "meta": {
         "startedAt": "2026-04-15T16:45:30.000Z",
         "durationMs": 621,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 1,
         "toolCalls": 0,
         "contextLength": 312

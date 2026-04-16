@@ -53,7 +53,7 @@ flowchart TD
     Select --> Fast["⚡ fast\nqwen3:4b"]
     Select --> Reasoning["🧠 reasoning\ndeepseek"]
     Select --> Code["💻 code\nqwen3-coder"]
-    Select --> Default["📦 default\nllama3.1"]
+    Select --> Default["📦 default\nllama3.1:8b"]
 ```
 
 ---
@@ -168,14 +168,14 @@ These options are resolved at startup from env vars and passed through to Ollama
 | `AGENT_MODEL_REASONING`    | --       | Model for `reasoning` profile                  |
 | `AGENT_MODEL_CODE`         | --       | Model for `code` profile                       |
 | `AGENT_MODEL_DEFAULT`      | --       | Model for `default` profile                    |
-| `OLLAMA_MODEL`             | `llama3` | Global fallback (used if profile var is unset) |
+| `OLLAMA_MODEL`             | `llama3.1:8b` | Global fallback (used if profile var is unset) |
 
 ### Priority order for model selection
 
 ```
 1. Profile-specific var (e.g. AGENT_MODEL_CODE)
 2. OLLAMA_MODEL (global fallback)
-3. "llama3" (hardcoded final fallback)
+3. "llama3.1:8b" (hardcoded final fallback)
 ```
 
 ### How the router selects a profile

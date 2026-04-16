@@ -48,7 +48,7 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  * @returns `{ envVar, model }` pair.
  */
 function resolveProfileModel(profile: string): { envVar: string; model: string } {
-  const fallback = process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? "llama3";
+  const fallback = process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? "llama3.1:8b";
 
   switch (profile) {
     case "fast":

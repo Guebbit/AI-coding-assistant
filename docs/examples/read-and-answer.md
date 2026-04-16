@@ -42,7 +42,7 @@ sequenceDiagram
         Agent->>LLM: buildPrompt(task, context, memory)
         LLM-->>Agent: { thought, action: "read_file", input: { path: "package.json" } }
         Agent->>Events: emit(agent:step, { step: 1, action: "read_file" })
-        Agent->>Events: emit(agent:model_routed, { profile: "default", model: "llama3.1:8b-instruct-q8_0" })
+        Agent->>Events: emit(agent:model_routed, { profile: "default", model: "llama3.1:8b" })
         Note over Agent: execute read_file("package.json")
         Agent->>Events: emit(tool:result, { tool: "read_file", result: "..." })
     end
@@ -65,10 +65,10 @@ What you'd see in the server logs (simplified):
 
 ```json
 { "type": "agent:start",        "task": "What test framework does this project use?" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 1, "action": "read_file", "thought": "I need to check the project dependencies to find the test framework. Let me read package.json." }
 { "type": "tool:result",        "tool": "read_file", "result": "{ \"name\": \"my-node-app\", \"devDependencies\": { \"vitest\": \"^3.1.1\", \"typescript\": \"^5.8.3\" } ... }" }
-{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
+{ "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "The project uses vitest as its test framework, listed in devDependencies." }
 { "type": "agent:done",         "answer": "This project uses **vitest** (v3.1.1) as its test framework. It's listed in `devDependencies` in package.json." }
 ```
@@ -114,7 +114,7 @@ When `action` is `"none"`, the loop ends and `thought` becomes the final answer.
     "meta": {
         "startedAt": "2026-04-15T14:22:01.000Z",
         "durationMs": 1842,
-        "model": "llama3.1:8b-instruct-q8_0",
+        "model": "llama3.1:8b",
         "steps": 2,
         "toolCalls": 1,
         "contextLength": 623
