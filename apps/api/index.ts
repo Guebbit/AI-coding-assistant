@@ -39,7 +39,8 @@ import {
   validateTask,
   validateProfile,
   t,
-  validateRecommendedEnvironment
+  validateRecommendedEnvironment,
+  validateRequiredEnvironment
 } from "@/packages/shared";
 import { registerIdeRoutes } from "./ide-endpoints";
 import { registerUploadRoutes } from "./upload-endpoints";
@@ -216,6 +217,13 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
 
 /* Default port for the Manna API server. */
 const PORT = envInt(process.env.PORT, 3001);
+
+try {
+  validateRequiredEnvironment();
+} catch (error) {
+  logger.error('startup_required_env_missing', { component: 'api.server', error: String(error) });
+  process.exit(1);
+}
 
 validateRecommendedEnvironment({
   warn: (message: string, meta?: object) => logger.warn(message, { component: "api.environment", ...meta })

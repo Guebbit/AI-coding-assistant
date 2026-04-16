@@ -33,12 +33,18 @@ let mysqlPool: mysql.Pool | null = null;
  */
 function getMySqlPool(): mysql.Pool {
     if (!mysqlPool) {
+        const database = process.env.MYSQL_DATABASE?.trim();
+        if (!database) {
+            throw new Error(
+                'MYSQL_DATABASE environment variable is required to use the MySQL tool but is not set.'
+            );
+        }
         mysqlPool = mysql.createPool({
             host: process.env.MYSQL_HOST ?? 'localhost',
             port: Number.parseInt(process.env.MYSQL_PORT ?? '3306', 10),
             user: process.env.MYSQL_USER ?? 'root',
             password: process.env.MYSQL_PASSWORD ?? '',
-            database: process.env.MYSQL_DATABASE ?? '',
+            database,
             /* Never allow multi-statement execution (defence-in-depth). */
             multipleStatements: false,
             waitForConnections: true,

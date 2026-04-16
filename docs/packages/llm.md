@@ -45,14 +45,14 @@ generate(prompt: string, options?: GenerateOptions): Promise<string>
 
 ### Options
 
-| Option   | Type               | Default                    | Description                                 |
-| -------- | ------------------ | -------------------------- | ------------------------------------------- |
+| Option   | Type               | Default                         | Description                                 |
+| -------- | ------------------ | ------------------------------- | ------------------------------------------- |
 | `model`  | string             | `OLLAMA_MODEL` or `llama3.1:8b` | Which model to use                          |
-| `stream` | boolean            | `false`                    | Stream tokens as they arrive                |
-| `suffix` | string             | --                         | For fill-in-the-middle / infill completions |
-| `system` | string             | --                         | System prompt override                      |
-| `format` | `"json"` or schema | --                         | Force JSON output                           |
-| `images` | string[]           | --                         | Base64 images for multimodal models         |
+| `stream` | boolean            | `false`                         | Stream tokens as they arrive                |
+| `suffix` | string             | --                              | For fill-in-the-middle / infill completions |
+| `system` | string             | --                              | System prompt override                      |
+| `format` | `"json"` or schema | --                              | Force JSON output                           |
+| `images` | string[]           | --                              | Base64 images for multimodal models         |
 
 ### format: "json" -- why it matters
 
@@ -77,7 +77,7 @@ The agent always uses `format: "json"` to get clean, parseable responses.
 | Variable          | Default                  | Description                       |
 | ----------------- | ------------------------ | --------------------------------- |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL                 |
-| `OLLAMA_MODEL`    | `llama3.1:8b`                 | Default model when none specified |
+| `OLLAMA_MODEL`    | `llama3.1:8b`            | Default model when none specified |
 
 ---
 

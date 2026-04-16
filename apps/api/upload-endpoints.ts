@@ -29,19 +29,8 @@ import {
 } from "@/packages/tools/index";
 import { logger } from "@/packages/logger/logger";
 import { type IResponseMeta, rejectResponse, successResponse, t } from "@/packages/shared";
+import type { ImageProcessorResponse } from "@/api/models";
 import { upload } from "./middlewares/multer";
-
-/**
- * Response shape returned by image-processing upload endpoints.
- */
-interface IUploadImageProcessingResult {
-  /** Base64-encoded PNG image. */
-  image: string;
-  /** Processing duration in milliseconds. */
-  duration_ms: number;
-  /** Model identifier used by the processor. */
-  model: string;
-}
 
 /**
  * Send either raw PNG bytes or JSON metadata based on the `Accept` header.
@@ -56,7 +45,7 @@ interface IUploadImageProcessingResult {
 function sendImageOrJson(
   request: Request,
   response: Response,
-  result: IUploadImageProcessingResult,
+  result: ImageProcessorResponse,
   meta?: IResponseMeta
 ): void {
   if (request.headers.accept?.includes("image/png")) {
@@ -154,11 +143,11 @@ export function registerUploadRoutes(app: express.Express): void {
         negative_prompt: req.body?.negative_prompt,
       })
       .then((result) => {
-        sendImageOrJson(req, res, result as IUploadImageProcessingResult, {
+        sendImageOrJson(req, res, result as ImageProcessorResponse, {
           startedAt: startedAt.toISOString(),
           durationMs: Date.now() - startedAt.getTime(),
           requestId: req.requestId,
-          model: (result as IUploadImageProcessingResult).model,
+          model: (result as ImageProcessorResponse).model,
         });
       })
       .catch((error: unknown) => {
@@ -204,11 +193,11 @@ export function registerUploadRoutes(app: express.Express): void {
         negative_prompt: req.body?.negative_prompt,
       })
       .then((result) => {
-        sendImageOrJson(req, res, result as IUploadImageProcessingResult, {
+        sendImageOrJson(req, res, result as ImageProcessorResponse, {
           startedAt: startedAt.toISOString(),
           durationMs: Date.now() - startedAt.getTime(),
           requestId: req.requestId,
-          model: (result as IUploadImageProcessingResult).model,
+          model: (result as ImageProcessorResponse).model,
         });
       })
       .catch((error: unknown) => {

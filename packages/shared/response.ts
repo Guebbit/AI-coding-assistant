@@ -7,7 +7,13 @@
  * @module shared/response
  */
 
-import type { Response } from 'express';
+declare module 'express-serve-static-core' {
+    interface Request {
+        requestId?: string;
+    }
+}
+
+import type { Request, Response } from 'express';
 import type { ResponseMeta as ApiResponseMeta } from '../../api/models';
 
 /**
@@ -132,3 +138,24 @@ export const rejectResponse = (
     message = '',
     errors: string[] = []
 ) => response.status(status).json(generateReject(status, message, errors));
+
+/**
+ * Build standard response metadata from an Express request + start time.
+ * Centralises the repeated { startedAt, durationMs, requestId } pattern.
+ */
+export function buildResponseMeta(startedAt: Date, req?: Request): IResponseMeta {
+    return {
+        startedAt: startedAt.toISOString(),
+        durationMs: Date.now() - startedAt.getTime(),
+        ...(req?.requestId !== undefined ? { requestId: req.requestId } : {}),
+    };
+}
+
+/**
+ * Sum prompt + completion token counts, returning undefined when either is absent.
+ */
+export function sumTokens(promptTokens?: number, completionTokens?: number): number | undefined {
+    return typeof promptTokens === 'number' && typeof completionTokens === 'number'
+        ? promptTokens + completionTokens
+        : undefined;
+}

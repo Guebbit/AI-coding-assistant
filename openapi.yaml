@@ -60,7 +60,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/HealthResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/HealthResponse'
 
     /run:
         post:
@@ -99,7 +104,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/RunResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/RunResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -137,7 +147,16 @@ paths:
                                     task: 'List all TypeScript files in packages/agent/'
             responses:
                 '200':
-                    description: SSE stream — connection kept open until agent completes
+                    description: |
+                        SSE stream — connection kept open until agent completes.
+
+                        SSE event payload schemas (see components/schemas):
+                        - `route` event: SseRouteEvent `{ profile, model, reason }`
+                        - `step` event: SseStepEvent `{ step, action, thought }`
+                        - `tool` event: SseToolEvent `{ tool, result?, error? }`
+                        - `done` event: SseDoneEvent `{ result, meta? }`
+                        - `error` event: SseErrorEvent `{ error }`
+                        - `max_steps` event: SseMaxStepsEvent `{ task, summary, diagnosticFile? }`
                     content:
                         text/event-stream:
                             schema:
@@ -197,7 +216,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/SwarmResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/SwarmResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -223,7 +247,16 @@ paths:
                             $ref: '#/components/schemas/SwarmRequest'
             responses:
                 '200':
-                    description: SSE event stream
+                    description: |
+                        SSE event stream.
+
+                        SSE event payload schemas (see components/schemas):
+                        - `route` event: SseRouteEvent `{ profile, model, reason }`
+                        - `step` event: SseStepEvent `{ step, action, thought }`
+                        - `tool` event: SseToolEvent `{ tool, result?, error? }`
+                        - `done` event: SseDoneEvent `{ result, meta? }`
+                        - `error` event: SseErrorEvent `{ error }`
+                        Other swarm-specific events: `decomposed`, `subtask_start`, `subtask_done`, `subtask_error`.
                     content:
                         text/event-stream:
                             schema:
@@ -289,7 +322,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/WorkflowResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/WorkflowResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -321,7 +359,16 @@ paths:
                             $ref: '#/components/schemas/WorkflowRequest'
             responses:
                 '200':
-                    description: SSE event stream
+                    description: |
+                        SSE event stream.
+
+                        SSE event payload schemas (see components/schemas):
+                        - `route` event: SseRouteEvent `{ profile, model, reason }`
+                        - `step` event: SseStepEvent `{ step, action, thought }`
+                        - `tool` event: SseToolEvent `{ tool, result?, error? }`
+                        - `done` event: SseDoneEvent `{ result, meta? }`
+                        - `error` event: SseErrorEvent `{ error }`
+                        Workflow-specific events: `workflow_start { stepCount }`, `step_start { index, task }`, `step_done { WorkflowStepResult }`.
                     content:
                         text/event-stream:
                             schema:
@@ -358,7 +405,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/AutocompleteResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/AutocompleteResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -385,7 +437,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/LintResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/LintResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -411,7 +468,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/PageReviewResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/PageReviewResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -451,13 +513,18 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    result:
-                                        type: string
-                                        description: Model's description of the image
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  model:
+                                                      type: string
+                                                  response:
+                                                      type: string
+                                                      description: The model's textual description of the image.
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -498,13 +565,19 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    text:
-                                        type: string
-                                        description: Transcribed text
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  model:
+                                                      type: string
+                                                      description: The STT model used.
+                                                  text:
+                                                      type: string
+                                                      description: Transcribed text.
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -545,7 +618,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/ImageProcessorResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ImageProcessorResponse'
                         image/png:
                             schema:
                                 type: string
@@ -590,7 +668,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/ImageProcessorResponse'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ImageProcessorResponse'
                         image/png:
                             schema:
                                 type: string
@@ -626,16 +709,19 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    text:
-                                        type: string
-                                        description: Full extracted text
-                                    pages:
-                                        type: integer
-                                        description: Total number of pages in the PDF
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  text:
+                                                      type: string
+                                                      description: Full extracted text
+                                                  pageCount:
+                                                      type: integer
+                                                      description: Total number of pages in the PDF
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '500':
@@ -658,34 +744,37 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    count:
-                                        type: integer
-                                        description: Number of available modes.
-                                        example: 4
-                                    modes:
-                                        type: array
-                                        items:
-                                            type: object
-                                            properties:
-                                                profile:
-                                                    type: string
-                                                    description: Profile name.
-                                                    example: fast
-                                                model:
-                                                    type: string
-                                                    description: Resolved Ollama model for this profile.
-                                                    example: 'llama3.1:8b'
-                                                envVar:
-                                                    type: string
-                                                    description: Environment variable that configures this profile's model.
-                                                    example: AGENT_MODEL_FAST
-                                                description:
-                                                    type: string
-                                                    description: Human-readable summary.
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  count:
+                                                      type: integer
+                                                      description: Number of available modes.
+                                                      example: 4
+                                                  modes:
+                                                      type: array
+                                                      items:
+                                                          type: object
+                                                          properties:
+                                                              profile:
+                                                                  type: string
+                                                                  description: Profile name.
+                                                                  example: fast
+                                                              model:
+                                                                  type: string
+                                                                  description: Resolved Ollama model for this profile.
+                                                                  example: 'llama3.1:8b'
+                                                              envVar:
+                                                                  type: string
+                                                                  description: Environment variable that configures this profile's model.
+                                                                  example: AGENT_MODEL_FAST
+                                                              description:
+                                                                  type: string
+                                                                  description: Human-readable summary.
 
     /info/models:
         get:
@@ -702,40 +791,43 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    count:
-                                        type: integer
-                                        description: Number of models available.
-                                    ollamaBaseUrl:
-                                        type: string
-                                        description: The Ollama base URL queried.
-                                        example: 'http://localhost:11434'
-                                    models:
-                                        type: array
-                                        items:
-                                            type: object
-                                            properties:
-                                                name:
-                                                    type: string
-                                                    example: 'llama3.1:8b'
-                                                size:
-                                                    type: integer
-                                                    nullable: true
-                                                    description: Model file size in bytes.
-                                                digest:
-                                                    type: string
-                                                    nullable: true
-                                                modifiedAt:
-                                                    type: string
-                                                    nullable: true
-                                                    description: ISO 8601 timestamp of last modification.
-                                                details:
-                                                    type: object
-                                                    nullable: true
-                                                    description: Ollama model metadata (family, parameter_size, quantization_level, etc.).
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  count:
+                                                      type: integer
+                                                      description: Number of models available.
+                                                  ollamaBaseUrl:
+                                                      type: string
+                                                      description: The Ollama base URL queried.
+                                                      example: 'http://localhost:11434'
+                                                  models:
+                                                      type: array
+                                                      items:
+                                                          type: object
+                                                          properties:
+                                                              name:
+                                                                  type: string
+                                                                  example: 'llama3.1:8b'
+                                                              size:
+                                                                  type: integer
+                                                                  nullable: true
+                                                                  description: Model file size in bytes.
+                                                              digest:
+                                                                  type: string
+                                                                  nullable: true
+                                                              modifiedAt:
+                                                                  type: string
+                                                                  nullable: true
+                                                                  description: ISO 8601 timestamp of last modification.
+                                                              details:
+                                                                  type: object
+                                                                  nullable: true
+                                                                  description: Ollama model metadata (family, parameter_size, quantization_level, etc.).
                 '502':
                     description: Ollama unreachable or returned an error.
                     content:
@@ -761,41 +853,44 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
-                                properties:
-                                    description:
-                                        type: string
-                                        example: 'Manna AI Agent Platform — REST API quick reference'
-                                    endpointCount:
-                                        type: integer
-                                    endpoints:
-                                        type: array
-                                        items:
-                                            type: object
-                                            properties:
-                                                method:
-                                                    type: string
-                                                    example: GET
-                                                path:
-                                                    type: string
-                                                    example: /health
-                                                summary:
-                                                    type: string
-                                                params:
-                                                    type: array
-                                                    items:
-                                                        type: object
-                                                        properties:
-                                                            name:
-                                                                type: string
-                                                            type:
-                                                                type: string
-                                                            required:
-                                                                type: boolean
-                                                            description:
-                                                                type: string
-                                    meta:
-                                        $ref: '#/components/schemas/ResponseMeta'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: object
+                                              properties:
+                                                  description:
+                                                      type: string
+                                                      example: 'Manna AI Agent Platform — REST API quick reference'
+                                                  endpointCount:
+                                                      type: integer
+                                                  endpoints:
+                                                      type: array
+                                                      items:
+                                                          type: object
+                                                          properties:
+                                                              method:
+                                                                  type: string
+                                                                  example: GET
+                                                              path:
+                                                                  type: string
+                                                                  example: /health
+                                                              summary:
+                                                                  type: string
+                                                              params:
+                                                                  type: array
+                                                                  items:
+                                                                      type: object
+                                                                      properties:
+                                                                          name:
+                                                                              type: string
+                                                                          type:
+                                                                              type: string
+                                                                          required:
+                                                                              type: boolean
+                                                                          description:
+                                                                              type: string
 
     # ── Library endpoints ──────────────────────────────────────────────────────
 
@@ -813,9 +908,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/LibraryInfo'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/LibraryInfo'
                 '500':
                     $ref: '#/components/responses/InternalError'
 
@@ -870,7 +970,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/ImportResult'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ImportResult'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '404':
@@ -930,9 +1035,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/RankedArticle'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/RankedArticle'
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '404':
@@ -962,9 +1072,14 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/ArticleExport'
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              type: array
+                                              items:
+                                                  $ref: '#/components/schemas/ArticleExport'
                 '404':
                     $ref: '#/components/responses/NotFound'
                 '500':
@@ -1009,6 +1124,137 @@ components:
                         $ref: '#/components/schemas/ErrorResponse'
 
     schemas:
+        SuccessEnvelope:
+            type: object
+            required: [success, status, message]
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                status:
+                    type: integer
+                    example: 200
+                message:
+                    type: string
+                    example: ''
+                data:
+                    description: The response payload. Type varies per endpoint.
+                meta:
+                    $ref: '#/components/schemas/ResponseMeta'
+
+        LintFinding:
+            type: object
+            required: [source, severity, category, message]
+            properties:
+                source:
+                    type: string
+                    enum: [typescript, convention, llm]
+                    description: Where this finding came from.
+                severity:
+                    type: string
+                    enum: [error, warning, info]
+                category:
+                    type: string
+                    description: Grouping category (e.g. "typescript", "style", "convention").
+                message:
+                    type: string
+                line:
+                    type: integer
+                    description: 1-based line number.
+                column:
+                    type: integer
+                    description: 1-based column number.
+                rule:
+                    type: string
+                    description: Machine-readable rule identifier (e.g. "TS2345").
+
+        PageReviewSuggestion:
+            type: object
+            required: [title, detail]
+            properties:
+                title:
+                    type: string
+                detail:
+                    type: string
+                priority:
+                    type: integer
+                    minimum: 1
+                    maximum: 5
+
+        PageReviewCategories:
+            type: object
+            properties:
+                correctness:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PageReviewSuggestion'
+                maintainability:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PageReviewSuggestion'
+                standards:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PageReviewSuggestion'
+                enhancements:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PageReviewSuggestion'
+
+        SseStepEvent:
+            type: object
+            properties:
+                step:
+                    type: integer
+                action:
+                    type: string
+                thought:
+                    type: string
+
+        SseToolEvent:
+            type: object
+            properties:
+                tool:
+                    type: string
+                result:
+                    description: Tool result (any type).
+                error:
+                    type: string
+
+        SseRouteEvent:
+            type: object
+            properties:
+                profile:
+                    type: string
+                model:
+                    type: string
+                reason:
+                    type: string
+
+        SseDoneEvent:
+            type: object
+            properties:
+                result:
+                    type: string
+                meta:
+                    $ref: '#/components/schemas/ResponseMeta'
+
+        SseErrorEvent:
+            type: object
+            properties:
+                error:
+                    type: string
+
+        SseMaxStepsEvent:
+            type: object
+            properties:
+                task:
+                    type: string
+                summary:
+                    type: string
+                diagnosticFile:
+                    type: string
+
         ErrorResponse:
             type: object
             required: [error]
@@ -1246,7 +1492,7 @@ components:
                     maximum: 100
                     description: |
                         Per-step agent-loop iteration cap.  Overrides `AGENTS_MAX_STEPS` for this
-                        request only.  Defaults to `AGENTS_MAX_STEPS` (env var, default 5).
+                        request only.  Defaults to `AGENTS_MAX_STEPS` (env var, default 20).
 
         WorkflowStepResult:
             type: object
@@ -1317,6 +1563,16 @@ components:
                     description: Whether the result was served from cache.
                 latencyMs:
                     type: integer
+                model:
+                    type: string
+                    description: The LLM model used for completion.
+                language:
+                    type: string
+                    description: Inferred programming language.
+                createdAtIso:
+                    type: string
+                    format: date-time
+                    description: ISO timestamp when the completion was generated.
                 meta:
                     $ref: '#/components/schemas/ResponseMeta'
 
@@ -1376,6 +1632,9 @@ components:
                             type: integer
                         infos:
                             type: integer
+                        total:
+                            type: integer
+                            description: Total number of findings across all severities.
                         deterministicCount:
                             type: integer
                         llmCount:
@@ -1383,19 +1642,7 @@ components:
                 findings:
                     type: array
                     items:
-                        type: object
-                        properties:
-                            severity:
-                                type: string
-                                enum: [error, warning, info]
-                            rule:
-                                type: string
-                            line:
-                                type: integer
-                            message:
-                                type: string
-                            suggestion:
-                                type: string
+                        $ref: '#/components/schemas/LintFinding'
                 llmModelUsed:
                     type: string
                 latencyMs:
@@ -1424,10 +1671,19 @@ components:
                 requestId:
                     type: string
                     format: uuid
+                model:
+                    type: string
+                    description: The LLM model used.
+                language:
+                    type: string
+                filePath:
+                    type: string
                 findings:
                     type: array
                     items:
                         type: object
+                categories:
+                    $ref: '#/components/schemas/PageReviewCategories'
                 latencyMs:
                     type: integer
                 meta:

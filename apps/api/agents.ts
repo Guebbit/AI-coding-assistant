@@ -11,6 +11,7 @@
 
 import { Agent } from "@/packages/agent/agent";
 import type { ModelProfile } from "@/packages/agent/model-router";
+import { PROFILE_LIST } from "@/packages/shared";
 import { loadMCPTools } from "@/packages/mcp";
 import { logger } from "@/packages/logger/logger";
 import { LangGraphSwarmOrchestrator } from "@/packages/orchestrator/graph";
@@ -172,7 +173,7 @@ export async function initializeAgents(): Promise<void> {
 }
 
 /** Recognised model profile names for request validation. */
-export const VALID_PROFILES = new Set<ModelProfile>(["fast", "reasoning", "code", "default"]);
+export const VALID_PROFILES = new Set<ModelProfile>(PROFILE_LIST);
 
 /**
  * Select the correct pre-built agent instance based on write permissions.

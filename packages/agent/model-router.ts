@@ -17,7 +17,7 @@
  */
 
 import { generate } from '../llm/ollama';
-import { envFloat, envInt, resolveModel, stripCodeFences } from '../shared';
+import { envFloat, envInt, resolveModel, stripCodeFences, PROFILE_LIST } from '../shared';
 import type { ModelProfile } from '../shared';
 
 /* ── Budget environment variables ────────────────────────────────────── */
@@ -66,6 +66,12 @@ export interface IModelRouteDecision {
 
     /** Optional generation options (temperature, top_p, etc.) for this profile. */
     options?: Record<string, unknown>;
+
+    /**
+     * Whether the task is expected to require tool use.
+     * When `false` the agent can answer directly without invoking any tool.
+     */
+    requiresTools: boolean;
 }
 
 /* ── Internal types ──────────────────────────────────────────────────── */
@@ -111,6 +117,17 @@ const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? 'phi4-mini:latest';
 /** Active routing strategy: `"rules"` (default) or `"model"`. */
 const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? 'rules').toLowerCase();
 
+/** Default generation options per profile. Extend this map to add a new profile. */
+const PROFILE_OPTION_DEFAULTS: Record<ModelProfile, {
+    temperature: number; top_p: number; top_k: number;
+    num_ctx: number; repeat_penalty: number;
+}> = {
+    fast:      { temperature: 0.3, top_p: 0.85, top_k: 30,  num_ctx: 4096,  repeat_penalty: 1.2 },
+    reasoning: { temperature: 0.2, top_p: 0.80, top_k: 20,  num_ctx: 8192,  repeat_penalty: 1.3 },
+    code:      { temperature: 0.1, top_p: 0.90, top_k: 40,  num_ctx: 6144,  repeat_penalty: 1.1 },
+    default:   { temperature: 0.3, top_p: 0.85, top_k: 30,  num_ctx: 8192,  repeat_penalty: 1.2 },
+};
+
 /**
  * Build profile-specific generation options (temperature, top_p, etc.).
  *
@@ -123,42 +140,14 @@ const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? 'rules').toLowerCase
  */
 function resolveOptions(profile: ModelProfile): Record<string, unknown> {
     const prefix = `AGENT_MODEL_${profile.toUpperCase()}`;
-    switch (profile) {
-        case 'fast':
-            return {
-                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.3),
-                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.85),
-                top_k: envInt(process.env[`${prefix}_TOP_K`], 30),
-                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 4096),
-                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.2)
-            };
-        case 'reasoning':
-            return {
-                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.2),
-                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.8),
-                top_k: envInt(process.env[`${prefix}_TOP_K`], 20),
-                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
-                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.3)
-            };
-        case 'code':
-            /* Lower temperature + wider candidate set keeps code deterministic
-             * while still exploring enough token choices for syntax completion. */
-            return {
-                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.1),
-                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.9),
-                top_k: envInt(process.env[`${prefix}_TOP_K`], 40),
-                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 6144),
-                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.1)
-            };
-        default:
-            return {
-                temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], 0.3),
-                top_p: envFloat(process.env[`${prefix}_TOP_P`], 0.85),
-                top_k: envInt(process.env[`${prefix}_TOP_K`], 30),
-                num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], 8192),
-                repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], 1.2)
-            };
-    }
+    const d = PROFILE_OPTION_DEFAULTS[profile];
+    return {
+        temperature:    envFloat(process.env[`${prefix}_TEMPERATURE`],    d.temperature),
+        top_p:          envFloat(process.env[`${prefix}_TOP_P`],          d.top_p),
+        top_k:          envInt(  process.env[`${prefix}_TOP_K`],          d.top_k),
+        num_ctx:        envInt(  process.env[`${prefix}_NUM_CTX`],        d.num_ctx),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty),
+    };
 }
 
 /* ── Rule-based routing ──────────────────────────────────────────────── */
@@ -188,7 +177,8 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
             profile: 'reasoning',
             model: resolveModel('reasoning'),
             reason: 'budget:context_near_ceiling',
-            options: resolveOptions('reasoning')
+            options: resolveOptions('reasoning'),
+            requiresTools: true
         };
     }
 
@@ -200,13 +190,27 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
             profile: 'fast',
             model: resolveModel('fast'),
             reason: 'budget:duration_near_ceiling',
-            options: resolveOptions('fast')
+            options: resolveOptions('fast'),
+            requiresTools: true
         };
     }
 
     /* ── Keyword heuristics ───────────────────────────────────────────── */
 
     const text = `${input.task}\n${input.context}`.toLowerCase();
+
+    /* Keywords that strongly suggest a tool call is needed. */
+    const toolSignals = [
+        'file', 'read', 'write', 'open', 'load', 'save',
+        'run', 'execute', 'shell', 'command', 'script',
+        'search', 'find', 'list', 'fetch', 'download',
+        'database', 'query', 'sql', 'mongo', 'mysql', 'postgres',
+        'image', 'pdf', 'csv', 'json', 'docx', 'markdown',
+        'url', 'http', 'browser', 'website',
+        'ingest', 'diagram', 'scaffold', 'project',
+        'knowledge', 'memory', 'semantic'
+    ];
+    const requiresTools = toolSignals.some((s) => text.includes(s)) || input.step > 0;
 
     /* Keywords that indicate the task is code-centric. */
     const codeSignals = [
@@ -248,7 +252,8 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
             profile: 'code',
             model: resolveModel('code'),
             reason: 'keyword_match:code',
-            options: resolveOptions('code')
+            options: resolveOptions('code'),
+            requiresTools
         };
     }
 
@@ -277,7 +282,8 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
             profile: 'reasoning',
             model: resolveModel('reasoning'),
             reason: 'heuristic:reasoning_or_long_task',
-            options: resolveOptions('reasoning')
+            options: resolveOptions('reasoning'),
+            requiresTools
         };
     }
 
@@ -286,7 +292,8 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
         profile: 'fast',
         model: resolveModel('fast'),
         reason: 'default_fast',
-        options: resolveOptions('fast')
+        options: resolveOptions('fast'),
+        requiresTools
     };
 }
 
@@ -299,11 +306,8 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
  * @returns The matching `ModelProfile`, or `null` if invalid.
  */
 function parseProfile(raw: string): ModelProfile | null {
-    const value = raw.trim().toLowerCase();
-    if (value === 'fast' || value === 'reasoning' || value === 'code' || value === 'default') {
-        return value;
-    }
-    return null;
+    const value = raw.trim().toLowerCase() as ModelProfile;
+    return (PROFILE_LIST as string[]).includes(value) ? value : null;
 }
 
 /**
@@ -327,15 +331,17 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
     const routerPrompt =
         `You are a model router.\n` +
         `Select exactly one profile: fast, reasoning, code, default.\n` +
+        `Also decide if the task requires tool use (reading files, running commands, querying databases, fetching URLs, etc.).\n` +
         `Rules:\n` +
         `- Use code for coding/refactor/debug/repo/dev tasks.\n` +
         `- Use reasoning for hard logic, architecture, multi-step analysis.\n` +
-        `- Use fast for simple Q&A.\n` +
+        `- Use fast for simple Q&A, greetings, or knowledge-based answers.\n` +
         `- Use default only when uncertain.\n` +
+        `- Set requiresTools to false when the task can be answered from knowledge alone.\n` +
         `Budget state: ${budgetInfo}\n` +
         `- If context is close to ceiling, prefer reasoning (larger context window).\n` +
         `- If elapsed time is close to max, prefer fast to finish quickly.\n` +
-        `Respond ONLY with JSON: {"profile":"fast|reasoning|code|default","reason":"short reason"}\n\n` +
+        `Respond ONLY with JSON: {"profile":"fast|reasoning|code|default","reason":"short reason","requiresTools":true|false}\n\n` +
         `Task:\n${input.task}\n\n` +
         `Context:\n${input.context.slice(-2000)}`;
 
@@ -346,7 +352,7 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
     });
 
     const cleaned = stripCodeFences(response);
-    const parsed = JSON.parse(cleaned) as { profile?: string; reason?: string };
+    const parsed = JSON.parse(cleaned) as { profile?: string; reason?: string; requiresTools?: boolean };
     const profile = parsed.profile ? parseProfile(parsed.profile) : null;
     if (!profile) {
         throw new Error(`Router returned invalid profile: ${String(parsed.profile)}`);
@@ -356,7 +362,8 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
         profile,
         model: resolveModel(profile),
         reason: parsed.reason?.slice(0, 240) ?? 'router_model_decision',
-        options: resolveOptions(profile)
+        options: resolveOptions(profile),
+        requiresTools: parsed.requiresTools !== false
     };
 }
 
@@ -376,13 +383,14 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
  * @returns A `ModelRouteDecision` describing the chosen model.
  */
 export async function routeModel(input: IRouteInput): Promise<IModelRouteDecision> {
-    /* Forced profile — bypass all routing. */
+    /* Forced profile — bypass all routing; assume tools may be needed. */
     if (input.forcedProfile) {
         return {
             profile: input.forcedProfile,
             model: resolveModel(input.forcedProfile),
             reason: 'forced_by_caller',
-            options: resolveOptions(input.forcedProfile)
+            options: resolveOptions(input.forcedProfile),
+            requiresTools: true
         };
     }
 
@@ -396,6 +404,7 @@ export async function routeModel(input: IRouteInput): Promise<IModelRouteDecisio
         profile: 'default' as ModelProfile,
         model: resolveModel('default'),
         reason: 'router_model_failed_fallback_default',
-        options: resolveOptions('default')
+        options: resolveOptions('default'),
+        requiresTools: true
     }));
 }

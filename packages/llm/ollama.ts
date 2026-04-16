@@ -116,7 +116,7 @@ export async function generateWithMetadata(
     options: IGenerateOptions = {}
 ): Promise<IGenerateResult> {
     const {
-        model = OLLAMA_MODEL,
+        model: modelOverride,
         stream = false,
         suffix,
         system,
@@ -124,6 +124,14 @@ export async function generateWithMetadata(
         images,
         options: providerOptions
     } = options;
+
+    const model = modelOverride?.trim() || OLLAMA_MODEL;
+    if (!model) {
+        throw new Error(
+            'No model specified and OLLAMA_MODEL environment variable is not set. ' +
+            'Set OLLAMA_MODEL in your .env file (e.g. OLLAMA_MODEL=llama3.1:8b).'
+        );
+    }
 
     const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
         method: 'POST',

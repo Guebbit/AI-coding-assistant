@@ -6,7 +6,7 @@
 `AGENT_MODEL_ROUTER_MODE=rules` — `rules` or `model`
 `AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — router model
 `AGENT_MODEL_{FAST=OLLAMA_MODEL,REASONING=OLLAMA_MODEL,CODE=OLLAMA_MODEL,DEFAULT=OLLAMA_MODEL}` — profile model + final fallback
-`AGENTS_MAX_STEPS=5` — max loop iterations
+`AGENTS_MAX_STEPS=20` — max loop iterations
 `AGENT_BUDGET_{MAX_DURATION_MS=60000,MAX_CONTEXT_CHARS=50000}` — router budget thresholds (fast downgrade / reasoning upgrade)
 `AGENT_VERIFICATION_{ENABLED=false,MODEL=AGENT_MODEL_FAST}` — post-tool verification gate/model
 `TOOL_VISION_MODEL=llava-llama3` — vision model

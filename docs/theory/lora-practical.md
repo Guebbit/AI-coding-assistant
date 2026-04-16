@@ -61,7 +61,7 @@ LoRA training expects a dataset of **instruction / input / output** examples in 
 Pick a base model that already does well at your target task — LoRA _adjusts_ behaviour, it doesn't teach from scratch.
 
 | Task                  | Recommended base models                    | Why                                  |
-| --------------------- |--------------------------------------------| ------------------------------------ |
+| --------------------- | ------------------------------------------ | ------------------------------------ |
 | **Code generation**   | `Qwen2.5-Coder`, `CodeLlama`               | Pre-trained on code, strong baseline |
 | **General assistant** | `Llama3.1:8b`, `Mistral`                   | Well-rounded, widely supported       |
 | **Multilingual**      | `Qwen2.5`, `Aya`                           | Strong non-English performance       |

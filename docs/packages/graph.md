@@ -212,13 +212,13 @@ RETURN person.name, r.type AS relationship, tech.name AS technology
 
 ## Configuration
 
-| Variable          | Default                 | Description                        |
-| ----------------- | ----------------------- | ---------------------------------- |
-| `NEO4J_URI`       | `bolt://localhost:7687` | Neo4j Bolt endpoint                |
-| `NEO4J_USER`      | `neo4j`                 | Neo4j username                     |
-| `NEO4J_PASSWORD`  | `put-your-password-here`            | Neo4j password                     |
-| `NEO4J_DATABASE`  | `neo4j`                 | Neo4j database name                |
-| `GRAPH_NER_MODEL` | `AGENT_MODEL_FAST`      | Ollama model for entity extraction |
+| Variable          | Default                  | Description                        |
+| ----------------- | ------------------------ | ---------------------------------- |
+| `NEO4J_URI`       | `bolt://localhost:7687`  | Neo4j Bolt endpoint                |
+| `NEO4J_USER`      | `neo4j`                  | Neo4j username                     |
+| `NEO4J_PASSWORD`  | `put-your-password-here` | Neo4j password                     |
+| `NEO4J_DATABASE`  | `neo4j`                  | Neo4j database name                |
+| `GRAPH_NER_MODEL` | `AGENT_MODEL_FAST`       | Ollama model for entity extraction |
 
 ---
 

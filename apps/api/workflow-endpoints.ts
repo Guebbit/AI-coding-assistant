@@ -35,13 +35,14 @@ import {
     envInt,
     rejectResponse,
     successResponse,
-    validateProfile,
-    sseFrame,
+    buildResponseMeta,
+    sumTokens,
     setupSSEHeaders,
+    createSseWriter,
     onSSEClose,
     t,
 } from '@/packages/shared';
-import { createAgent, VALID_PROFILES } from './agents';
+import { createAgent } from './agents';
 import type { ModelProfile } from '@/packages/agent/model-router';
 import { writeAgentEventToSse } from './sse-event-bridge';
 import type {
@@ -56,27 +57,13 @@ import type {
  * Global step cap read once at startup (mirrors `agent.ts`'s own constant).
  * Used as the default per-step budget when `maxStepsPerStep` is omitted.
  */
-const DEFAULT_MAX_STEPS_PER_STEP = envInt(process.env.AGENTS_MAX_STEPS, 5);
+const DEFAULT_MAX_STEPS_PER_STEP = envInt(process.env.AGENTS_MAX_STEPS, 20);
 
 /**
  * Hard upper bound on `maxStepsPerStep` to prevent accidental run-away
  * requests.
  */
 const MAX_STEPS_PER_STEP_CEILING = 100;
-
-/* ── Carry modes ─────────────────────────────────────────────────────── */
-
-/**
- * Supported context-carry modes between workflow steps.
- *
- * - `none`    — no prior context forwarded.
- * - `summary` — a compact bullet-point summary of prior results.
- * - `full`    — the full raw output of every prior step.
- */
-export const CARRY_MODES = ['none', 'summary', 'full'] as const;
-
-/** Union type derived from the supported carry modes array. */
-export type CarryMode = (typeof CARRY_MODES)[number];
 
 /* ── Zod schema ──────────────────────────────────────────────────────── */
 
@@ -195,7 +182,7 @@ interface IWorkflowCallbacks {
  * @returns A string to prepend to the step task, or an empty string when
  *          carry is `none` or there are no prior results.
  */
-function buildCarryContext(carry: CarryMode, priors: IWorkflowStepResult[]): string {
+function buildCarryContext(carry: NonNullable<OpenApiWorkflowRequest['carry']>, priors: IWorkflowStepResult[]): string {
     if (carry === 'none' || priors.length === 0) {
         return '';
     }
@@ -296,18 +283,14 @@ async function runWorkflow(
         callbacks?.onStepComplete?.(result);
     }
 
-    const totalTokens =
-        typeof promptTokens === 'number' && typeof completionTokens === 'number'
-            ? promptTokens + completionTokens
-            : undefined;
+    const totalTokens = sumTokens(promptTokens, completionTokens);
     const models = [...modelsUsed];
     return {
         steps: stepResults,
         allSucceeded: stepResults.every((r) => r.success),
         totalDurationMs: Date.now() - workflowStartedAt.getTime(),
         meta: {
-            startedAt: workflowStartedAt.toISOString(),
-            durationMs: Date.now() - workflowStartedAt.getTime(),
+            ...buildResponseMeta(workflowStartedAt),
             ...(models.length > 0 ? { models, model: models.length === 1 ? models[0] : undefined } : {}),
             ...(typeof promptTokens === 'number' ? { promptTokens } : {}),
             ...(typeof completionTokens === 'number' ? { completionTokens } : {}),
@@ -363,13 +346,6 @@ export function registerWorkflowRoutes(app: Express): void {
 
         const parsed = parseResult.data;
 
-        /* Extra profile check (Zod enum already validates, but defence-in-depth). */
-        const profileError = validateProfile(parsed.profile, VALID_PROFILES);
-        if (profileError) {
-            rejectResponse(res, 400, 'Bad Request', [profileError]);
-            return;
-        }
-
         logger.info('workflow_request_received', {
             component: 'api.workflow.endpoints',
             stepCount: parsed.steps.length,
@@ -391,9 +367,7 @@ export function registerWorkflowRoutes(app: Express): void {
                 const typedResponse: OpenApiWorkflowResponse = workflowResponse;
                 successResponse(res, typedResponse, 200, '', {
                     ...workflowResponse.meta,
-                    startedAt: startedAt.toISOString(),
-                    durationMs: Date.now() - startedAt.getTime(),
-                    requestId: req.requestId,
+                    ...buildResponseMeta(startedAt, req),
                 });
             })
             .catch((error: unknown) => {
@@ -436,18 +410,10 @@ export function registerWorkflowRoutes(app: Express): void {
 
         const parsed = parseResult.data;
 
-        const profileError = validateProfile(parsed.profile, VALID_PROFILES);
-        if (profileError) {
-            rejectResponse(res, 400, 'Bad Request', [profileError]);
-            return;
-        }
-
         /* ── Set SSE headers ────────────────────────────────────────── */
         setupSSEHeaders(res);
 
-        const writeEvent = (eventType: string, data: unknown): void => {
-            res.write(sseFrame(eventType, data));
-        };
+        const writeEvent = createSseWriter(res);
 
         /*
          * Track which workflow step is currently running so inner agent
@@ -493,9 +459,7 @@ export function registerWorkflowRoutes(app: Express): void {
                     ...typedResponse,
                     meta: {
                         ...workflowResponse.meta,
-                        startedAt: startedAt.toISOString(),
-                        durationMs: Date.now() - startedAt.getTime(),
-                        requestId: req.requestId,
+                        ...buildResponseMeta(startedAt, req),
                     },
                 });
                 logger.info('workflow_stream_completed', {

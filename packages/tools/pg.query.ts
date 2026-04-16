@@ -31,12 +31,18 @@ let pgPool: pg.Pool | null = null;
  */
 function getPgPool(): pg.Pool {
     if (!pgPool) {
+        const database = process.env.PG_DATABASE?.trim();
+        if (!database) {
+            throw new Error(
+                'PG_DATABASE environment variable is required to use the PostgreSQL tool but is not set.'
+            );
+        }
         pgPool = new pg.Pool({
             host: process.env.PG_HOST ?? 'localhost',
             port: Number.parseInt(process.env.PG_PORT ?? '5432', 10),
             user: process.env.PG_USER ?? 'postgres',
             password: process.env.PG_PASSWORD ?? '',
-            database: process.env.PG_DATABASE ?? ''
+            database
         });
     }
     return pgPool;

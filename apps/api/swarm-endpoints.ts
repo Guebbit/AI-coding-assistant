@@ -20,7 +20,7 @@ import {
   successResponse,
   validateTask,
   validateProfile,
-  sseFrame,
+  createSseWriter,
   setupSSEHeaders,
   onSSEClose,
   t,
@@ -31,31 +31,32 @@ import type { ISwarmConfig } from "@/packages/swarm/types";
 import type { SwarmRequest, SwarmResponse } from "@/api/models";
 import { writeSwarmEventToSse } from "./sse-event-bridge";
 
+/** Discriminated-union return types for {@link parseSwarmBody}. */
+type SwarmBodyOk = { ok: true; task: string; config: ISwarmConfig };
+type SwarmBodyErr = { ok: false; error: string };
+type ParsedSwarmBody = SwarmBodyOk | SwarmBodyErr;
+
 /**
  * Parse and validate the shared request body fields for swarm endpoints.
  *
  * @param body - The raw request body.
- * @returns Validated fields, or an `error` string if validation fails.
+ * @returns A discriminated union: `{ ok: true, task, config }` or `{ ok: false, error }`.
  */
-function parseSwarmBody(body: Partial<SwarmRequest>): {
-  task?: string;
-  config?: ISwarmConfig;
-  error?: string;
-} {
+function parseSwarmBody(body: Partial<SwarmRequest>): ParsedSwarmBody {
   const taskResult = validateTask(body.task);
   if ('error' in taskResult) {
-    return { error: taskResult.error };
+    return { ok: false, error: taskResult.error };
   }
 
   const profile = body.profile;
   const profileError = validateProfile(profile, VALID_PROFILES);
   if (profileError) {
-    return { error: profileError };
+    return { ok: false, error: profileError };
   }
 
   const maxSubtasks = body.maxSubtasks;
   if (maxSubtasks !== undefined && (typeof maxSubtasks !== "number" || maxSubtasks < 1)) {
-    return { error: '"maxSubtasks" must be a positive number' };
+    return { ok: false, error: '"maxSubtasks" must be a positive number' };
   }
 
   const config: ISwarmConfig = {
@@ -64,7 +65,7 @@ function parseSwarmBody(body: Partial<SwarmRequest>): {
     profileOverride: profile as ModelProfile | undefined,
   };
 
-  return { task: taskResult.task, config };
+  return { ok: true, task: taskResult.task, config };
 }
 
 /**
@@ -91,14 +92,14 @@ export function registerSwarmRoutes(app: Express): void {
    */
   app.post("/run/swarm", (req: Request, res: Response) => {
     const startedAt = new Date();
-    const { task, config, error } = parseSwarmBody(
-      req.body as Partial<SwarmRequest>,
-    );
+    const result = parseSwarmBody(req.body as Partial<SwarmRequest>);
 
-    if (error || !task || !config) {
-      rejectResponse(res, 400, "Bad Request", [error ?? "Invalid swarm request"]);
+    if (!result.ok) {
+      rejectResponse(res, 400, "Bad Request", [result.error]);
       return;
     }
+
+    const { task, config } = result;
 
     logger.info("swarm_request_received", {
       component: "api.swarm.endpoints",
@@ -175,21 +176,19 @@ export function registerSwarmRoutes(app: Express): void {
    */
   app.post("/run/swarm/stream", (req: Request, res: Response) => {
     const startedAt = new Date();
-    const { task, config, error } = parseSwarmBody(
-      req.body as Partial<SwarmRequest>,
-    );
+    const result = parseSwarmBody(req.body as Partial<SwarmRequest>);
 
-    if (error || !task || !config) {
-      rejectResponse(res, 400, "Bad Request", [error ?? "Invalid swarm request"]);
+    if (!result.ok) {
+      rejectResponse(res, 400, "Bad Request", [result.error]);
       return;
     }
+
+    const { task, config } = result;
 
     /* ── Set SSE headers ──────────────────────────────────────────── */
     setupSSEHeaders(res);
 
-    const writeEvent = (eventType: string, data: unknown): void => {
-      res.write(sseFrame(eventType, data));
-    };
+    const writeEvent = createSseWriter(res);
 
     /* ── Event bridge (swarm + agent events) ──────────────────────── */
     const handler = (event: IAgentEvent): void => {

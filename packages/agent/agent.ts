@@ -45,7 +45,7 @@ import type { IToolCall } from '../persistence/types';
  * Maximum number of reasoning iterations before the agent gives up.
  * Configurable via the `AGENTS_MAX_STEPS` environment variable.
  */
-const MAX_STEPS = Number.parseInt(process.env.AGENTS_MAX_STEPS ?? '5', 10);
+const MAX_STEPS = Number.parseInt(process.env.AGENTS_MAX_STEPS ?? '20', 10);
 
 /**
  * Fast model used for the self-debug summary on max-steps exhaustion.
@@ -235,6 +235,69 @@ export class Agent {
                 }
             }
 
+            // ── Route model (determines profile AND whether tools are needed) ──
+            const route = await routeModel({
+                task: inputArgs.task,
+                context: inputArgs.context,
+                step,
+                forcedProfile: options?.profile,
+                contextLength: inputArgs.context.length,
+                cumulativeDurationMs: Date.now() - runStartedAt
+            }).catch((error: unknown) => {
+                logger.error('agent_llm_call_failed', {
+                    component: 'agent',
+                    step,
+                    error: String(error)
+                });
+                emit({ type: 'agent:error', payload: { step, error: String(error) } });
+                throw error;
+            });
+
+            profilesUsed.add(route.profile);
+            emit({
+                type: 'agent:model_routed',
+                payload: { step, profile: route.profile, model: route.model, reason: route.reason }
+            });
+
+            // ── Direct-answer shortcut: no tools needed ───────────────────────
+            if (!route.requiresTools && step === 0 && !inputArgs.context) {
+                const memoryBlock = inputArgs.memory.length > 0
+                    ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`
+                    : '';
+                const directPrompt =
+                    `${memoryBlock}` +
+                    `Task:\n${inputArgs.task}\n\n` +
+                    `Answer concisely and directly.`;
+                logger.info('agent_direct_answer', { component: 'agent', step, reason: route.reason });
+                const llmStartedAt = Date.now();
+                const directResult = await generateWithMetadata(directPrompt, {
+                    model: route.model,
+                    options: route.options
+                }).catch((error: unknown) => {
+                    logger.error('agent_llm_call_failed', { component: 'agent', step, error: String(error) });
+                    emit({ type: 'agent:error', payload: { step, error: String(error) } });
+                    throw error;
+                });
+                llmSteps += 1;
+                modelsUsed.add(directResult.model ?? route.model);
+                if (typeof directResult.promptEvalCount === 'number') promptTokens = (promptTokens ?? 0) + directResult.promptEvalCount;
+                if (typeof directResult.evalCount === 'number') completionTokens = (completionTokens ?? 0) + directResult.evalCount;
+                logger.info('agent_llm_response_received', {
+                    component: 'agent', step, responseLength: directResult.response.length,
+                    durationMs: Date.now() - llmStartedAt, routedProfile: route.profile,
+                    routedReason: route.reason, model: directResult.model
+                });
+                const answer = directResult.response.trim();
+                await addMemory(`Task: ${task} → ${answer}`);
+                emit({ type: 'agent:done', payload: { thought: answer } });
+                await saveAgentRun({
+                    task, agentProfile: options?.profile ?? null, output: answer,
+                    context: '', memory, startTime, endTime: new Date(),
+                    durationMs: Date.now() - runStartedAt, toolCalls: [], diagnosticEntries, status: 'completed'
+                }).catch((error: unknown) => logger.warn('agent_persist_failed', { component: 'agent', error: String(error) }));
+                return { answer, meta: buildRunMeta() };
+            }
+
             const prompt = this.buildPrompt(inputArgs.task, inputArgs.context, inputArgs.memory);
             logger.info('agent_step_started', {
                 component: 'agent',
@@ -245,67 +308,45 @@ export class Agent {
             });
 
             // ── Call the LLM ─────────────────────────────────────────────────
-            const response = await routeModel({
-                task: inputArgs.task,
-                context: inputArgs.context,
-                step,
-                forcedProfile: options?.profile,
-                contextLength: inputArgs.context.length,
-                cumulativeDurationMs: Date.now() - runStartedAt
-            })
-                .then((route) => {
-                    profilesUsed.add(route.profile);
-                    emit({
-                        type: 'agent:model_routed',
-                        payload: {
-                            step,
-                            profile: route.profile,
-                            model: route.model,
-                            reason: route.reason
-                        }
-                    });
-                    const llmStartedAt = Date.now();
-                    return generateWithMetadata(prompt, {
-                        model: route.model,
-                        options: route.options
-                    }).then((llmResult) => {
-                        llmSteps += 1;
-                        modelsUsed.add(llmResult.model ?? route.model);
-                        if (typeof llmResult.promptEvalCount === 'number') {
-                            promptTokens = (promptTokens ?? 0) + llmResult.promptEvalCount;
-                        }
-                        if (typeof llmResult.evalCount === 'number') {
-                            completionTokens = (completionTokens ?? 0) + llmResult.evalCount;
-                        }
-                        logger.info('agent_llm_response_received', {
-                            component: 'agent',
-                            step,
-                            responseLength: llmResult.response.length,
-                            durationMs: Date.now() - llmStartedAt,
-                            routedProfile: route.profile,
-                            routedReason: route.reason,
-                            model: llmResult.model,
-                            done: llmResult.done,
-                            doneReason: llmResult.doneReason,
-                            totalDurationNs: llmResult.totalDurationNs,
-                            loadDurationNs: llmResult.loadDurationNs,
-                            promptEvalCount: llmResult.promptEvalCount,
-                            promptEvalDurationNs: llmResult.promptEvalDurationNs,
-                            evalCount: llmResult.evalCount,
-                            evalDurationNs: llmResult.evalDurationNs
-                        });
-                        return llmResult.response;
-                    });
-                })
-                .catch((error: unknown) => {
-                    logger.error('agent_llm_call_failed', {
-                        component: 'agent',
-                        step,
-                        error: String(error)
-                    });
-                    emit({ type: 'agent:error', payload: { step, error: String(error) } });
-                    throw error;
+            const response = await generateWithMetadata(prompt, {
+                model: route.model,
+                options: route.options
+            }).then((llmResult) => {
+                llmSteps += 1;
+                modelsUsed.add(llmResult.model ?? route.model);
+                if (typeof llmResult.promptEvalCount === 'number') {
+                    promptTokens = (promptTokens ?? 0) + llmResult.promptEvalCount;
+                }
+                if (typeof llmResult.evalCount === 'number') {
+                    completionTokens = (completionTokens ?? 0) + llmResult.evalCount;
+                }
+                logger.info('agent_llm_response_received', {
+                    component: 'agent',
+                    step,
+                    responseLength: llmResult.response.length,
+                    durationMs: Date.now() - runStartedAt,
+                    routedProfile: route.profile,
+                    routedReason: route.reason,
+                    model: llmResult.model,
+                    done: llmResult.done,
+                    doneReason: llmResult.doneReason,
+                    totalDurationNs: llmResult.totalDurationNs,
+                    loadDurationNs: llmResult.loadDurationNs,
+                    promptEvalCount: llmResult.promptEvalCount,
+                    promptEvalDurationNs: llmResult.promptEvalDurationNs,
+                    evalCount: llmResult.evalCount,
+                    evalDurationNs: llmResult.evalDurationNs
                 });
+                return llmResult.response;
+            }).catch((error: unknown) => {
+                logger.error('agent_llm_call_failed', {
+                    component: 'agent',
+                    step,
+                    error: String(error)
+                });
+                emit({ type: 'agent:error', payload: { step, error: String(error) } });
+                throw error;
+            });
 
             // ── Parse the LLM response with Zod schema validation ────────────
             let parsed: AgentStep;
@@ -606,11 +647,13 @@ export class Agent {
             `Available tools:\n${toolList}\n\n` +
             `Respond ONLY with a single valid JSON object — no markdown, no extra text:\n` +
             `{\n` +
-            `  "thought": "your reasoning",\n` +
+            `  "thought": "your reasoning or final answer",\n` +
             `  "action": "tool_name or none",\n` +
             `  "input": {}\n` +
             `}\n\n` +
-            `Use action "none" when the task is fully complete.`
+            `Rules:\n` +
+            `- Only use a tool when you genuinely need to read a file, run a command, or access external data.\n` +
+            `- Use action "none" when the task is fully complete.`
         );
     }
 }

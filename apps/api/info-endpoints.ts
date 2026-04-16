@@ -15,8 +15,13 @@
 
 import type express from "express";
 import { logger } from "@/packages/logger/logger";
-import { rejectResponse, successResponse } from "@/packages/shared";
+import { rejectResponse, successResponse, buildResponseMeta, PROFILE_ENV_VARS } from "@/packages/shared";
+import type { ModelProfile } from "@/packages/shared";
 import { VALID_PROFILES } from "./agents";
+import type {
+  GetHelp200ResponseEndpointsInner,
+  GetHelp200ResponseEndpointsInnerParamsInner,
+} from "@/api/models";
 
 /* ── Constants ───────────────────────────────────────────────────────── */
 
@@ -47,67 +52,16 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  * @param profile - Profile name.
  * @returns `{ envVar, model }` pair.
  */
-function resolveProfileModel(profile: string): { envVar: string; model: string } {
-  const fallback = process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? "llama3.1:8b";
-
-  switch (profile) {
-    case "fast":
-      return {
-        envVar: "AGENT_MODEL_FAST",
-        model: process.env.AGENT_MODEL_FAST ?? fallback,
-      };
-    case "reasoning":
-      return {
-        envVar: "AGENT_MODEL_REASONING",
-        model: process.env.AGENT_MODEL_REASONING ?? fallback,
-      };
-    case "code":
-      return {
-        envVar: "AGENT_MODEL_CODE",
-        model: process.env.AGENT_MODEL_CODE ?? fallback,
-      };
-    default:
-      return {
-        envVar: "AGENT_MODEL_DEFAULT",
-        model: fallback,
-      };
-  }
+function resolveProfileModel(profile: ModelProfile): { envVar: string; model: string } {
+  const envVar = PROFILE_ENV_VARS[profile as ModelProfile] ?? 'AGENT_MODEL_DEFAULT';
+  const model = process.env[envVar] ?? process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? 'not configured';
+  return { envVar, model };
 }
 
 /* ── Help catalogue ──────────────────────────────────────────────────── */
 
-/**
- * A single entry in the `GET /help` response.
- *
- * Deliberately terse — this is the `--help` equivalent, not full docs.
- */
-interface IHelpEntry {
-  /** HTTP method. */
-  method: string;
-  /** URL path. */
-  path: string;
-  /** One-line summary. */
-  summary: string;
-  /** Request body fields (empty array for GET endpoints). */
-  params: IHelpParameter[];
-}
-
-/**
- * A single request parameter described in the help output.
- */
-interface IHelpParameter {
-  /** Field name. */
-  name: string;
-  /** Expected type (e.g. `"string"`, `"boolean"`). */
-  type: string;
-  /** Whether the field is required. */
-  required: boolean;
-  /** Short description. */
-  description: string;
-}
-
 /** Static help catalogue — kept in sync with the codebase manually. */
-const HELP_CATALOGUE: IHelpEntry[] = [
+const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
   /* ── Core ──────────────────────────────────────────────────────────── */
   {
     method: "GET",
@@ -153,6 +107,52 @@ const HELP_CATALOGUE: IHelpEntry[] = [
         required: false,
         description: "Force a model profile.",
       },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/run/swarm",
+    summary: "Submit a task to the multi-agent swarm orchestrator. Decomposes the task into subtasks.",
+    params: [
+      { name: "task", type: "string", required: true, description: "Natural-language task." },
+      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
+      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile." },
+      { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/run/swarm/stream",
+    summary: "Same as POST /run/swarm but streams swarm lifecycle events via SSE.",
+    params: [
+      { name: "task", type: "string", required: true, description: "Natural-language task." },
+      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
+      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile." },
+      { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/workflow",
+    summary: "Run an ordered list of steps sequentially, each handled by a fresh agent.",
+    params: [
+      { name: "steps", type: "Array<{ task: string }>", required: true, description: "Ordered step list (1–50 items)." },
+      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools for all steps." },
+      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile for all steps." },
+      { name: "carry", type: '"none" | "summary" | "full"', required: false, description: 'Context carry mode between steps (default "summary").' },
+      { name: "maxStepsPerStep", type: "number", required: false, description: "Per-step agent iteration cap (default AGENTS_MAX_STEPS)." },
+    ],
+  },
+  {
+    method: "POST",
+    path: "/workflow/stream",
+    summary: "Same as POST /workflow but streams step lifecycle events via SSE.",
+    params: [
+      { name: "steps", type: "Array<{ task: string }>", required: true, description: "Ordered step list." },
+      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools for all steps." },
+      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile for all steps." },
+      { name: "carry", type: '"none" | "summary" | "full"', required: false, description: "Context carry mode between steps." },
+      { name: "maxStepsPerStep", type: "number", required: false, description: "Per-step agent iteration cap." },
     ],
   },
 
@@ -280,11 +280,7 @@ export function registerInfoRoutes(application: express.Express): void {
     successResponse(response, {
       count: modes.length,
       modes,
-    }, 200, "", {
-      startedAt: startedAt.toISOString(),
-      durationMs: Date.now() - startedAt.getTime(),
-      requestId: _request.requestId,
-    });
+    }, 200, "", buildResponseMeta(startedAt, _request));
   });
 
   /* ── GET /info/models ───────────────────────────────────────────── */
@@ -327,11 +323,7 @@ export function registerInfoRoutes(application: express.Express): void {
           count: models.length,
           ollamaBaseUrl: OLLAMA_BASE_URL,
           models,
-        }, 200, "", {
-          startedAt: startedAt.toISOString(),
-          durationMs: Date.now() - startedAt.getTime(),
-          requestId: _request.requestId,
-        });
+        }, 200, "", buildResponseMeta(startedAt, _request));
       })
       .catch((error: unknown) => {
         if (response.headersSent) return;
@@ -351,10 +343,6 @@ export function registerInfoRoutes(application: express.Express): void {
       description: "Manna AI Agent Platform — REST API quick reference",
       endpointCount: HELP_CATALOGUE.length,
       endpoints: HELP_CATALOGUE,
-    }, 200, "", {
-      startedAt: startedAt.toISOString(),
-      durationMs: Date.now() - startedAt.getTime(),
-      requestId: _request.requestId,
-    });
+    }, 200, "", buildResponseMeta(startedAt, _request));
   });
 }

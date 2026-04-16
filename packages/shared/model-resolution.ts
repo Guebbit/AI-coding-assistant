@@ -10,6 +10,17 @@
 /** Supported model profile names across the agent ecosystem. */
 export type ModelProfile = 'fast' | 'reasoning' | 'code' | 'default';
 
+/** Ordered list of all valid profile names. Used for validation and iteration. */
+export const PROFILE_LIST: ModelProfile[] = ['fast', 'reasoning', 'code', 'default'];
+
+/** Maps each profile to its environment-variable name. */
+export const PROFILE_ENV_VARS: Record<ModelProfile, string> = {
+    fast: 'AGENT_MODEL_FAST',
+    reasoning: 'AGENT_MODEL_REASONING',
+    code: 'AGENT_MODEL_CODE',
+    default: 'AGENT_MODEL_DEFAULT',
+};
+
 /**
  * Optional overrides for model resolution.
  */
@@ -55,7 +66,7 @@ export function resolveModel(profile: ModelProfile, options: IResolveModelOption
 
     const includeAgentDefault = options.includeAgentDefault !== false;
     const includeOllamaFallback = options.includeOllamaFallback !== false;
-    const hardDefault = options.hardDefault?.trim() || 'llama3.1:8b';
+    const hardDefault = options.hardDefault?.trim() || undefined;
 
     const defaultChain = [
         includeAgentDefault ? process.env.AGENT_MODEL_DEFAULT : undefined,

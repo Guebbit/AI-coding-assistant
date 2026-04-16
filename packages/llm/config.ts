@@ -15,5 +15,9 @@ export const OLLAMA_BASE_URL: string = process.env.OLLAMA_BASE_URL ?? 'http://lo
 /** Ollama model used to generate text embeddings. */
 export const OLLAMA_EMBED_MODEL: string = process.env.OLLAMA_EMBED_MODEL ?? 'nomic-embed-text';
 
-/** Default generative model, used as a fallback for all profiles. */
-export const OLLAMA_MODEL: string = process.env.OLLAMA_MODEL ?? 'llama3';
+/**
+ * Default generative model, used as a fallback for all profiles.
+ * `undefined` when `OLLAMA_MODEL` is not set — callers must handle this
+ * and throw a clear error rather than silently using a wrong model.
+ */
+export const OLLAMA_MODEL: string | undefined = process.env.OLLAMA_MODEL?.trim() || undefined;

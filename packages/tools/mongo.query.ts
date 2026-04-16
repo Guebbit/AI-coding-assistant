@@ -144,10 +144,15 @@ export const mongoQueryTool = createDatabaseTool<IMongoQueryInput>({
      * @throws {Error} When the connection fails or the operation errors.
      */
     async run({ collection, operation, query, limit }) {
-        const databaseName = process.env.MONGO_DATABASE ?? '';
+        const databaseName = process.env.MONGO_DATABASE?.trim();
+        if (!databaseName) {
+            throw new Error(
+                'MONGO_DATABASE environment variable is required to use the MongoDB tool but is not set.'
+            );
+        }
 
         const client = await getMongoClient();
-        const database = client.db(databaseName || undefined);
+        const database = client.db(databaseName);
         const col = database.collection(collection);
 
         if (operation === 'find') {

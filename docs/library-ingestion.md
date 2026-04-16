@@ -400,7 +400,7 @@ For the recommended hardware (RTX 4090, Ryzen 9 9950X3D, 32 GB RAM):
 
 | Component         | Model / Tool                    | VRAM / RAM Usage                      |
 | ----------------- | ------------------------------- | ------------------------------------- |
-| Summarisation LLM | `llama3.1:8b`     | ~8 GB VRAM                            |
+| Summarisation LLM | `llama3.1:8b`                   | ~8 GB VRAM                            |
 | Embedding model   | `nomic-embed-text` (via Ollama) | CPU only, ~300 MB RAM                 |
 | Vector DB         | Qdrant (local)                  | ~100–500 MB RAM for typical libraries |
 | PDF parsing       | `pdf.read.ts` (existing tool)   | CPU, < 200 MB RAM                     |

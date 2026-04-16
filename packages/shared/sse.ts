@@ -46,3 +46,13 @@ export function setupSSEHeaders(res: Response): void {
 export function onSSEClose(req: Request, cleanup: () => void): void {
     req.on('close', cleanup);
 }
+
+/**
+ * Create a typed SSE write helper bound to a single response.
+ * Eliminates the repeated `(eventType, data) => res.write(sseFrame(...))` pattern.
+ */
+export function createSseWriter(res: Response): (eventType: string, data: unknown) => void {
+    return (eventType: string, data: unknown): void => {
+        res.write(sseFrame(eventType, data));
+    };
+}

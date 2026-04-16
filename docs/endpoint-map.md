@@ -180,13 +180,13 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
 3. The model router selects a profile (or uses the forced `profile`).
 4. The LLM returns a structured JSON step: `{ thought, action, input }`.
 5. If `action === "none"`, the loop ends and `thought` is returned as the result.
-6. Otherwise the named tool is executed with `input`, and its result is appended to context. Repeat up to `AGENTS_MAX_STEPS` (default 5).
+6. Otherwise the named tool is executed with `input`, and its result is appended to context. Repeat up to `AGENTS_MAX_STEPS` (default 20).
 
 **Relevant env vars**
 
 | Variable                  | Default        | Effect                                                      |
-| ------------------------- | -------------- | ----------------------------------------------------------- |
-| `AGENTS_MAX_STEPS`        | `5`            | Maximum loop iterations                                     |
+| ------------------------- |----------------| ----------------------------------------------------------- |
+| `AGENTS_MAX_STEPS`        | `20`           | Maximum loop iterations                                     |
 | `AGENT_MODEL_FAST`        | `OLLAMA_MODEL` | Model used for the `fast` profile                           |
 | `AGENT_MODEL_REASONING`   | `OLLAMA_MODEL` | Model used for the `reasoning` profile                      |
 | `AGENT_MODEL_CODE`        | `OLLAMA_MODEL` | Model used for the `code` profile                           |
@@ -323,13 +323,13 @@ Registered via `registerWorkflowRoutes(app)` in `apps/api/index.ts`.
 
 **Request body**
 
-| Field             | Type                                           | Required | Default                  | Description                                                              |
-| ----------------- | ---------------------------------------------- | -------- | ------------------------ | ------------------------------------------------------------------------ |
-| `steps`           | `string[]`                                     | ✅       | —                        | Ordered list of step task strings (1–50 items)                           |
-| `carry`           | `"none" \| "summary" \| "full"`                | —        | `"summary"`              | How prior step outputs are forwarded into subsequent steps               |
-| `allowWrite`      | `boolean`                                      | —        | `false`                  | Unlock write tools (`write_file`, `scaffold_project`, `document_ingest`) |
-| `profile`         | `"fast" \| "reasoning" \| "code" \| "default"` | —        | auto-routed              | Force a model profile for every step                                     |
-| `maxStepsPerStep` | `integer` (1–100)                              | —        | `AGENTS_MAX_STEPS` (≈ 5) | Per-step agent-loop iteration cap                                        |
+| Field             | Type                                           | Required | Default                   | Description                                                              |
+| ----------------- | ---------------------------------------------- | -------- |---------------------------| ------------------------------------------------------------------------ |
+| `steps`           | `string[]`                                     | ✅       | —                         | Ordered list of step task strings (1–50 items)                           |
+| `carry`           | `"none" \| "summary" \| "full"`                | —        | `"summary"`               | How prior step outputs are forwarded into subsequent steps               |
+| `allowWrite`      | `boolean`                                      | —        | `false`                   | Unlock write tools (`write_file`, `scaffold_project`, `document_ingest`) |
+| `profile`         | `"fast" \| "reasoning" \| "code" \| "default"` | —        | auto-routed               | Force a model profile for every step                                     |
+| `maxStepsPerStep` | `integer` (1–100)                              | —        | `AGENTS_MAX_STEPS` (≈ 20) | Per-step agent-loop iteration cap                                        |
 
 #### Context carry modes
 
@@ -410,8 +410,8 @@ curl -X POST http://localhost:3001/workflow \
 **Env / config notes**
 
 | Variable                         | Default | Effect on `/workflow`                                  |
-| -------------------------------- | ------- | ------------------------------------------------------ |
-| `AGENTS_MAX_STEPS`               | `5`     | Default per-step cap when `maxStepsPerStep` is omitted |
+| -------------------------------- |---------| ------------------------------------------------------ |
+| `AGENTS_MAX_STEPS`               | `20`    | Default per-step cap when `maxStepsPerStep` is omitted |
 | `AGENT_BUDGET_MAX_DURATION_MS`   | `60000` | Per-step wall-clock budget ceiling (same as `/run`)    |
 | `AGENT_BUDGET_MAX_CONTEXT_CHARS` | `50000` | Per-step context length ceiling (same as `/run`)       |
 

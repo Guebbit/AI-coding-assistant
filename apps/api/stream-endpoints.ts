@@ -26,7 +26,7 @@ import {
   rejectResponse,
   validateTask,
   validateProfile,
-  sseFrame,
+  createSseWriter,
   setupSSEHeaders,
   onSSEClose,
 } from "@/packages/shared";
@@ -69,9 +69,7 @@ export function registerStreamRoutes(app: Express): void {
     /* ── Set SSE headers ──────────────────────────────────────────── */
     setupSSEHeaders(res);
 
-    const writeEvent = (eventType: string, data: unknown): void => {
-      res.write(sseFrame(eventType, data));
-    };
+    const writeEvent = createSseWriter(res);
 
     /* ── Event bridge ─────────────────────────────────────────────── */
     const handler = (event: IAgentEvent): void => {

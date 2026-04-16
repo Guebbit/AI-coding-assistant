@@ -160,14 +160,14 @@ These options are resolved at startup from env vars and passed through to Ollama
 
 ## Environment variables (full reference)
 
-| Variable                   | Default  | Description                                    |
-| -------------------------- | -------- | ---------------------------------------------- |
-| `AGENT_MODEL_ROUTER_MODE`  | `rules`  | `rules` or `model`                             |
-| `AGENT_MODEL_ROUTER_MODEL` | --       | Classifier model (model mode only)             |
-| `AGENT_MODEL_FAST`         | --       | Model for `fast` profile                       |
-| `AGENT_MODEL_REASONING`    | --       | Model for `reasoning` profile                  |
-| `AGENT_MODEL_CODE`         | --       | Model for `code` profile                       |
-| `AGENT_MODEL_DEFAULT`      | --       | Model for `default` profile                    |
+| Variable                   | Default       | Description                                    |
+| -------------------------- | ------------- | ---------------------------------------------- |
+| `AGENT_MODEL_ROUTER_MODE`  | `rules`       | `rules` or `model`                             |
+| `AGENT_MODEL_ROUTER_MODEL` | --            | Classifier model (model mode only)             |
+| `AGENT_MODEL_FAST`         | --            | Model for `fast` profile                       |
+| `AGENT_MODEL_REASONING`    | --            | Model for `reasoning` profile                  |
+| `AGENT_MODEL_CODE`         | --            | Model for `code` profile                       |
+| `AGENT_MODEL_DEFAULT`      | --            | Model for `default` profile                    |
 | `OLLAMA_MODEL`             | `llama3.1:8b` | Global fallback (used if profile var is unset) |
 
 ### Priority order for model selection

@@ -60,7 +60,7 @@ export interface WorkflowRequest {
     carry?: WorkflowRequestCarryEnum;
     /**
      * Per-step agent-loop iteration cap.  Overrides `AGENTS_MAX_STEPS` for this
-     * request only.  Defaults to `AGENTS_MAX_STEPS` (env var, default 5).
+     * request only.  Defaults to `AGENTS_MAX_STEPS` (env var, default 20).
      * 
      * @type {number}
      * @memberof WorkflowRequest
