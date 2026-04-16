@@ -1025,7 +1025,7 @@ Follow these steps to add a new direct endpoint (the same pattern used by `/auto
 
 5. **Document it here** — add a section to this page following the same structure (request body table, response shape, env vars, curl example). Update the visual tree at the top.
 
-6. **Update `AI_README.md`** — per the update protocol: add a row to the IDE direct endpoints table, add any new env vars to the Key Environment Variables table, and add the file to the Directory map if you created a new file.
+6. **Update `.ai/README.md`** — per the update protocol: add a row to the IDE direct endpoints table, add any new env vars to the Key Environment Variables table, and add the file to the Directory map if you created a new file.
 
 ```
 

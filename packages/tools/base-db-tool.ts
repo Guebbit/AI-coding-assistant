@@ -28,7 +28,7 @@
  * 5. Register the tool in `apps/api/agents.ts` (conditionally on env vars).
  * 6. Add a doc page under `docs/packages/tools/<engine>-query.md`.
  * 7. Update `docs/.vitepress/config.mts` to include the new page in the sidebar.
- * 8. Update `AI_README.md` with the new tool name and its env vars.
+ * 8. Update `.ai/README.md` with the new tool name and its env vars.
  *
  * @module tools/base-db-tool
  */

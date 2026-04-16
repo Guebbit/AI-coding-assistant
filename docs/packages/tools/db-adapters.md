@@ -77,7 +77,7 @@ Follow these eight steps:
 5. **Register conditionally** in `apps/api/agents.ts` — only when env vars are set.
 6. **Add a doc page** at `docs/packages/tools/<engine>-query.md`.
 7. **Update the sidebar** in `docs/.vitepress/config.mts`.
-8. **Update `AI_README.md`** — add the tool name and its env vars.
+8. **Update `.ai/README.md`** — add the tool name and its env vars.
 
 ## Safety principles
 
