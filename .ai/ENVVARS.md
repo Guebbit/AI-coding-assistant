@@ -1,4 +1,5 @@
 # Environment variable catalog
+
 `OLLAMA_BASE_URL=http://localhost:11434` — Ollama API endpoint
 `OLLAMA_MODEL=llama3` — base model fallback
 `OLLAMA_EMBED_MODEL=nomic-embed-text` — embeddings for memory/search

@@ -1,21 +1,25 @@
 # Manna AI machine index
+
 MANDATORY: read this file first every session.
 
 Identity
+
 - Repo: `Guebbit/manna`
 - Stack: TypeScript (strict), Node.js >=18, ESM (`tsx`)
-- Topology: flat monorepo (`apps/`, `packages/`, `tests/`), relative imports
+- Topology: flat monorepo (`apps/`, `packages/`, `tests/`), `@/*` root alias imports
 
 System
+
 - Local-first Ollama agent server (not chatbot UI)
 - Endpoints:
-  - Agent loop: `POST /run`, stream: `POST /run/stream`
-  - Swarm: `POST /run/swarm`, `POST /run/swarm/stream`
-  - Workflow: `POST /workflow`, `POST /workflow/stream`
-  - IDE direct (no loop): `/autocomplete`, `/lint-conventions`, `/page-review`
-  - Info (no LLM): `/info/modes`, `/info/models`, `/help`
+    - Agent loop: `POST /run`, stream: `POST /run/stream`
+    - Swarm: `POST /run/swarm`, `POST /run/swarm/stream`
+    - Workflow: `POST /workflow`, `POST /workflow/stream`
+    - IDE direct (no loop): `/autocomplete`, `/lint-conventions`, `/page-review`
+    - Info (no LLM): `/info/modes`, `/info/models`, `/help`
 
 Execution graph (`POST /run`)
+
 ```text
 handler: apps/api/index.ts
 input: { task, allowWrite?, profile? }
@@ -42,6 +46,7 @@ loop exhausted => generate self-debug summary (FAST_MODEL) -> addMemory(MAX_STEP
 ```
 
 Structured output contract (hard requirement)
+
 ```ts
 // packages/agent/schemas.ts
 {
@@ -50,10 +55,12 @@ Structured output contract (hard requirement)
     input: Record<string, unknown>; // forwarded to tool.execute()
 }
 ```
+
 - Validate with Zod `agentStepSchema`
 - Parse failure => append correction context + retry same step slot
 
 Core invariants/safety
+
 - `shell`: allowlist-only commands
 - `mysql_query`: `SELECT` only
 - `read_*` + `write_file`/`scaffold_project` + `document_ingest`: path-safe under repo root
@@ -67,11 +74,13 @@ Core invariants/safety
 - Persistence failures logged/ignored (`.catch()` in run paths), never crash run
 
 Routing/model fallback summary
+
 - Profiles: `fast|reasoning|code|default`
 - Router mode (`AGENT_MODEL_ROUTER_MODE`): `rules` (default) or `model`
 - Fallback chain per profile: profile var -> `AGENT_MODEL_DEFAULT` -> `OLLAMA_MODEL` -> `llama3`
 
 Update protocol
+
 - model changes -> update `.ai/MODELS.md` + `.ai/ENVVARS.md` defaults
 - tool add/remove/rename -> update `.ai/TOOLS.md` + `.ai/STRUCTURE.md` + invariants here
 - endpoint changes -> update this file graph/tables + `openapi.yaml` + `CHANGELOG.md`
@@ -81,6 +90,7 @@ Update protocol
 - run `npm run complete:check`
 
 Load-on-demand map
+
 - Model/hardware decisions -> `.ai/MODELS.md`
 - Tool inventory/registration/MCP lifecycle -> `.ai/TOOLS.md`
 - Environment variables/defaults -> `.ai/ENVVARS.md`

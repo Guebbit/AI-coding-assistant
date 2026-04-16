@@ -1,6 +1,7 @@
 # Repository structure + change map
 
 Directory map
+
 ```text
 /
 ├─ apps/api/{index.ts,agents.ts,stream-endpoints.ts,swarm-endpoints.ts,workflow-endpoints.ts,ide-endpoints.ts,upload-endpoints.ts,info-endpoints.ts,middlewares/{multer.ts,security.ts},types.d.ts}
@@ -47,6 +48,7 @@ Common modification patterns
 | Knowledge graph query/ingest | `packages/tools/knowledge.graph*.ts`, `packages/graph/*` |
 
 Test architecture
+
 - `npm test` -> `tests/unit/**/*.test.ts`, `tests/integration/**/*.test.ts`; deps: none (fetch mocked)
 - `npm run test:eval` -> `tests/evals/**/*.eval.ts`; deps: Ollama required, Qdrant/PostgreSQL optional
 - `npm run test:coverage` -> unit+integration; deps: none

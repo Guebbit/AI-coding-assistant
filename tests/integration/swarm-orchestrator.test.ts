@@ -17,15 +17,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LangGraphSwarmOrchestrator } from '@/packages/orchestrator/graph.js';
 
 /* ── Mock persistence and diagnostics (not under test) ───────────────── */
-vi.mock('../../../packages/persistence/db.js', () => ({
+vi.mock('@/packages/persistence/db.js', () => ({
     saveAgentRun: vi.fn().mockResolvedValue(null),
     saveSwarmRun: vi.fn().mockResolvedValue(null)
 }));
-vi.mock('../../../packages/diagnostics/index.js', () => ({
+vi.mock('@/packages/diagnostics/index.js', () => ({
     writeDiagnosticLog: vi.fn().mockResolvedValue('test.md'),
     cleanupOldLogs: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock('../../../packages/logger/logger.js', () => ({
+vi.mock('@/packages/logger/logger.js', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 

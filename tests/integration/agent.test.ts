@@ -19,14 +19,14 @@ import { Agent } from '@/packages/agent/agent.js';
 import type { ITool } from '@/packages/tools/types.js';
 
 /* ── Mock persistence (PostgreSQL) and diagnostics ───────────────────── */
-vi.mock('../../../packages/persistence/db.js', () => ({
+vi.mock('@/packages/persistence/db.js', () => ({
     saveAgentRun: vi.fn().mockResolvedValue(null)
 }));
-vi.mock('../../../packages/diagnostics/index.js', () => ({
+vi.mock('@/packages/diagnostics/index.js', () => ({
     writeDiagnosticLog: vi.fn().mockResolvedValue('data/diagnostics/test.md'),
     cleanupOldLogs: vi.fn().mockResolvedValue(undefined)
 }));
-vi.mock('../../../packages/logger/logger.js', () => ({
+vi.mock('@/packages/logger/logger.js', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 

@@ -1,6 +1,7 @@
 # Tool registry + lifecycle
 
 Native tool registry
+
 - `read_file` -> `packages/tools/fs.read.ts` [no]
 - `write_file` -> `packages/tools/fs.write.ts` [yes]
 - `shell` -> `packages/tools/shell.ts` [no]
@@ -27,15 +28,18 @@ Native tool registry
 Write tools register only when request body has `allowWrite:true`.
 
 Registration locations
+
 - Tool interface: `packages/tools/types.ts`
 - Exports: `packages/tools/index.ts`
 - Runtime arrays: `apps/api/agents.ts` (`readOnlyTools`, `writeTools`)
 
 Add/remove procedure
+
 - Add: create `packages/tools/<name>.ts` implementing `Tool` -> export in `packages/tools/index.ts` -> register in `apps/api/agents.ts` (read-only vs write list) -> update this file + `.ai/STRUCTURE.md` + `.ai/README.md` invariants if needed
 - Remove/rename: update exports + runtime arrays -> update this file + `.ai/STRUCTURE.md` -> remove/rename related env vars in `.ai/ENVVARS.md`
 
 MCP tools
+
 - Bridge files: `packages/mcp/*`
 - Config: `data/mcp-servers.json` (template: `.example`)
 - Global switch: `MCP_ENABLED=false`
