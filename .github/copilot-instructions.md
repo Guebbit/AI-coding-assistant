@@ -1,8 +1,15 @@
 # GitHub Copilot — Mandatory Preamble
 
-**ALWAYS read `AI_README.md` in the repository root before responding to any task in this repo.**
+**ALWAYS read `.ai/README.md` first before responding to any task in this repository.**
 
-The file `AI_README.md` is the authoritative machine-oriented reference for this codebase.
-It contains: system architecture, tool registry, model routing rules, environment variables, invariants, hardware specs, and the update protocol that must be followed whenever the codebase changes.
+`.ai/README.md` is the root machine index (architecture, execution graph, structured output contract, invariants, routing summary, update protocol).
 
-Do not proceed with any task — code changes, questions, or planning — without first reading `AI_README.md` in full.
+After reading `.ai/README.md`, consult additional `.ai/*.md` files on-demand by task type:
+
+- model/hardware work -> `.ai/MODELS.md`
+- tool registry/MCP/tool lifecycle work -> `.ai/TOOLS.md`
+- environment/default changes -> `.ai/ENVVARS.md`
+- file layout/modification targets/testing -> `.ai/STRUCTURE.md`
+- coding conventions/naming/comment rules -> `.ai/STYLE.md`
+
+Do not proceed with code changes, planning, or answers until `.ai/README.md` is loaded.

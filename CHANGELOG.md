@@ -103,7 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`Agent.run()` — `maxSteps` option**: The `options` parameter now accepts an optional `maxSteps: number` field that overrides the global `AGENTS_MAX_STEPS` env var for that specific run. Fully backward-compatible — existing callers that omit `maxSteps` are unaffected.
 - **`openapi.yaml` — `RunRequest.allowWrite` description**: Updated to mention all three tools unlocked by `allowWrite: true` — `write_file`, `scaffold_project`, and `document_ingest` (the third was previously omitted).
 - **`openapi.yaml` — `/health` response schema**: Added missing `timestamp` field (`type: string, format: date-time`) to match the actual implementation which returns `{ status: "ok", timestamp: new Date().toISOString() }`.
-- **`openapi.yaml` — `/upload/image-classify` model description**: Replaced the hardcoded and inaccurate `llava:13b` default with a generic reference to the `TOOL_VISION_MODEL` environment variable, consistent with `AI_README.md`.
+- **`openapi.yaml` — `/upload/image-classify` model description**: Replaced the hardcoded and inaccurate `llava:13b` default with a generic reference to the `TOOL_VISION_MODEL` environment variable, consistent with `.ai/README.md`.
 
 ### Added
 
@@ -136,7 +136,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - `packages/agent/agent.ts`: accumulates `IDiagnosticEntry[]` during the loop; passes budget state to `routeModel()`; writes diagnostic log on both success (when entries exist) and max-steps exhaustion.
 - `packages/tools/index.ts`: exports all new tool instances.
 - `packages/shared/index.ts`: exports `chunkText`, `IChunk`, `IChunkOptions`.
-- `AI_README.md`: updated event bus table, tool registry, directory map, execution graph, processors section, env vars table, invariants, endpoint table, and common modification patterns.
+- `.ai/README.md`: updated event bus table, tool registry, directory map, execution graph, processors section, env vars table, invariants, endpoint table, and common modification patterns.
 
 ### Visual documentation overhaul
 
@@ -148,8 +148,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **`docs/theory/RAG.md`** — theory page on Retrieval-Augmented Generation: what it is, ingestion/query pipelines, architectures, RAG vs fine-tuning comparison, failure modes
 - **`docs/theory/VECTOR_DATABASES.md`** — theory page on vector databases: HNSW/IVF/flat indices, how Qdrant works, practical scaling realities (personal vs. production), embedding model comparison
 - **`openapi.yaml`** — OpenAPI 3.1 specification including library endpoints: `GET /library`, `POST /library/{libraryId}/import`, `POST /library/{libraryId}/search`, `GET /library/{libraryId}/export`
-- **Developer process rule in `AI_README.md`** — every route addition/modification/removal must update `openapi.yaml` and describe the change in `CHANGELOG.md`
-- **Mermaid diagram rule in `AI_README.md`** — coding style now mandates Mermaid diagrams for all pipelines, architectures, and multi-step processes in documentation
+- **Developer process rule in `.ai/README.md`** — every route addition/modification/removal must update `openapi.yaml` and describe the change in `CHANGELOG.md`
+- **Mermaid diagram rule in `.ai/README.md`** — coding style now mandates Mermaid diagrams for all pipelines, architectures, and multi-step processes in documentation
 - **Mermaid diagrams added** to `docs/theory/RAG.md`, `docs/theory/VECTOR_DATABASES.md`, and `docs/library-ingestion.md` — all ASCII-only diagrams replaced with Mermaid equivalents
 
 ### Fixed
@@ -218,7 +218,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- `AI_README.md` — machine-oriented codebase reference for AI agents
+- `.ai/README.md` — machine-oriented codebase reference for AI agents
 - Frontend can now override model routing profile per request
 - Default router model set to `phi4-mini`
 
