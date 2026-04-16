@@ -24,7 +24,7 @@ const DEFAULT_MCP_CONFIG_PATH = 'data/mcp-servers.json';
 const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
 
 /** Regex used to resolve `${VAR_NAME}` placeholders in MCP env entries. */
-const ENV_INTERPOLATION_PATTERN = /\${([\w]+)}/g;
+const ENV_INTERPOLATION_PATTERN = /\${(\w+)}/g;
 
 /** Shared logger for MCP bridge operations. */
 const mcpLogger = getLogger('mcp');
