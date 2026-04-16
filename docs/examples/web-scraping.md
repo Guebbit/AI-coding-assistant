@@ -79,20 +79,20 @@ In the event log above, notice the `[truncated at 5000 chars]` marker at the end
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "Here's what Ollama does:\n\n- **Local LLM runner** — Ollama lets you download and run large language models (Llama 3.1, Mistral, Phi 3, etc.) entirely on your own machine. No cloud API needed.\n\n- **Single-package setup** — It bundles model weights, configuration, and runtime into one package defined by a Modelfile. One command to pull and run.\n\n- **GPU-optimized** — Automatically detects and uses your GPU (NVIDIA/AMD) for faster inference, with CPU fallback."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T16:30:00.000Z",
-    "durationMs": 3215,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 2,
-    "toolCalls": 1,
-    "contextLength": 2104
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "Here's what Ollama does:\n\n- **Local LLM runner** — Ollama lets you download and run large language models (Llama 3.1, Mistral, Phi 3, etc.) entirely on your own machine. No cloud API needed.\n\n- **Single-package setup** — It bundles model weights, configuration, and runtime into one package defined by a Modelfile. One command to pull and run.\n\n- **GPU-optimized** — Automatically detects and uses your GPU (NVIDIA/AMD) for faster inference, with CPU fallback."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T16:30:00.000Z",
+        "durationMs": 3215,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 2,
+        "toolCalls": 1,
+        "contextLength": 2104
+    }
 }
 ```
 

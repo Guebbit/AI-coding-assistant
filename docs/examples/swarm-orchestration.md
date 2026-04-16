@@ -124,23 +124,23 @@ The decompose node produces a structured plan:
 
 ```json
 {
-  "subtasks": [
-    {
-      "id": "st-1",
-      "task": "Design user schema (id, email, passwordHash, createdAt) and CRUD endpoints (GET/POST/PUT/DELETE /users)",
-      "dependencies": []
-    },
-    {
-      "id": "st-2",
-      "task": "Implement JWT authentication middleware with login endpoint, token generation, and route protection",
-      "dependencies": []
-    },
-    {
-      "id": "st-3",
-      "task": "Write vitest unit tests for all user CRUD endpoints and the JWT auth flow",
-      "dependencies": ["st-1", "st-2"]
-    }
-  ]
+    "subtasks": [
+        {
+            "id": "st-1",
+            "task": "Design user schema (id, email, passwordHash, createdAt) and CRUD endpoints (GET/POST/PUT/DELETE /users)",
+            "dependencies": []
+        },
+        {
+            "id": "st-2",
+            "task": "Implement JWT authentication middleware with login endpoint, token generation, and route protection",
+            "dependencies": []
+        },
+        {
+            "id": "st-3",
+            "task": "Write vitest unit tests for all user CRUD endpoints and the JWT auth flow",
+            "dependencies": ["st-1", "st-2"]
+        }
+    ]
 }
 ```
 
@@ -152,22 +152,22 @@ Subtasks `st-1` and `st-2` have no dependencies, so they run in parallel. Subtas
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "## User Management REST API\n\n### Files created:\n\n1. `src/models/user.ts` — User schema with id, email, passwordHash, createdAt fields\n2. `src/routes/users.ts` — CRUD endpoints (GET/POST/PUT/DELETE /users/:id)\n3. `src/middleware/auth.ts` — JWT middleware: verifyToken(), generateToken(), protectRoute()\n4. `src/routes/auth.ts` — POST /login endpoint returning JWT\n5. `tests/users.test.ts` — 8 unit tests covering all CRUD operations\n6. `tests/auth.test.ts` — 5 unit tests covering login, token validation, and protected routes\n\n### Architecture:\n- Express + TypeScript\n- bcrypt for password hashing\n- jsonwebtoken for JWT\n- vitest for testing\n\nAll 13 tests pass.",
-    "subtaskResults": [
-      { "id": "st-1", "success": true, "durationMs": 8200 },
-      { "id": "st-2", "success": true, "durationMs": 9100 },
-      { "id": "st-3", "success": true, "durationMs": 11300 }
-    ],
-    "totalDurationMs": 28450
-  },
-  "meta": {
-    "startedAt": "2026-04-15T17:00:00.000Z",
-    "durationMs": 28450
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "## User Management REST API\n\n### Files created:\n\n1. `src/models/user.ts` — User schema with id, email, passwordHash, createdAt fields\n2. `src/routes/users.ts` — CRUD endpoints (GET/POST/PUT/DELETE /users/:id)\n3. `src/middleware/auth.ts` — JWT middleware: verifyToken(), generateToken(), protectRoute()\n4. `src/routes/auth.ts` — POST /login endpoint returning JWT\n5. `tests/users.test.ts` — 8 unit tests covering all CRUD operations\n6. `tests/auth.test.ts` — 5 unit tests covering login, token validation, and protected routes\n\n### Architecture:\n- Express + TypeScript\n- bcrypt for password hashing\n- jsonwebtoken for JWT\n- vitest for testing\n\nAll 13 tests pass.",
+        "subtaskResults": [
+            { "id": "st-1", "success": true, "durationMs": 8200 },
+            { "id": "st-2", "success": true, "durationMs": 9100 },
+            { "id": "st-3", "success": true, "durationMs": 11300 }
+        ],
+        "totalDurationMs": 28450
+    },
+    "meta": {
+        "startedAt": "2026-04-15T17:00:00.000Z",
+        "durationMs": 28450
+    }
 }
 ```
 

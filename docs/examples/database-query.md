@@ -83,20 +83,20 @@ The `mysql_query` tool validates this is a `SELECT` statement before executing. 
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "Here are the 5 most recent orders:\n\n| Order ID | Date       | Total    | Customer        |\n|----------|------------|----------|-----------------|\n| 1042     | 2026-04-15 | $149.99  | Alice Chen      |\n| 1041     | 2026-04-14 | $89.50   | Bob Rivera      |\n| 1040     | 2026-04-14 | $234.00  | Carol Zhang     |\n| 1039     | 2026-04-13 | $55.00   | Dave Okafor     |\n| 1038     | 2026-04-12 | $178.25  | Eve Johansson   |"
-  },
-  "meta": {
-    "startedAt": "2026-04-15T16:00:00.000Z",
-    "durationMs": 2104,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 2,
-    "toolCalls": 1,
-    "contextLength": 891
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "Here are the 5 most recent orders:\n\n| Order ID | Date       | Total    | Customer        |\n|----------|------------|----------|-----------------|\n| 1042     | 2026-04-15 | $149.99  | Alice Chen      |\n| 1041     | 2026-04-14 | $89.50   | Bob Rivera      |\n| 1040     | 2026-04-14 | $234.00  | Carol Zhang     |\n| 1039     | 2026-04-13 | $55.00   | Dave Okafor     |\n| 1038     | 2026-04-12 | $178.25  | Eve Johansson   |"
+    },
+    "meta": {
+        "startedAt": "2026-04-15T16:00:00.000Z",
+        "durationMs": 2104,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 2,
+        "toolCalls": 1,
+        "contextLength": 891
+    }
 }
 ```
 
@@ -140,7 +140,7 @@ sequenceDiagram
 
 ### Rejection event log
 
-```json
+````json
 { "type": "agent:start",        "task": "Delete all orders older than 2025" }
 { "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
 { "type": "agent:step",         "step": 1, "action": "mysql_query", "thought": "I'll delete old orders with a DELETE query." }
@@ -148,7 +148,7 @@ sequenceDiagram
 { "type": "agent:model_routed", "profile": "default", "model": "llama3.1:8b-instruct-q8_0" }
 { "type": "agent:step",         "step": 2, "action": "none", "thought": "I'm unable to delete data — the database tool only allows SELECT queries for safety. You would need to run this directly on your database." }
 { "type": "agent:done",         "answer": "I can't delete data — the mysql_query tool only allows SELECT queries for safety. To remove old orders, run this directly on your database:\n\n```sql\nDELETE FROM orders WHERE created_at < '2025-01-01';\n```\n\n⚠️ Back up your data first." }
-```
+````
 
 The agent receives the error, understands the constraint, and gives you the SQL to run yourself. The loop **doesn't crash** — it handles the rejection gracefully and continues.
 

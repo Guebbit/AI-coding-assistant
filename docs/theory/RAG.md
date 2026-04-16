@@ -40,12 +40,12 @@ flowchart TD
 
 **Key design choices at ingestion time:**
 
-| Decision                    | Why it matters                                                                                        |
-| --------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Chunk size (tokens)         | Too small → each chunk lacks context. Too large → less precise retrieval. 300–800 tokens is typical.  |
-| Overlap between chunks      | Prevents splitting a key sentence at a boundary. 10–20 % overlap is common.                           |
-| Metadata attached to chunks | Source file, page number, section, date — enables post-retrieval filtering.                           |
-| [Embedding](/glossary#embedding) model             | Must be the same model at ingestion and query time. Changing models requires re-embedding everything. |
+| Decision                               | Why it matters                                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Chunk size (tokens)                    | Too small → each chunk lacks context. Too large → less precise retrieval. 300–800 tokens is typical.  |
+| Overlap between chunks                 | Prevents splitting a key sentence at a boundary. 10–20 % overlap is common.                           |
+| Metadata attached to chunks            | Source file, page number, section, date — enables post-retrieval filtering.                           |
+| [Embedding](/glossary#embedding) model | Must be the same model at ingestion and query time. Changing models requires re-embedding everything. |
 
 ---
 
@@ -65,12 +65,12 @@ flowchart TD
 
 ## RAG vs. Plain LLM vs. Fine-Tuning
 
-| Approach            | When to use                          | Pros                         | Cons                                            |
-| ------------------- | ------------------------------------ | ---------------------------- | ----------------------------------------------- |
-| **Plain LLM**       | General knowledge, no private data   | Zero setup                   | No private data, stale cutoff, can hallucinate  |
-| **[Fine-tuning](/glossary#fine-tuning)**     | Domain style/behaviour, not facts    | Internalises domain patterns | Expensive, no source citations, hard to update  |
-| **RAG**             | Private documents, factual retrieval | Cheap, updatable, citable    | Retrieval can fail; multi-hop reasoning is hard |
-| **RAG + fine-tune** | Large specialised domains            | Best factual accuracy        | Most expensive to build and maintain            |
+| Approach                                 | When to use                          | Pros                         | Cons                                            |
+| ---------------------------------------- | ------------------------------------ | ---------------------------- | ----------------------------------------------- |
+| **Plain LLM**                            | General knowledge, no private data   | Zero setup                   | No private data, stale cutoff, can hallucinate  |
+| **[Fine-tuning](/glossary#fine-tuning)** | Domain style/behaviour, not facts    | Internalises domain patterns | Expensive, no source citations, hard to update  |
+| **RAG**                                  | Private documents, factual retrieval | Cheap, updatable, citable    | Retrieval can fail; multi-hop reasoning is hard |
+| **RAG + fine-tune**                      | Large specialised domains            | Best factual accuracy        | Most expensive to build and maintain            |
 
 **Rule of thumb**: if you have a body of documents and want to answer questions about their _content_, use RAG. If you want the model to _write in a specific style_, use fine-tuning. If you want _both_, combine them.
 

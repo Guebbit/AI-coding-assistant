@@ -78,20 +78,22 @@ What you'd see in the server logs (simplified):
 Each step, the model returns a [structured JSON decision](/glossary#json-contract):
 
 **Step 1:**
+
 ```json
 {
-  "thought": "I need to check the project dependencies to find the test framework. Let me read package.json.",
-  "action": "read_file",
-  "input": { "path": "package.json" }
+    "thought": "I need to check the project dependencies to find the test framework. Let me read package.json.",
+    "action": "read_file",
+    "input": { "path": "package.json" }
 }
 ```
 
 **Step 2:**
+
 ```json
 {
-  "thought": "The project uses vitest as its test framework, listed in devDependencies.",
-  "action": "none",
-  "input": {}
+    "thought": "The project uses vitest as its test framework, listed in devDependencies.",
+    "action": "none",
+    "input": {}
 }
 ```
 
@@ -103,20 +105,20 @@ When `action` is `"none"`, the loop ends and `thought` becomes the final answer.
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "This project uses **vitest** (v3.1.1) as its test framework. It's listed in `devDependencies` in package.json."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T14:22:01.000Z",
-    "durationMs": 1842,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 2,
-    "toolCalls": 1,
-    "contextLength": 623
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "This project uses **vitest** (v3.1.1) as its test framework. It's listed in `devDependencies` in package.json."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T14:22:01.000Z",
+        "durationMs": 1842,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 2,
+        "toolCalls": 1,
+        "contextLength": 623
+    }
 }
 ```
 

@@ -72,10 +72,11 @@ sequenceDiagram
 **Result**: 2 steps, 1 tool call, ~1,800ms.
 
 After Run 1, memory now contains:
+
 ```json
 {
-  "task": "What database does this project use?",
-  "result": "The project uses PostgreSQL 16, running as a Docker service..."
+    "task": "What database does this project use?",
+    "result": "The project uses PostgreSQL 16, running as a Docker service..."
 }
 ```
 
@@ -156,12 +157,12 @@ flowchart LR
     R1D -.->|stored in ring buffer + Qdrant| R2A
 ```
 
-| | Run 1 (cold) | Run 2 (warm) |
-| --- | --- | --- |
-| Memory hit | ❌ No | ✅ Yes |
-| Steps | 2 | 1 |
-| Tool calls | 1 (`read_file`) | 0 |
-| Duration | ~1,800ms | ~620ms |
+|            | Run 1 (cold)    | Run 2 (warm) |
+| ---------- | --------------- | ------------ |
+| Memory hit | ❌ No           | ✅ Yes       |
+| Steps      | 2               | 1            |
+| Tool calls | 1 (`read_file`) | 0            |
+| Duration   | ~1,800ms        | ~620ms       |
 
 ---
 
@@ -169,20 +170,20 @@ flowchart LR
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "PostgreSQL **16**, configured in docker-compose.yml as the `db` service with image `postgres:16`."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T16:45:30.000Z",
-    "durationMs": 621,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 1,
-    "toolCalls": 0,
-    "contextLength": 312
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "PostgreSQL **16**, configured in docker-compose.yml as the `db` service with image `postgres:16`."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T16:45:30.000Z",
+        "durationMs": 621,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 1,
+        "toolCalls": 0,
+        "contextLength": 312
+    }
 }
 ```
 

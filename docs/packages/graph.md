@@ -199,14 +199,14 @@ RETURN person.name, r.type AS relationship, tech.name AS technology
 
 ## When to use graph traversal vs vector search
 
-| Use case                                 | Best tool                               |
-| ---------------------------------------- | --------------------------------------- |
-| "Find documents similar to this text"    | `semantic_search` (Qdrant)              |
-| "What is X related to?"                  | `query_knowledge_graph` (Neo4j)         |
-| "List all entities of type Technology"   | `query_knowledge_graph` ([Cypher](/glossary#cypher))        |
-| "Find everything about a topic"          | Both — combine semantic + graph results |
-| "Multi-hop: A relates to B relates to C" | `query_knowledge_graph` (Cypher)        |
-| "Recall what I did in a past run"        | Memory ring buffer / Qdrant             |
+| Use case                                 | Best tool                                            |
+| ---------------------------------------- | ---------------------------------------------------- |
+| "Find documents similar to this text"    | `semantic_search` (Qdrant)                           |
+| "What is X related to?"                  | `query_knowledge_graph` (Neo4j)                      |
+| "List all entities of type Technology"   | `query_knowledge_graph` ([Cypher](/glossary#cypher)) |
+| "Find everything about a topic"          | Both — combine semantic + graph results              |
+| "Multi-hop: A relates to B relates to C" | `query_knowledge_graph` (Cypher)                     |
+| "Recall what I did in a past run"        | Memory ring buffer / Qdrant                          |
 
 ---
 

@@ -50,24 +50,24 @@ sequenceDiagram
 
 ### Response
 
-```json
+````json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "The `Session` interface in `types.ts` is missing the `accessToken` field. Add it:\n\n```typescript\nexport interface Session {\n  userId: string;\n  expiresAt: Date;\n  accessToken: string;  // ← add this\n}\n```\n\nThis fixes the error in `auth.ts` because `session.accessToken` now exists on the type."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T18:30:00.000Z",
-    "durationMs": 4125,
-    "model": "qwen2.5-coder:14b-instruct-q8_0",
-    "steps": 3,
-    "toolCalls": 2,
-    "contextLength": 1450
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "The `Session` interface in `types.ts` is missing the `accessToken` field. Add it:\n\n```typescript\nexport interface Session {\n  userId: string;\n  expiresAt: Date;\n  accessToken: string;  // ← add this\n}\n```\n\nThis fixes the error in `auth.ts` because `session.accessToken` now exists on the type."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T18:30:00.000Z",
+        "durationMs": 4125,
+        "model": "qwen2.5-coder:14b-instruct-q8_0",
+        "steps": 3,
+        "toolCalls": 2,
+        "contextLength": 1450
+    }
 }
-```
+````
 
 ---
 
@@ -117,20 +117,20 @@ Notice: **1 step, 0 tool calls**. This is a knowledge question — the reasoning
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "**Session object (server-side memory):**\n- ✅ Not accessible to client-side JavaScript (immune to XSS token theft)\n- ❌ Vulnerable to session fixation if session IDs are predictable\n- ❌ Requires sticky sessions or shared session store for horizontal scaling\n- Token lives in server memory — if the server restarts, sessions are lost\n\n**httpOnly cookies:**\n- ✅ Not accessible to JavaScript (`httpOnly` flag blocks `document.cookie`)\n- ✅ Automatically sent with every request (no client-side token management)\n- ❌ Vulnerable to CSRF unless you add `SameSite=Strict` or CSRF tokens\n- ❌ Size limit (~4KB per cookie)\n\n**Recommendation:** Use httpOnly cookies with `Secure`, `SameSite=Strict`, and short expiry. Add CSRF protection. This gives you XSS resistance + automatic transmission without client-side JavaScript touching the token."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T18:32:00.000Z",
-    "durationMs": 2640,
-    "model": "qwen3:14b",
-    "steps": 1,
-    "toolCalls": 0,
-    "contextLength": 285
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "**Session object (server-side memory):**\n- ✅ Not accessible to client-side JavaScript (immune to XSS token theft)\n- ❌ Vulnerable to session fixation if session IDs are predictable\n- ❌ Requires sticky sessions or shared session store for horizontal scaling\n- Token lives in server memory — if the server restarts, sessions are lost\n\n**httpOnly cookies:**\n- ✅ Not accessible to JavaScript (`httpOnly` flag blocks `document.cookie`)\n- ✅ Automatically sent with every request (no client-side token management)\n- ❌ Vulnerable to CSRF unless you add `SameSite=Strict` or CSRF tokens\n- ❌ Size limit (~4KB per cookie)\n\n**Recommendation:** Use httpOnly cookies with `Secure`, `SameSite=Strict`, and short expiry. Add CSRF protection. This gives you XSS resistance + automatic transmission without client-side JavaScript touching the token."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T18:32:00.000Z",
+        "durationMs": 2640,
+        "model": "qwen3:14b",
+        "steps": 1,
+        "toolCalls": 0,
+        "contextLength": 285
+    }
 }
 ```
 
@@ -144,12 +144,12 @@ The router has two modes (set via `AGENT_MODEL_ROUTER_MODE`):
 
 Keyword and heuristic matching. Fast, no LLM call:
 
-| Signal | Profile selected |
-| ------ | --------------- |
-| "fix", "error", "TypeScript", "code", "implement" | `code` |
-| "explain", "why", "compare", "implications", "analyze" | `reasoning` |
-| "list", "count", "show", "get" | `fast` |
-| No strong signal | `default` |
+| Signal                                                 | Profile selected |
+| ------------------------------------------------------ | ---------------- |
+| "fix", "error", "TypeScript", "code", "implement"      | `code`           |
+| "explain", "why", "compare", "implications", "analyze" | `reasoning`      |
+| "list", "count", "show", "get"                         | `fast`           |
+| No strong signal                                       | `default`        |
 
 ### `model` mode
 
@@ -157,8 +157,8 @@ A small LLM (the router model) reads the task and outputs a JSON profile choice.
 
 ```json
 {
-  "profile": "code",
-  "reason": "Task involves fixing a TypeScript type error, which requires code understanding"
+    "profile": "code",
+    "reason": "Task involves fixing a TypeScript type error, which requires code understanding"
 }
 ```
 

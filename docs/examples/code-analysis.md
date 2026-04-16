@@ -74,12 +74,12 @@ sequenceDiagram
 
 ### How context grows
 
-| Step | Action | Files in context | Approx. tokens |
-| ---- | ------ | --------------- | -------------- |
-| 1 | `read_file("src/api/index.ts")` | 1 | ~1,200 |
-| 2 | `read_file("src/api/error-handler.ts")` | 2 | ~2,800 |
-| 3 | `read_file("src/shared/errors.ts")` | 3 | ~3,900 |
-| 4 | `action: "none"` (answer) | 3 | ~4,400 |
+| Step | Action                                  | Files in context | Approx. tokens |
+| ---- | --------------------------------------- | ---------------- | -------------- |
+| 1    | `read_file("src/api/index.ts")`         | 1                | ~1,200         |
+| 2    | `read_file("src/api/error-handler.ts")` | 2                | ~2,800         |
+| 3    | `read_file("src/shared/errors.ts")`     | 3                | ~3,900         |
+| 4    | `action: "none"` (answer)               | 3                | ~4,400         |
 
 Each tool result is appended to the context that gets sent to the LLM on the next step. The agent literally accumulates knowledge through the loop.
 
@@ -118,20 +118,20 @@ This is the [agent loop](/glossary#agent-loop) doing what it's designed for — 
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "Error handling works in 3 layers:\n\n1. **Custom error classes** (`src/shared/errors.ts`): `AppError` extends `Error` with a `statusCode`. Subclasses like `NotFoundError` preset the code (404) and message.\n\n2. **Throw site**: Route handlers throw `AppError` subclasses — `throw new NotFoundError('User')` — instead of setting status codes manually.\n\n3. **Catch-all middleware** (`src/api/error-handler.ts`): Express error middleware catches everything. If it's an `AppError`, the response uses its `statusCode` and `message`. Anything else returns a generic 500.\n\nThe pattern is clean: throw typed errors, catch them centrally."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T15:10:00.000Z",
-    "durationMs": 8420,
-    "model": "qwen3:14b",
-    "steps": 4,
-    "toolCalls": 3,
-    "contextLength": 4412
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "Error handling works in 3 layers:\n\n1. **Custom error classes** (`src/shared/errors.ts`): `AppError` extends `Error` with a `statusCode`. Subclasses like `NotFoundError` preset the code (404) and message.\n\n2. **Throw site**: Route handlers throw `AppError` subclasses — `throw new NotFoundError('User')` — instead of setting status codes manually.\n\n3. **Catch-all middleware** (`src/api/error-handler.ts`): Express error middleware catches everything. If it's an `AppError`, the response uses its `statusCode` and `message`. Anything else returns a generic 500.\n\nThe pattern is clean: throw typed errors, catch them centrally."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T15:10:00.000Z",
+        "durationMs": 8420,
+        "model": "qwen3:14b",
+        "steps": 4,
+        "toolCalls": 3,
+        "contextLength": 4412
+    }
 }
 ```
 

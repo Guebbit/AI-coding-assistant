@@ -19,14 +19,14 @@ The design emerged from a use-case discussion around building a local knowledge 
 
 ## Design Rationale: Summary Index vs Full RAG
 
-| Full RAG                                   | Summary Index (this approach)                         |
-| ------------------------------------------ | ----------------------------------------------------- |
-| Needs perfect PDF text extraction          | Only needs "good enough" extraction for summarisation |
-| Thousands of [chunks](/glossary#chunk) to embed & search      | One embedding per article (50–100 / year)             |
-| LLM synthesises answers from fragments     | **You** read the original article — no synthesis risk |
-| Complex chunking & retrieval tuning        | Simple summary + metadata store                       |
-| Citation is approximate ("around page 84") | Citation is **exact** (stored at ingestion time)      |
-| Expensive at scale                         | Extremely lightweight                                 |
+| Full RAG                                                 | Summary Index (this approach)                         |
+| -------------------------------------------------------- | ----------------------------------------------------- |
+| Needs perfect PDF text extraction                        | Only needs "good enough" extraction for summarisation |
+| Thousands of [chunks](/glossary#chunk) to embed & search | One embedding per article (50–100 / year)             |
+| LLM synthesises answers from fragments                   | **You** read the original article — no synthesis risk |
+| Complex chunking & retrieval tuning                      | Simple summary + metadata store                       |
+| Citation is approximate ("around page 84")               | Citation is **exact** (stored at ingestion time)      |
+| Expensive at scale                                       | Extremely lightweight                                 |
 
 **When to prefer full RAG instead:** if you need the system to _synthesise_ an answer from across multiple articles (e.g. "summarise 10 years of coverage on CRISPR"), the summary-index approach won't serve you — you'd need to load full article text into the LLM prompt. For pure _discovery_ ("which articles cover X?"), the summary index is superior.
 

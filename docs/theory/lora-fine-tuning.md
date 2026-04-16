@@ -12,10 +12,10 @@ Imagine you hired a **chef** who already knows how to cook. Fine-tuning is like 
 
 Compare that to **RAG** (Retrieval-Augmented Generation), which is like handing the same chef a **recipe card** every time they cook. They follow the card without needing to memorize anything.
 
-| Analogy | Technique | When to use |
-| --- | --- | --- |
+| Analogy                         | Technique       | When to use                |
+| ------------------------------- | --------------- | -------------------------- |
 | Send the chef to cooking school | **Fine-tuning** | New _style_ or _behaviour_ |
-| Hand the chef a recipe card | **RAG** | New _facts_ or _documents_ |
+| Hand the chef a recipe card     | **RAG**         | New _facts_ or _documents_ |
 
 Fine-tuning **changes the model's weights** — the internal numbers that control how it writes. After training, the new behaviour is permanent and doesn't need to be included in every prompt.
 
@@ -23,14 +23,14 @@ Fine-tuning **changes the model's weights** — the internal numbers that contro
 
 ## Full Fine-Tuning vs LoRA
 
-| | Full Fine-Tuning | LoRA |
-| --- | --- | --- |
-| **What changes** | Every weight in the model | Only small adapter layers |
-| **VRAM needed** | 2–4× model size (e.g. 28 GB for 7B) | ~model size + ~10 % (e.g. 8 GB for 7B) |
-| **Training speed** | Hours to days | Minutes to hours |
-| **Cost** | $$$ (multi-GPU) | $ (single consumer GPU) |
-| **Risk of forgetting** | High — can overwrite useful knowledge | Low — base model is frozen |
-| **Best for** | Building a fundamentally new model | Adapting style, tone, format, domain |
+|                        | Full Fine-Tuning                      | LoRA                                   |
+| ---------------------- | ------------------------------------- | -------------------------------------- |
+| **What changes**       | Every weight in the model             | Only small adapter layers              |
+| **VRAM needed**        | 2–4× model size (e.g. 28 GB for 7B)   | ~model size + ~10 % (e.g. 8 GB for 7B) |
+| **Training speed**     | Hours to days                         | Minutes to hours                       |
+| **Cost**               | $$$ (multi-GPU)                       | $ (single consumer GPU)                |
+| **Risk of forgetting** | High — can overwrite useful knowledge | Low — base model is frozen             |
+| **Best for**           | Building a fundamentally new model    | Adapting style, tone, format, domain   |
 
 **Bottom line:** unless you're a research lab, LoRA is almost always the right choice for local fine-tuning.
 
@@ -63,11 +63,11 @@ flowchart LR
 
 ### Key Parameters
 
-| Parameter | What it controls | Typical values |
-| --- | --- | --- |
-| **Rank (r)** | Size of matrices A and B. Higher = more expressive but more VRAM. | 8–64 |
-| **Alpha (α)** | Scaling factor for the adapter's contribution. Usually set to `α = r` or `α = 2r`. | 16–128 |
-| **Target modules** | Which layers get adapters (attention layers are standard). | `q_proj`, `v_proj`, sometimes all linear |
+| Parameter          | What it controls                                                                   | Typical values                           |
+| ------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Rank (r)**       | Size of matrices A and B. Higher = more expressive but more VRAM.                  | 8–64                                     |
+| **Alpha (α)**      | Scaling factor for the adapter's contribution. Usually set to `α = r` or `α = 2r`. | 16–128                                   |
+| **Target modules** | Which layers get adapters (attention layers are standard).                         | `q_proj`, `v_proj`, sometimes all linear |
 
 Think of **rank** like resolution: rank 8 is a rough sketch of the behaviour change, rank 64 is a detailed portrait. Most tasks work fine at rank 16–32.
 
@@ -121,13 +121,13 @@ Ollama currently expects adapters in **GGUF format**. If your training tool expo
 
 Minimum hardware for **LoRA fine-tuning** (not inference — just training):
 
-| Model size | VRAM (LoRA, QLoRA) | RAM | Notes |
-| --- | --- | --- | --- |
-| **3B** | 6 GB | 16 GB | Works on most modern GPUs |
-| **7B** | 8–10 GB | 16 GB | RTX 3060 12 GB / RTX 4060 Ti 16 GB |
-| **13B** | 12–16 GB | 32 GB | RTX 4070 Ti Super / RTX 4090 |
-| **34B** | 24–40 GB | 64 GB | RTX 4090 or A100 |
-| **70B** | 48+ GB | 128 GB | Multi-GPU or cloud (A100 ×2) |
+| Model size | VRAM (LoRA, QLoRA) | RAM    | Notes                              |
+| ---------- | ------------------ | ------ | ---------------------------------- |
+| **3B**     | 6 GB               | 16 GB  | Works on most modern GPUs          |
+| **7B**     | 8–10 GB            | 16 GB  | RTX 3060 12 GB / RTX 4060 Ti 16 GB |
+| **13B**    | 12–16 GB           | 32 GB  | RTX 4070 Ti Super / RTX 4090       |
+| **34B**    | 24–40 GB           | 64 GB  | RTX 4090 or A100                   |
+| **70B**    | 48+ GB             | 128 GB | Multi-GPU or cloud (A100 ×2)       |
 
 ::: tip QLoRA = quantized LoRA
 **QLoRA** loads the base model in 4-bit quantization during training, cutting VRAM roughly in half. This is how you fine-tune a 7B model on an 8 GB GPU.

@@ -12,37 +12,37 @@ Every example is **fake but realistic** — the requests, event logs, and respon
 
 ## Basic Agent
 
-| Example | What it shows |
-| ------- | ------------- |
+| Example                             | What it shows                                      |
+| ----------------------------------- | -------------------------------------------------- |
 | [Read & Answer](read-and-answer.md) | Simplest possible flow — one tool call, one answer |
-| [Code Analysis](code-analysis.md) | Multi-file reasoning across a 4-step agent loop |
+| [Code Analysis](code-analysis.md)   | Multi-file reasoning across a 4-step agent loop    |
 
 ## Data & Search
 
-| Example | What it shows |
-| ------- | ------------- |
-| [Database Query](database-query.md) | SQL tool with safety boundary (SELECT only) |
-| [Web Scraping](web-scraping.md) | Fetch a page, summarise it, see truncation behaviour |
-| [Semantic Memory](semantic-memory.md) | Two sequential runs — cold vs warm (memory hit) |
+| Example                               | What it shows                                        |
+| ------------------------------------- | ---------------------------------------------------- |
+| [Database Query](database-query.md)   | SQL tool with safety boundary (SELECT only)          |
+| [Web Scraping](web-scraping.md)       | Fetch a page, summarise it, see truncation behaviour |
+| [Semantic Memory](semantic-memory.md) | Two sequential runs — cold vs warm (memory hit)      |
 
 ## Multi-Agent
 
-| Example | What it shows |
-| ------- | ------------- |
+| Example                                       | What it shows                                                    |
+| --------------------------------------------- | ---------------------------------------------------------------- |
 | [Swarm Orchestration](swarm-orchestration.md) | Decompose → execute → review → synthesize with parallel subtasks |
 
 ## Integrations
 
-| Example | What it shows |
-| ------- | ------------- |
+| Example                                  | What it shows                                       |
+| ---------------------------------------- | --------------------------------------------------- |
 | [MCP Tools (GitHub)](mcp-integration.md) | External tool discovery, namespacing, and execution |
-| [Knowledge Graph](knowledge-graph.md) | Multi-hop entity traversal via Neo4j |
+| [Knowledge Graph](knowledge-graph.md)    | Multi-hop entity traversal via Neo4j                |
 
 ## Streaming & Monitoring
 
-| Example | What it shows |
-| ------- | ------------- |
-| [Streaming Events](streaming-events.md) | SSE event stream vs standard response |
+| Example                                     | What it shows                                    |
+| ------------------------------------------- | ------------------------------------------------ |
+| [Streaming Events](streaming-events.md)     | SSE event stream vs standard response            |
 | [Model Routing in Action](model-routing.md) | How the router picks different profiles per task |
 
 ---

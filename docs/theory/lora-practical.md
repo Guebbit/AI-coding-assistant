@@ -14,13 +14,13 @@ flowchart LR
     D --> E["5. Load in\nOllama"]
 ```
 
-| Step | Time | Difficulty |
-| --- | --- | --- |
-| 1. Prepare data | 1–8 hours (manual curation) | Medium |
-| 2. Choose base model | 5 minutes | Easy |
-| 3. Train | 15 min – 4 hours (depends on GPU + dataset) | Easy (with Unsloth) |
-| 4. Export & convert | 5–15 minutes | Easy |
-| 5. Load in Ollama | 2 minutes | Easy |
+| Step                 | Time                                        | Difficulty          |
+| -------------------- | ------------------------------------------- | ------------------- |
+| 1. Prepare data      | 1–8 hours (manual curation)                 | Medium              |
+| 2. Choose base model | 5 minutes                                   | Easy                |
+| 3. Train             | 15 min – 4 hours (depends on GPU + dataset) | Easy (with Unsloth) |
+| 4. Export & convert  | 5–15 minutes                                | Easy                |
+| 5. Load in Ollama    | 2 minutes                                   | Easy                |
 
 ---
 
@@ -37,11 +37,11 @@ LoRA training expects a dataset of **instruction / input / output** examples in 
 
 ### How Many Examples?
 
-| Dataset size | Expected result |
-| --- | --- |
-| < 50 | Too small — model won't learn much |
-| 50–500 | Good for narrow style/format changes |
-| 500–5,000 | Solid for domain-specific behaviour |
+| Dataset size | Expected result                           |
+| ------------ | ----------------------------------------- |
+| < 50         | Too small — model won't learn much        |
+| 50–500       | Good for narrow style/format changes      |
+| 500–5,000    | Solid for domain-specific behaviour       |
 | 5,000–50,000 | Excellent, diminishing returns above this |
 
 ::: warning Quality over quantity
@@ -60,13 +60,13 @@ LoRA training expects a dataset of **instruction / input / output** examples in 
 
 Pick a base model that already does well at your target task — LoRA _adjusts_ behaviour, it doesn't teach from scratch.
 
-| Task | Recommended base models | Why |
-| --- | --- | --- |
-| **Code generation** | `Qwen2.5-Coder`, `CodeLlama` | Pre-trained on code, strong baseline |
-| **General assistant** | `Llama3`, `Mistral` | Well-rounded, widely supported |
-| **Multilingual** | `Qwen2.5`, `Aya` | Strong non-English performance |
-| **Long context** | `Qwen2.5` (32K–128K), `Llama3` (128K) | Native long-context support |
-| **Small/edge** | `Phi-3-mini`, `Gemma-2B` | Runs on minimal hardware |
+| Task                  | Recommended base models               | Why                                  |
+| --------------------- | ------------------------------------- | ------------------------------------ |
+| **Code generation**   | `Qwen2.5-Coder`, `CodeLlama`          | Pre-trained on code, strong baseline |
+| **General assistant** | `Llama3`, `Mistral`                   | Well-rounded, widely supported       |
+| **Multilingual**      | `Qwen2.5`, `Aya`                      | Strong non-English performance       |
+| **Long context**      | `Qwen2.5` (32K–128K), `Llama3` (128K) | Native long-context support          |
+| **Small/edge**        | `Phi-3-mini`, `Gemma-2B`              | Runs on minimal hardware             |
 
 ::: tip Match the size to your hardware
 Check the [hardware requirements table](/theory/lora-fine-tuning#what-you-need-hardware) before picking. A 7B model is the sweet spot for most consumer GPUs.
@@ -120,6 +120,7 @@ trainer.train()
 ```
 
 ::: tip Typical training times
+
 - **500 examples, 7B model, RTX 4060 Ti:** ~15–30 minutes
 - **5,000 examples, 7B model, RTX 4090:** ~1–2 hours
 
@@ -204,13 +205,13 @@ Set `OLLAMA_MODEL=my-finetuned-model` in your `.env` to use it as the default mo
 
 Before investing time in LoRA training, check if a simpler approach works:
 
-| Situation | Better alternative |
-| --- | --- |
+| Situation                                                        | Better alternative                                   |
+| ---------------------------------------------------------------- | ---------------------------------------------------- |
 | You need the model to know **specific facts** (docs, APIs, data) | Use [RAG](/theory/RAG) — retrieve docs at query time |
-| You need **real-time data** (stock prices, weather, live APIs) | Use [tools](/packages/tools/) — call APIs directly |
-| Your dataset has **< 50 examples** | Too small for LoRA — use few-shot prompting instead |
-| You want a **different output format** (JSON, XML, etc.) | Try system prompt engineering first |
-| The base model is **already good** at the task | Don't fix what isn't broken — test first |
+| You need **real-time data** (stock prices, weather, live APIs)   | Use [tools](/packages/tools/) — call APIs directly   |
+| Your dataset has **< 50 examples**                               | Too small for LoRA — use few-shot prompting instead  |
+| You want a **different output format** (JSON, XML, etc.)         | Try system prompt engineering first                  |
+| The base model is **already good** at the task                   | Don't fix what isn't broken — test first             |
 
 ::: tip The golden rule
 Try prompting first, then RAG, then LoRA. Fine-tuning is the **last** lever to pull, not the first.

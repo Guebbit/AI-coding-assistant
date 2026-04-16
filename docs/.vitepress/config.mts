@@ -78,7 +78,10 @@ export default withMermaid(
                         { text: 'Overview', link: '/scenarios/' },
                         { text: '1. File Reading', link: '/scenarios/file-reading' },
                         { text: '2. Shell Inspection', link: '/scenarios/shell-inspection' },
-                        { text: '3. Multi-step Reasoning', link: '/scenarios/multi-step-reasoning' },
+                        {
+                            text: '3. Multi-step Reasoning',
+                            link: '/scenarios/multi-step-reasoning'
+                        },
                         { text: '4. SQL Query', link: '/scenarios/sql-query' },
                         { text: '5. Browser Fetch', link: '/scenarios/browser-fetch' },
                         { text: '5.1 Vision', link: '/scenarios/vision-classification' },

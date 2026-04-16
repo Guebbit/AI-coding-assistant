@@ -112,20 +112,20 @@ The `query_knowledge_graph` tool blocks mutating [Cypher](/glossary#cypher) keyw
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "In the knowledge graph, **TypeScript** is related to 6 technologies, ranked by how often they appear in docs:\n\n| Technology | Type           | Doc mentions |\n|------------|----------------|--------------|\n| Ollama     | Tool           | 8            |\n| Node.js    | Runtime        | 6            |\n| ESM        | Module System  | 5            |\n| Express    | Framework      | 4            |\n| Zod        | Library        | 3            |\n| vitest     | Test Framework | 2            |\n\nThe strongest connections are with **Ollama** (the LLM backend) and **Node.js** (the runtime). Zod appears in validation contexts (the agent's JSON contract uses it)."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T17:30:00.000Z",
-    "durationMs": 4210,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 3,
-    "toolCalls": 2,
-    "contextLength": 1842
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "In the knowledge graph, **TypeScript** is related to 6 technologies, ranked by how often they appear in docs:\n\n| Technology | Type           | Doc mentions |\n|------------|----------------|--------------|\n| Ollama     | Tool           | 8            |\n| Node.js    | Runtime        | 6            |\n| ESM        | Module System  | 5            |\n| Express    | Framework      | 4            |\n| Zod        | Library        | 3            |\n| vitest     | Test Framework | 2            |\n\nThe strongest connections are with **Ollama** (the LLM backend) and **Node.js** (the runtime). Zod appears in validation contexts (the agent's JSON contract uses it)."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T17:30:00.000Z",
+        "durationMs": 4210,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 3,
+        "toolCalls": 2,
+        "contextLength": 1842
+    }
 }
 ```
 

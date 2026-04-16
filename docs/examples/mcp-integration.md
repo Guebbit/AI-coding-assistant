@@ -45,17 +45,17 @@ The naming convention: **`mcp_{serverName}__{toolName}`**. Double underscore sep
 
 ```json
 {
-  "servers": [
-    {
-      "name": "github",
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    }
-  ]
+    "servers": [
+        {
+            "name": "github",
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-github"],
+            "env": {
+                "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+            }
+        }
+    ]
 }
 ```
 
@@ -133,20 +133,20 @@ The agent doesn't know or care that `mcp_github__list_pull_requests` comes from 
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "There are **3 open PRs** in my-org/my-repo:\n\n1. **#142 — Add OAuth2 support** (alice, Apr 10)\n   Feature PR adding OAuth2 provider integration. Labels: `feature`.\n\n2. **#139 — Fix rate limiter edge case** (bob, Apr 8)\n   Bug fix for rate limiter failing under concurrent requests. Labels: `bug`.\n\n3. **#137 — Update TypeScript to 5.9** (carol, Apr 5)\n   Chore PR bumping TypeScript and fixing new strict-mode warnings. Labels: `chore`."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T17:15:00.000Z",
-    "durationMs": 2845,
-    "model": "llama3.1:8b-instruct-q8_0",
-    "steps": 2,
-    "toolCalls": 1,
-    "contextLength": 1203
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "There are **3 open PRs** in my-org/my-repo:\n\n1. **#142 — Add OAuth2 support** (alice, Apr 10)\n   Feature PR adding OAuth2 provider integration. Labels: `feature`.\n\n2. **#139 — Fix rate limiter edge case** (bob, Apr 8)\n   Bug fix for rate limiter failing under concurrent requests. Labels: `bug`.\n\n3. **#137 — Update TypeScript to 5.9** (carol, Apr 5)\n   Chore PR bumping TypeScript and fixing new strict-mode warnings. Labels: `chore`."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T17:15:00.000Z",
+        "durationMs": 2845,
+        "model": "llama3.1:8b-instruct-q8_0",
+        "steps": 2,
+        "toolCalls": 1,
+        "contextLength": 1203
+    }
 }
 ```
 

@@ -30,13 +30,13 @@ The database must answer: _"which stored vectors are closest to my query vector?
 
 ## How Vector DBs Differ from SQL / NoSQL
 
-| Feature             | SQL (relational)              | NoSQL (document / key-value)           | Vector DB                                   |
-| ------------------- | ----------------------------- | -------------------------------------- | ------------------------------------------- |
-| **Query type**      | Exact match, range, joins     | Exact match, full-text                 | Nearest-neighbour (semantic similarity)     |
-| **Index structure** | B-tree, hash                  | Hash / inverted index                  | ANN index ([HNSW](/glossary#hnsw), [IVF](/glossary#ivf), …)                    |
-| **Filtering**       | `WHERE col = val`             | JSON path match                        | Post-filter on metadata attached to vectors |
-| **Best for**        | Structured data, transactions | Flexible schema, high write throughput | Semantic search, embeddings, RAG            |
-| **Scaling axis**    | Rows × columns                | Documents                              | Vectors × dimensions                        |
+| Feature             | SQL (relational)              | NoSQL (document / key-value)           | Vector DB                                                   |
+| ------------------- | ----------------------------- | -------------------------------------- | ----------------------------------------------------------- |
+| **Query type**      | Exact match, range, joins     | Exact match, full-text                 | Nearest-neighbour (semantic similarity)                     |
+| **Index structure** | B-tree, hash                  | Hash / inverted index                  | ANN index ([HNSW](/glossary#hnsw), [IVF](/glossary#ivf), …) |
+| **Filtering**       | `WHERE col = val`             | JSON path match                        | Post-filter on metadata attached to vectors                 |
+| **Best for**        | Structured data, transactions | Flexible schema, high write throughput | Semantic search, embeddings, RAG                            |
+| **Scaling axis**    | Rows × columns                | Documents                              | Vectors × dimensions                                        |
 
 **None of these replaces the others.** Production RAG systems typically use:
 

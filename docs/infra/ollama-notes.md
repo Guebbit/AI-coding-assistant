@@ -58,12 +58,12 @@ For first validation, use a small model first, then scale up.
 Approximate ranges depend on model family and [quantization](/glossary#quantization):
 
 | Model class | Typical [VRAM](/glossary#vram) need (quantized) | Notes                                               |
-| ----------- | -----------------------------------------------: | --------------------------------------------------- |
-| 1B–4B       |                                              Low | Good for first tests and weak hardware              |
-| 7B–8B       |                                           Medium | Strong default for daily local usage                |
-| 13B         |                                      Medium-high | Usually one model loaded at a time on 24 GB         |
-| 30B+        |                                             High | Can become unstable on consumer single-GPU setups   |
-| 70B         |                                        Very high | Usually requires multi-GPU or remote infrastructure |
+| ----------- | ----------------------------------------------: | --------------------------------------------------- |
+| 1B–4B       |                                             Low | Good for first tests and weak hardware              |
+| 7B–8B       |                                          Medium | Strong default for daily local usage                |
+| 13B         |                                     Medium-high | Usually one model loaded at a time on 24 GB         |
+| 30B+        |                                            High | Can become unstable on consumer single-GPU setups   |
+| 70B         |                                       Very high | Usually requires multi-GPU or remote infrastructure |
 
 Practical rule on 24 GB [VRAM](/glossary#vram):
 

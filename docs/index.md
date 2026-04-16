@@ -6,15 +6,15 @@ Local-first AI agent API — send a task, get an answer. [Ollama](/glossary#olla
 
 ## Documentation tracks
 
-| Track | What you'll find | Start here |
-| --- | --- | --- |
-| **Getting Started** | Setup, use cases, first request | [Use the Application](/use-the-application) |
-| **Practical Examples** | Request → under-the-hood → response walkthroughs | [Examples](/examples/) |
-| **Scenarios** | Hands-on drills (10 min each) | [Scenarios](/scenarios/) |
+| Track                     | What you'll find                                                            | Start here                                   |
+| ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------- |
+| **Getting Started**       | Setup, use cases, first request                                             | [Use the Application](/use-the-application)  |
+| **Practical Examples**    | Request → under-the-hood → response walkthroughs                            | [Examples](/examples/)                       |
+| **Scenarios**             | Hands-on drills (10 min each)                                               | [Scenarios](/scenarios/)                     |
 | **Architecture & Theory** | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered) |
-| **API Surface** | All HTTP endpoints | [Endpoint Map](/endpoint-map) |
-| **Package Reference** | Code contracts per package | [Packages](/packages/) |
-| **Glossary** | Every technical term explained | [Glossary](/glossary) |
+| **API Surface**           | All HTTP endpoints                                                          | [Endpoint Map](/endpoint-map)                |
+| **Package Reference**     | Code contracts per package                                                  | [Packages](/packages/)                       |
+| **Glossary**              | Every technical term explained                                              | [Glossary](/glossary)                        |
 
 ---
 
@@ -49,9 +49,9 @@ flowchart LR
 
 ## Fast links
 
-| Area | Links |
-| --- | --- |
-| **Learn** | [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary) |
-| **Theory** | [Agent Loop](/theory/agent-loop) · [RAG](/theory/RAG) · [Vectors](/theory/VECTOR_DATABASES) · [LoRA](/theory/lora-fine-tuning) · [MCP](/theory/MCP) |
-| **Reference** | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) |
-| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion) |
+| Area               | Links                                                                                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn**          | [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                           |
+| **Theory**         | [Agent Loop](/theory/agent-loop) · [RAG](/theory/RAG) · [Vectors](/theory/VECTOR_DATABASES) · [LoRA](/theory/lora-fine-tuning) · [MCP](/theory/MCP) |
+| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection)                            |
+| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                               |

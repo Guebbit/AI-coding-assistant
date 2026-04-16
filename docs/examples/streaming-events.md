@@ -93,6 +93,7 @@ data: {"result":"The project has 6 npm scripts:\n\n- **dev** — `tsx watch src/
 ```
 
 Each SSE message follows the standard format:
+
 ```
 event: <event-type>\n
 data: <JSON payload>\n
@@ -103,14 +104,14 @@ The blank line after `data:` signals the end of that event.
 
 ### SSE event types
 
-| SSE event | Triggered by | Payload |
-| --------- | ------------ | ------- |
-| `route` | `agent:model_routed` | `{ profile, model, reason }` |
-| `step` | `agent:step` | `{ step, action, thought }` |
-| `tool` | `tool:result` or `tool:error` | `{ tool, result }` or `{ tool, error }` |
-| `done` | `agent:done` | `{ result }` |
-| `error` | `agent:error` | `{ error }` |
-| `max_steps` | `agent:max_steps` | `{ task, summary }` |
+| SSE event   | Triggered by                  | Payload                                 |
+| ----------- | ----------------------------- | --------------------------------------- |
+| `route`     | `agent:model_routed`          | `{ profile, model, reason }`            |
+| `step`      | `agent:step`                  | `{ step, action, thought }`             |
+| `tool`      | `tool:result` or `tool:error` | `{ tool, result }` or `{ tool, error }` |
+| `done`      | `agent:done`                  | `{ result }`                            |
+| `error`     | `agent:error`                 | `{ error }`                             |
+| `max_steps` | `agent:max_steps`             | `{ task, summary }`                     |
 
 The connection closes automatically when the agent completes (`done`, `error`, or `max_steps`).
 
@@ -118,14 +119,14 @@ The connection closes automatically when the agent completes (`done`, `error`, o
 
 ## Streaming vs Non-Streaming: Side-by-Side
 
-| | `POST /run` | `POST /run/stream` |
-| --- | --- | --- |
-| Response type | Single JSON object | SSE event stream |
-| When you get data | After all steps complete | Each step as it happens |
-| Content-Type | `application/json` | `text/event-stream` |
-| Request body | Identical | Identical |
-| Final result | `data.result` | Last `done` event's `result` |
-| Use case | Scripts, CI, simple integrations | UIs, progress indicators, debugging |
+|                   | `POST /run`                      | `POST /run/stream`                  |
+| ----------------- | -------------------------------- | ----------------------------------- |
+| Response type     | Single JSON object               | SSE event stream                    |
+| When you get data | After all steps complete         | Each step as it happens             |
+| Content-Type      | `application/json`               | `text/event-stream`                 |
+| Request body      | Identical                        | Identical                           |
+| Final result      | `data.result`                    | Last `done` event's `result`        |
+| Use case          | Scripts, CI, simple integrations | UIs, progress indicators, debugging |
 
 ### Non-streaming (for comparison)
 
@@ -139,18 +140,18 @@ You wait ~2 seconds, then get the full response at once:
 
 ```json
 {
-  "success": true,
-  "status": 200,
-  "message": "",
-  "data": {
-    "result": "The project has 6 npm scripts: ..."
-  },
-  "meta": {
-    "startedAt": "2026-04-15T18:00:00.000Z",
-    "durationMs": 1953,
-    "steps": 2,
-    "toolCalls": 1
-  }
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "result": "The project has 6 npm scripts: ..."
+    },
+    "meta": {
+        "startedAt": "2026-04-15T18:00:00.000Z",
+        "durationMs": 1953,
+        "steps": 2,
+        "toolCalls": 1
+    }
 }
 ```
 
