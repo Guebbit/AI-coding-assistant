@@ -289,8 +289,12 @@ export function registerInfoRoutes(application: express.Express): void {
     const startedAt = new Date();
     logger.info("info_models_requested", { component: "api.info" });
 
-    fetch(`${OLLAMA_BASE_URL}/api/tags`)
+    fetch(`${OLLAMA_BASE_URL}/api/tags`, { signal: AbortSignal.timeout(10_000) })
       .then((ollamaResponse) => {
+        /*
+         * Error path: reject immediately and return — execution never reaches
+         * the ok-path json() call below.
+         */
         if (!ollamaResponse.ok) {
           return ollamaResponse
             .text()
@@ -302,28 +306,30 @@ export function registerInfoRoutes(application: express.Express): void {
                 body: body.slice(0, 500),
               });
               rejectResponse(response, 502, "Bad Gateway", [`Ollama API returned ${ollamaResponse.status}`]);
-              return null;
             });
         }
 
-        return ollamaResponse.json() as Promise<{ models?: Array<Record<string, unknown>> }>;
-      })
-      .then((data) => {
-        if (!data) return;
+        /* Ok path: parse the JSON and build the success response. */
+        return (ollamaResponse.json() as Promise<{ models?: Array<Record<string, unknown>> }>)
+          .then((data) => {
+            const rawModels: Array<Record<string, unknown>> = Array.isArray(data?.models)
+              ? data.models
+              : [];
 
-        const models = (data.models ?? []).map((model) => ({
-          name: (model.name as string) ?? (model.model as string) ?? "unknown",
-          size: (model.size as number) ?? null,
-          digest: (model.digest as string) ?? null,
-          modifiedAt: (model.modified_at as string) ?? null,
-          details: (model.details as Record<string, unknown>) ?? null,
-        }));
+            const models = rawModels.map((model) => ({
+              name: (model.name as string) ?? (model.model as string) ?? "unknown",
+              size: (model.size as number) ?? null,
+              digest: (model.digest as string) ?? null,
+              modifiedAt: (model.modified_at as string) ?? null,
+              details: (model.details as Record<string, unknown>) ?? null,
+            }));
 
-        successResponse(response, {
-          count: models.length,
-          ollamaBaseUrl: OLLAMA_BASE_URL,
-          models,
-        }, 200, "", buildResponseMeta(startedAt, _request));
+            successResponse(response, {
+              count: models.length,
+              ollamaBaseUrl: OLLAMA_BASE_URL,
+              models,
+            }, 200, "", buildResponseMeta(startedAt, _request));
+          });
       })
       .catch((error: unknown) => {
         if (response.headersSent) return;
