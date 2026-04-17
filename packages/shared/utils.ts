@@ -20,8 +20,6 @@ export function withTimeout<T>(
 ): Promise<T> {
     return Promise.race([
         promise,
-        new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(message)), ms)
-        ),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), ms))
     ]);
 }

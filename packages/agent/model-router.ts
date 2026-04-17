@@ -118,15 +118,23 @@ const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? 'phi4-mini:latest';
 const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? 'rules').toLowerCase();
 
 /** Default generation options per profile. Extend this map to add a new profile. */
-const PROFILE_OPTION_DEFAULTS: Record<ModelProfile, {
-    temperature: number; top_p: number; top_k: number;
-    num_ctx: number; repeat_penalty: number;
-}> = {
-    fast:      { temperature: 0.3, top_p: 0.85, top_k: 30,  num_ctx: 4096,  repeat_penalty: 1.2 },
-    reasoning: { temperature: 0.2, top_p: 0.80, top_k: 20,  num_ctx: 8192,  repeat_penalty: 1.3 },
-    code:      { temperature: 0.1, top_p: 0.90, top_k: 40,  num_ctx: 6144,  repeat_penalty: 1.1 },
-    default:   { temperature: 0.3, top_p: 0.85, top_k: 30,  num_ctx: 8192,  repeat_penalty: 1.2 },
+/* eslint-disable @typescript-eslint/naming-convention -- Ollama API uses snake_case parameter names */
+const PROFILE_OPTION_DEFAULTS: Record<
+    ModelProfile,
+    {
+        temperature: number;
+        top_p: number;
+        top_k: number;
+        num_ctx: number;
+        repeat_penalty: number;
+    }
+> = {
+    fast: { temperature: 0.3, top_p: 0.85, top_k: 30, num_ctx: 4096, repeat_penalty: 1.2 },
+    reasoning: { temperature: 0.2, top_p: 0.8, top_k: 20, num_ctx: 8192, repeat_penalty: 1.3 },
+    code: { temperature: 0.1, top_p: 0.9, top_k: 40, num_ctx: 6144, repeat_penalty: 1.1 },
+    default: { temperature: 0.3, top_p: 0.85, top_k: 30, num_ctx: 8192, repeat_penalty: 1.2 }
 };
+/* eslint-enable @typescript-eslint/naming-convention */
 
 /**
  * Build profile-specific generation options (temperature, top_p, etc.).
@@ -142,11 +150,11 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
     const prefix = `AGENT_MODEL_${profile.toUpperCase()}`;
     const d = PROFILE_OPTION_DEFAULTS[profile];
     return {
-        temperature:    envFloat(process.env[`${prefix}_TEMPERATURE`],    d.temperature),
-        top_p:          envFloat(process.env[`${prefix}_TOP_P`],          d.top_p),
-        top_k:          envInt(  process.env[`${prefix}_TOP_K`],          d.top_k),
-        num_ctx:        envInt(  process.env[`${prefix}_NUM_CTX`],        d.num_ctx),
-        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty),
+        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], d.temperature),
+        top_p: envFloat(process.env[`${prefix}_TOP_P`], d.top_p),
+        top_k: envInt(process.env[`${prefix}_TOP_K`], d.top_k),
+        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], d.num_ctx),
+        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty)
     };
 }
 
@@ -201,14 +209,45 @@ function routeWithRules(input: IRouteInput): IModelRouteDecision {
 
     /* Keywords that strongly suggest a tool call is needed. */
     const toolSignals = [
-        'file', 'read', 'write', 'open', 'load', 'save',
-        'run', 'execute', 'shell', 'command', 'script',
-        'search', 'find', 'list', 'fetch', 'download',
-        'database', 'query', 'sql', 'mongo', 'mysql', 'postgres',
-        'image', 'pdf', 'csv', 'json', 'docx', 'markdown',
-        'url', 'http', 'browser', 'website',
-        'ingest', 'diagram', 'scaffold', 'project',
-        'knowledge', 'memory', 'semantic'
+        'file',
+        'read',
+        'write',
+        'open',
+        'load',
+        'save',
+        'run',
+        'execute',
+        'shell',
+        'command',
+        'script',
+        'search',
+        'find',
+        'list',
+        'fetch',
+        'download',
+        'database',
+        'query',
+        'sql',
+        'mongo',
+        'mysql',
+        'postgres',
+        'image',
+        'pdf',
+        'csv',
+        'json',
+        'docx',
+        'markdown',
+        'url',
+        'http',
+        'browser',
+        'website',
+        'ingest',
+        'diagram',
+        'scaffold',
+        'project',
+        'knowledge',
+        'memory',
+        'semantic'
     ];
     const requiresTools = toolSignals.some((s) => text.includes(s)) || input.step > 0;
 
@@ -352,7 +391,11 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
     });
 
     const cleaned = stripCodeFences(response);
-    const parsed = JSON.parse(cleaned) as { profile?: string; reason?: string; requiresTools?: boolean };
+    const parsed = JSON.parse(cleaned) as {
+        profile?: string;
+        reason?: string;
+        requiresTools?: boolean;
+    };
     const profile = parsed.profile ? parseProfile(parsed.profile) : null;
     if (!profile) {
         throw new Error(`Router returned invalid profile: ${String(parsed.profile)}`);

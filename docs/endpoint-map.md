@@ -185,7 +185,7 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
 **Relevant env vars**
 
 | Variable                  | Default        | Effect                                                      |
-| ------------------------- |----------------| ----------------------------------------------------------- |
+| ------------------------- | -------------- | ----------------------------------------------------------- |
 | `AGENTS_MAX_STEPS`        | `20`           | Maximum loop iterations                                     |
 | `AGENT_MODEL_FAST`        | `OLLAMA_MODEL` | Model used for the `fast` profile                           |
 | `AGENT_MODEL_REASONING`   | `OLLAMA_MODEL` | Model used for the `reasoning` profile                      |
@@ -324,7 +324,7 @@ Registered via `registerWorkflowRoutes(app)` in `apps/api/index.ts`.
 **Request body**
 
 | Field             | Type                                           | Required | Default                   | Description                                                              |
-| ----------------- | ---------------------------------------------- | -------- |---------------------------| ------------------------------------------------------------------------ |
+| ----------------- | ---------------------------------------------- | -------- | ------------------------- | ------------------------------------------------------------------------ |
 | `steps`           | `string[]`                                     | ✅       | —                         | Ordered list of step task strings (1–50 items)                           |
 | `carry`           | `"none" \| "summary" \| "full"`                | —        | `"summary"`               | How prior step outputs are forwarded into subsequent steps               |
 | `allowWrite`      | `boolean`                                      | —        | `false`                   | Unlock write tools (`write_file`, `scaffold_project`, `document_ingest`) |
@@ -410,7 +410,7 @@ curl -X POST http://localhost:3001/workflow \
 **Env / config notes**
 
 | Variable                         | Default | Effect on `/workflow`                                  |
-| -------------------------------- |---------| ------------------------------------------------------ |
+| -------------------------------- | ------- | ------------------------------------------------------ |
 | `AGENTS_MAX_STEPS`               | `20`    | Default per-step cap when `maxStepsPerStep` is omitted |
 | `AGENT_BUDGET_MAX_DURATION_MS`   | `60000` | Per-step wall-clock budget ceiling (same as `/run`)    |
 | `AGENT_BUDGET_MAX_CONTEXT_CHARS` | `50000` | Per-step context length ceiling (same as `/run`)       |

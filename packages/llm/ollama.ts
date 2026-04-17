@@ -129,7 +129,7 @@ export async function generateWithMetadata(
     if (!model) {
         throw new Error(
             'No model specified and OLLAMA_MODEL environment variable is not set. ' +
-            'Set OLLAMA_MODEL in your .env file (e.g. OLLAMA_MODEL=llama3.1:8b).'
+                'Set OLLAMA_MODEL in your .env file (e.g. OLLAMA_MODEL=llama3.1:8b).'
         );
     }
 

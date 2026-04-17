@@ -23,15 +23,17 @@ interface IEnvironmentValidationLogger {
  * Missing any of these throws at startup rather than silently using a
  * wrong default that causes cryptic runtime failures later.
  */
-const REQUIRED_ENV_KEYS = ['OLLAMA_MODEL'] as const;
+const REQUIRED_ENV_KEYS = [] as const;
 
 /**
  * Environment variables that Manna warns about if missing.
  *
- * These are not hard-required (Manna starts anyway) but their absence
- * degrades functionality.
+ * These are not hard-required (Manna starts anyway using the built-in
+ * `llama3.1:8b` fallback) but their absence degrades functionality
+ * because the system will use the hardcoded model instead of the one
+ * configured for the deployment.
  */
-const RECOMMENDED_ENV_KEYS = ['OLLAMA_BASE_URL'] as const;
+const RECOMMENDED_ENV_KEYS = ['OLLAMA_BASE_URL', 'OLLAMA_MODEL'] as const;
 
 /**
  * Throw if any required environment variable is missing or empty.
@@ -50,7 +52,7 @@ export const validateRequiredEnvironment = (): void => {
     if (missing.length > 0) {
         throw new Error(
             `Missing required environment variable${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. ` +
-            `Please set ${missing.length > 1 ? 'them' : 'it'} in your .env file before starting Manna.`
+                `Please set ${missing.length > 1 ? 'them' : 'it'} in your .env file before starting Manna.`
         );
     }
 };

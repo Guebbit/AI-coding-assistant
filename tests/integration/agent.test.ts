@@ -6,12 +6,18 @@
  * any live services.
  *
  * Scenarios covered:
- * 1. Single-step completion (action = "none" on first LLM response)
- * 2. Tool call followed by completion
- * 3. Invalid JSON from LLM → self-correction → completion
- * 4. Unknown tool requested → error appended → completion
- * 5. Tool execution failure → error appended → completion
- * 6. Max steps reached → self-debug summary returned
+ * 1. Direct-answer shortcut: conversational task with no tool signals → plain text response
+ * 2. Single-step completion (action = "none" on first LLM response)
+ * 3. Tool call followed by completion
+ * 4. Invalid JSON from LLM → self-correction → completion
+ * 5. Unknown tool requested → error appended → completion
+ * 6. Tool execution failure → error appended → completion
+ * 7. Max steps reached → self-debug summary returned
+ *
+ * Note: tasks used in tests that exercise the full agent loop include at least
+ * one tool-signal keyword (e.g. "search", "file", "list") so the model router
+ * correctly sets requiresTools=true and does NOT trigger the direct-answer
+ * shortcut.  Tasks without tool signals are reserved for direct-answer tests.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -103,6 +109,13 @@ const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
 });
 
 beforeEach(() => {
+    /* Set deterministic model names so resolveModel never throws. */
+    process.env.AGENT_MODEL_FAST = 'test-model';
+    process.env.AGENT_MODEL_REASONING = 'test-model';
+    process.env.AGENT_MODEL_CODE = 'test-model';
+    process.env.AGENT_MODEL_DEFAULT = 'test-model';
+    /* Use rules mode to keep tests deterministic (no extra LLM routing call). */
+    process.env.AGENT_MODEL_ROUTER_MODE = 'rules';
     fetchQueue.length = 0;
     vi.stubGlobal('fetch', mockFetch);
     mockFetch.mockClear();
@@ -110,6 +123,15 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+    for (const k of [
+        'AGENT_MODEL_FAST',
+        'AGENT_MODEL_REASONING',
+        'AGENT_MODEL_CODE',
+        'AGENT_MODEL_DEFAULT',
+        'AGENT_MODEL_ROUTER_MODE'
+    ]) {
+        delete process.env[k];
+    }
 });
 
 /* ── Test tools ──────────────────────────────────────────────────────── */
@@ -132,12 +154,50 @@ const failingTool: ITool = {
 
 /* ── Tests ───────────────────────────────────────────────────────────── */
 
+describe('Agent.run — direct-answer shortcut', () => {
+    it('returns a plain-text answer without tool calls for a conversational task', async () => {
+        /*
+         * No tool-signal keywords in the task → requiresTools=false at step 0
+         * → agent skips the JSON loop and calls the LLM for a plain answer.
+         */
+        fetchQueue.push({
+            response: 'Hello! Doing great, thanks for asking.',
+            model: 'test-model',
+            done: true
+        });
+
+        const agent = new Agent([]);
+        const result = await agent.run('Hello, how are you today?');
+
+        expect(result.answer).toBe('Hello! Doing great, thanks for asking.');
+        expect(result.meta.steps).toBe(1);
+        expect(result.meta.toolCalls).toBe(0);
+    });
+
+    it('uses the forced profile but still bypasses tools for a conversational task', async () => {
+        fetchQueue.push({
+            response: 'Sure, just a quick greeting.',
+            model: 'test-model',
+            done: true
+        });
+
+        const agent = new Agent([]);
+        const result = await agent.run('Hey there, what is up?', { profile: 'fast' });
+
+        expect(result.answer).toBe('Sure, just a quick greeting.');
+        expect(result.meta.steps).toBe(1);
+        expect(result.meta.toolCalls).toBe(0);
+        expect(result.meta.profile).toBe('fast');
+    });
+});
+
 describe('Agent.run — happy paths', () => {
     it('completes in a single step when the LLM returns action "none"', async () => {
+        /* Task includes "search" to ensure requiresTools=true → full JSON loop. */
         fetchQueue.push(agentResponse('The answer is 42.', 'none'));
 
         const agent = new Agent([]);
-        const result = await agent.run('What is 6 times 7?');
+        const result = await agent.run('Search for: what is 6 times 7?');
         expect(result.answer).toBe('The answer is 42.');
         expect(result.meta.models).toEqual(['test-model']);
         expect(result.meta.steps).toBe(1);
@@ -151,7 +211,7 @@ describe('Agent.run — happy paths', () => {
         fetchQueue.push(agentResponse('Echo returned the message.', 'none'));
 
         const agent = new Agent([echoTool]);
-        const result = await agent.run('Echo "hello"');
+        const result = await agent.run('Search and echo "hello"');
         expect(result.answer).toBe('Echo returned the message.');
         expect(echoTool.execute).toHaveBeenCalledWith({ message: 'hello' });
     });
@@ -159,7 +219,7 @@ describe('Agent.run — happy paths', () => {
     it('respects a forcedProfile passed in options', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
-        const result = await agent.run('Quick task', { profile: 'fast' });
+        const result = await agent.run('Search files for quick task', { profile: 'fast' });
         expect(result.answer).toBe('Done.');
         expect(result.meta.profile).toBe('fast');
     });
@@ -167,7 +227,7 @@ describe('Agent.run — happy paths', () => {
     it('respects a maxSteps override', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
-        const result = await agent.run('Quick task', { maxSteps: 1 });
+        const result = await agent.run('Search files for quick task', { maxSteps: 1 });
         expect(result.answer).toBe('Done.');
     });
 
@@ -178,7 +238,7 @@ describe('Agent.run — happy paths', () => {
         fetchQueue.push(agentResponse('Done now.', 'none', {}, { prompt: 8, completion: 7 }));
 
         const agent = new Agent([echoTool]);
-        const result = await agent.run('Token aggregation task');
+        const result = await agent.run('Search for token aggregation results');
         expect(result.answer).toBe('Done now.');
         expect(result.meta.promptTokens).toBe(20);
         expect(result.meta.completionTokens).toBe(12);
@@ -194,7 +254,7 @@ describe('Agent.run — fail-open / retry paths', () => {
         fetchQueue.push(agentResponse('Corrected.', 'none'));
 
         const agent = new Agent([]);
-        const result = await agent.run('Handle invalid JSON');
+        const result = await agent.run('Handle invalid JSON'); /* "json" is a tool signal */
         expect(result.answer).toBe('Corrected.');
     });
 
@@ -205,7 +265,7 @@ describe('Agent.run — fail-open / retry paths', () => {
         fetchQueue.push(agentResponse('Recovered.', 'none'));
 
         const agent = new Agent([echoTool]);
-        const result = await agent.run('Use an unknown tool');
+        const result = await agent.run('Search and use an unknown tool');
         expect(result.answer).toBe('Recovered.');
     });
 
@@ -217,7 +277,7 @@ describe('Agent.run — fail-open / retry paths', () => {
         fetchQueue.push(agentResponse('Tool failed but I recovered.', 'none'));
 
         const agent = new Agent([failingTool]);
-        const result = await agent.run('Call a failing tool');
+        const result = await agent.run('Search and call a failing tool');
         expect(result.answer).toBe('Tool failed but I recovered.');
     });
 });
@@ -231,7 +291,7 @@ describe('Agent.run — max steps exhaustion', () => {
         fetchQueue.push(debugResponse('The agent got stuck in a loop.'));
 
         const agent = new Agent([echoTool]);
-        const result = await agent.run('Infinite loop task', { maxSteps: 2 });
+        const result = await agent.run('Search in the infinite loop task', { maxSteps: 2 });
         expect(result.answer).toBe('The agent got stuck in a loop.');
     });
 
@@ -241,7 +301,7 @@ describe('Agent.run — max steps exhaustion', () => {
         fetchQueue.push(FETCH_FAIL); /* self-debug generate call returns 500 */
 
         const agent = new Agent([echoTool]);
-        const result = await agent.run('Self-debug failure', { maxSteps: 1 });
+        const result = await agent.run('Search: self-debug failure', { maxSteps: 1 });
         expect(result.answer).toBe('Max steps reached without a conclusive answer.');
     });
 });
@@ -254,7 +314,7 @@ describe('Agent.run — processors', () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
         agent.addProcessor(processor as Parameters<typeof agent.addProcessor>[0]);
-        await agent.run('Processor test');
+        await agent.run('Search for processor test');
         expect(processInputStep).toHaveBeenCalledOnce();
     });
 
@@ -265,7 +325,7 @@ describe('Agent.run — processors', () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([]);
         agent.addProcessor(processor as Parameters<typeof agent.addProcessor>[0]);
-        await agent.run('Output processor test');
+        await agent.run('Search for output processor test');
         expect(processOutputStep).toHaveBeenCalledOnce();
     });
 });
