@@ -63,4 +63,23 @@ describe('resolveModel', () => {
             })
         ).toBe('hard-fallback');
     });
+
+    it('returns the built-in llama3.1:8b fallback when no env vars are set and no options are provided', () => {
+        /* All MODEL_ENV_KEYS deleted by beforeEach — function must not throw */
+        expect(resolveModel('code')).toBe('llama3.1:8b');
+        expect(resolveModel('fast')).toBe('llama3.1:8b');
+        expect(resolveModel('reasoning')).toBe('llama3.1:8b');
+        expect(resolveModel('default')).toBe('llama3.1:8b');
+    });
+
+    it('throws when hardDefault is explicitly set to empty string and no env vars provide a fallback', () => {
+        /* Caller opted out of the built-in fallback via hardDefault:'' */
+        expect(() =>
+            resolveModel('code', {
+                includeAgentDefault: false,
+                includeOllamaFallback: false,
+                hardDefault: ''
+            })
+        ).toThrow('Unable to resolve model for profile "code"');
+    });
 });
