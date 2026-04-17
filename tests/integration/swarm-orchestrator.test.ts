@@ -14,6 +14,17 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+/* Set required model env vars before module-level resolveModel calls. */
+vi.hoisted(() => {
+    process.env.OLLAMA_MODEL = 'test-model';
+    process.env.AGENT_MODEL_FAST = 'test-model';
+    process.env.AGENT_MODEL_REASONING = 'test-model';
+    process.env.AGENT_MODEL_CODE = 'test-model';
+    process.env.AGENT_MODEL_DEFAULT = 'test-model';
+    process.env.AGENT_MODEL_ROUTER_MODE = 'rules';
+});
+
 import { LangGraphSwarmOrchestrator } from '@/packages/orchestrator/graph.js';
 
 /* ── Mock persistence and diagnostics (not under test) ───────────────── */
@@ -36,6 +47,13 @@ const fetchQueue: unknown[] = [];
 
 /** Sentinel: push this into fetchQueue to simulate a failed /api/generate call. */
 const FETCH_FAIL = { __fetchFail: true };
+
+/** Dummy tool so agents enter the JSON-structured loop instead of direct-answer. */
+const dummyTool = {
+    name: 'noop',
+    description: 'Does nothing',
+    execute: async () => 'ok'
+};
 
 /** Build an agent step JSON response body. */
 function agentResponse(thought: string, action = 'none', input: Record<string, unknown> = {}) {
@@ -119,7 +137,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         /* 2. agent step for sub-0 */
         fetchQueue.push(agentResponse('The answer is Paris.', 'none'));
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('What is the capital of France?');
 
         expect(result.subtaskResults).toHaveLength(1);
@@ -156,7 +174,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         /* synthesis call */
         fetchQueue.push(rawResponse('synthesised answer'));
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('Two-step task');
 
         expect(result.subtaskResults).toHaveLength(2);
@@ -175,7 +193,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         /* synthesis call (fallback after failure) */
         fetchQueue.push(rawResponse('Degraded answer'));
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('Failing subtask task');
 
         expect(result.subtaskResults[0].success).toBe(false);
@@ -195,7 +213,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         /* synthesis */
         fetchQueue.push(rawResponse('deadlock handled'));
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('Circular dep task');
 
         /* All subtasks should have been executed despite the deadlock */
@@ -213,7 +231,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         fetchQueue.push(agentResponse('B done', 'none'));
         fetchQueue.push(rawResponse('final synthesis'));
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('Multi-part task');
 
         expect(result.answer).toBe('final synthesis');
@@ -231,7 +249,7 @@ describe('LangGraphSwarmOrchestrator.run', () => {
         /* synthesis call fails */
         fetchQueue.push(FETCH_FAIL);
 
-        const orchestrator = new LangGraphSwarmOrchestrator([]);
+        const orchestrator = new LangGraphSwarmOrchestrator([dummyTool]);
         const result = await orchestrator.run('Synthesis failure task');
 
         /* Should have concatenated the successful subtask answers */

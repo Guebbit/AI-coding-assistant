@@ -193,7 +193,7 @@ describe('Agent.run — happy paths', () => {
     it('completes in a single step when the LLM returns action "none"', async () => {
         fetchQueue.push(agentResponse('The answer is 42.', 'none'));
 
-        const agent = new Agent([]);
+        const agent = new Agent([echoTool]);
         const result = await agent.run('Search for: what is 6 times 7?');
         expect(result.answer).toBe('The answer is 42.');
         expect(result.meta.models).toEqual(['test-model']);
@@ -215,7 +215,7 @@ describe('Agent.run — happy paths', () => {
 
     it('respects a forcedProfile passed in options', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
-        const agent = new Agent([]);
+        const agent = new Agent([echoTool]);
         const result = await agent.run('Search files for quick task', { profile: 'fast' });
         expect(result.answer).toBe('Done.');
         expect(result.meta.profile).toBe('fast');
@@ -223,7 +223,7 @@ describe('Agent.run — happy paths', () => {
 
     it('respects a maxSteps override', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
-        const agent = new Agent([]);
+        const agent = new Agent([echoTool]);
         const result = await agent.run('Search files for quick task', { maxSteps: 1 });
         expect(result.answer).toBe('Done.');
     });
@@ -250,8 +250,8 @@ describe('Agent.run — fail-open / retry paths', () => {
         /* Step 2: valid response */
         fetchQueue.push(agentResponse('Corrected.', 'none'));
 
-        const agent = new Agent([]);
-        const result = await agent.run('Handle invalid JSON'); /* "json" is a tool signal */
+        const agent = new Agent([echoTool]);
+        const result = await agent.run('Handle invalid JSON for search'); /* "json" + tool */
         expect(result.answer).toBe('Corrected.');
     });
 
@@ -309,7 +309,7 @@ describe('Agent.run — processors', () => {
         const processor = { processInputStep };
 
         fetchQueue.push(agentResponse('Done.', 'none'));
-        const agent = new Agent([]);
+        const agent = new Agent([echoTool]);
         agent.addProcessor(processor as Parameters<typeof agent.addProcessor>[0]);
         await agent.run('Search for processor test');
         expect(processInputStep).toHaveBeenCalledOnce();
@@ -320,7 +320,7 @@ describe('Agent.run — processors', () => {
         const processor = { processOutputStep };
 
         fetchQueue.push(agentResponse('Done.', 'none'));
-        const agent = new Agent([]);
+        const agent = new Agent([echoTool]);
         agent.addProcessor(processor as Parameters<typeof agent.addProcessor>[0]);
         await agent.run('Search for output processor test');
         expect(processOutputStep).toHaveBeenCalledOnce();

@@ -15,6 +15,20 @@
 import path from 'path';
 
 /**
+ * Verify that `resolved` does not escape the given `root` directory.
+ *
+ * @param resolved   - The already-resolved absolute path to validate.
+ * @param root       - The trusted root directory (absolute path).
+ * @param errorLabel - Label used in the thrown error message (e.g. "project root").
+ * @throws {Error} When `resolved` is outside `root`.
+ */
+function assertInsideRoot(resolved: string, root: string, errorLabel: string): void {
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+        throw new Error(`Access denied: path is outside the ${errorLabel}`);
+    }
+}
+
+/**
  * Resolve `userPath` relative to the current working directory and
  * verify that the result does not escape the project root.
  *
@@ -26,11 +40,9 @@ import path from 'path';
  * @throws {Error} When the path escapes the project root.
  */
 export function resolveSafePath(userPath: string): string {
-    const resolved = path.resolve(process.cwd(), userPath);
     const root = path.resolve(process.cwd());
-    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
-        throw new Error('Access denied: path is outside the project root');
-    }
+    const resolved = path.resolve(root, userPath);
+    assertInsideRoot(resolved, root, 'project root');
     return resolved;
 }
 
@@ -48,8 +60,6 @@ export function resolveSafePath(userPath: string): string {
  */
 export function resolveInsideRoot(root: string, userPath: string): string {
     const resolved = path.resolve(root, userPath);
-    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
-        throw new Error('Access denied: path is outside the allowed root');
-    }
+    assertInsideRoot(resolved, root, 'allowed root');
     return resolved;
 }

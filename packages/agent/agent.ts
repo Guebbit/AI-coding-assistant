@@ -40,18 +40,13 @@ import { writeDiagnosticLog, cleanupOldLogs } from '../diagnostics';
 import type { IDiagnosticEntry } from '../diagnostics';
 import { saveAgentRun } from '../persistence/db';
 import type { IToolCall } from '../persistence/types';
+import type { IGenerateResult } from '../llm/ollama';
 
 /**
  * Maximum number of reasoning iterations before the agent gives up.
  * Configurable via the `AGENTS_MAX_STEPS` environment variable.
  */
 const MAX_STEPS = Number.parseInt(process.env.AGENTS_MAX_STEPS ?? '20', 10);
-
-/**
- * Fast model used for the self-debug summary on max-steps exhaustion.
- * Mirrors the value configured in the model router.
- */
-const FAST_MODEL = resolveModel('fast');
 
 /**
  * Directory where diagnostic Markdown files are written.
@@ -103,6 +98,15 @@ export interface IAgentRunResult {
 }
 
 /**
+ * Mutable token counters accumulated across LLM steps.
+ * Extracted to avoid scattering nullable arithmetic throughout `run()`.
+ */
+interface ITokenAccumulator {
+    promptTokens: number | undefined;
+    completionTokens: number | undefined;
+}
+
+/**
  * The core agent — wraps tools, processors, memory, and an LLM into a
  * single `run()` method that executes an agentic reasoning loop.
  *
@@ -140,16 +144,158 @@ export class Agent {
         return this;
     }
 
+    /* ── Private helpers (DRY + SRP extractions) ─────────────────────── */
+
+    /**
+     * Accumulate token counts from an LLM result into a mutable accumulator.
+     *
+     * @param accumulator - The token accumulator to mutate.
+     * @param llmResult   - The LLM response containing optional token counts.
+     */
+    private static accumulateTokens(
+        accumulator: ITokenAccumulator,
+        llmResult: IGenerateResult
+    ): void {
+        if (typeof llmResult.promptEvalCount === 'number') {
+            accumulator.promptTokens = (accumulator.promptTokens ?? 0) + llmResult.promptEvalCount;
+        }
+        if (typeof llmResult.evalCount === 'number') {
+            accumulator.completionTokens =
+                (accumulator.completionTokens ?? 0) + llmResult.evalCount;
+        }
+    }
+
+    /**
+     * Log and emit an LLM error, then re-throw.
+     *
+     * @param error - The caught error.
+     * @param step  - Current agent step index.
+     * @throws Always re-throws the original error.
+     */
+    private static handleLlmError(error: unknown, step: number): never {
+        logger.error('agent_llm_call_failed', {
+            component: 'agent',
+            step,
+            error: String(error)
+        });
+        emit({ type: 'agent:error', payload: { step, error: String(error) } });
+        throw error;
+    }
+
+    /**
+     * Persist an agent run to PostgreSQL (fail-open — never throws).
+     *
+     * @param input - The full run input for `saveAgentRun`.
+     */
+    private static async persistRun(input: Parameters<typeof saveAgentRun>[0]): Promise<void> {
+        await saveAgentRun(input).catch((error: unknown) =>
+            logger.warn('agent_persist_failed', {
+                component: 'agent',
+                error: String(error)
+            })
+        );
+    }
+
+    /**
+     * Write diagnostics to disk and prune old logs if entries were collected.
+     *
+     * @param entries - Diagnostic entries from this run.
+     * @param task    - The user's task description (used in the log filename).
+     * @param summary - Optional AI commentary appended to the log.
+     * @returns The path to the written diagnostic file, or empty string if none was written.
+     */
+    private static async writeDiagnostics(
+        entries: IDiagnosticEntry[],
+        task: string,
+        summary?: string
+    ): Promise<string> {
+        if (entries.length === 0 && !summary) return '';
+        return writeDiagnosticLog(entries, task, summary)
+            .then(async (logPath) => {
+                await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
+                logger.info('agent_diagnostic_log_written', { component: 'agent', logPath });
+                return logPath;
+            })
+            .catch((error: unknown) => {
+                logger.warn('agent_diagnostic_log_failed', {
+                    component: 'agent',
+                    error: String(error)
+                });
+                return '';
+            });
+    }
+
+    /**
+     * Run all registered input processors in order.
+     *
+     * @param args - The initial input step arguments.
+     * @returns The (possibly modified) input step arguments.
+     */
+    private async runInputProcessors(args: IProcessInputStepArgs): Promise<IProcessInputStepArgs> {
+        let result = args;
+        for (const proc of this.processors) {
+            if (proc.processInputStep) {
+                const modified = await proc.processInputStep(result);
+                if (modified) result = modified;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Run all registered output processors in order.
+     *
+     * @param args - The initial output step arguments.
+     * @returns The (possibly modified) output step arguments.
+     */
+    private async runOutputProcessors(
+        args: IProcessOutputStepArgs
+    ): Promise<IProcessOutputStepArgs> {
+        let result = args;
+        for (const proc of this.processors) {
+            if (proc.processOutputStep) {
+                const modified = await proc.processOutputStep(result);
+                if (modified) result = modified;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Assemble the full prompt string sent to the LLM at each step.
+     *
+     * @param task    - The user's task description.
+     * @param context - Accumulated context from prior steps.
+     * @param memory  - Relevant memory strings.
+     * @returns The fully assembled prompt string.
+     */
+    private buildPrompt(task: string, context: string, memory: string[]): string {
+        const memoryBlock = memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : '';
+        const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
+        const toolList = this.tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
+
+        return (
+            `You are an AI agent with access to tools.\n\n` +
+            `Task:\n${task}\n\n` +
+            memoryBlock +
+            contextBlock +
+            `Available tools:\n${toolList}\n\n` +
+            `Respond ONLY with a single valid JSON object — no markdown, no extra text:\n` +
+            `{\n` +
+            `  "thought": "your reasoning or final answer",\n` +
+            `  "action": "tool_name or none",\n` +
+            `  "input": {}\n` +
+            `}\n\n` +
+            `Rules:\n` +
+            `- Only use a tool when you genuinely need to read a file, run a command, or access external data.\n` +
+            `- Use action "none" when the task is fully complete.`
+        );
+    }
+
+    /* ── Public API ──────────────────────────────────────────────────── */
+
     /**
      * Execute the full agentic loop for a given task.
-     *
-     * Optionally accepts a `profile` override that forces the model
-     * router to use a specific profile for every step, bypassing
-     * automatic routing.
-     *
-     * Optionally accepts a `maxSteps` override that bounds this specific
-     * run independently of the global `AGENTS_MAX_STEPS` env var.  This
-     * is used by the workflow orchestrator to give each step its own cap.
      *
      * @param task    - The user's natural-language task description.
      * @param options - Optional configuration (e.g. `{ profile: "code", maxSteps: 10 }`).
@@ -166,11 +312,12 @@ export class Agent {
         const toolCalls: IToolCall[] = [];
         const modelsUsed = new Set<string>();
         const profilesUsed = new Set<ModelProfile>();
-        let promptTokens: number | undefined;
-        let completionTokens: number | undefined;
+        const tokens: ITokenAccumulator = {
+            promptTokens: undefined,
+            completionTokens: undefined
+        };
         let llmSteps = 0;
 
-        /* Use per-call override when provided; fall back to the global default. */
         const effectiveMaxSteps =
             typeof options?.maxSteps === 'number' && options.maxSteps > 0
                 ? options.maxSteps
@@ -197,8 +344,9 @@ export class Agent {
 
         const buildRunMeta = (): IAgentRunMeta => {
             const totalTokens =
-                typeof promptTokens === 'number' && typeof completionTokens === 'number'
-                    ? promptTokens + completionTokens
+                typeof tokens.promptTokens === 'number' &&
+                typeof tokens.completionTokens === 'number'
+                    ? tokens.promptTokens + tokens.completionTokens
                     : undefined;
             const profile =
                 options?.profile ?? (profilesUsed.size === 1 ? [...profilesUsed][0] : undefined);
@@ -209,33 +357,41 @@ export class Agent {
                 toolCalls: toolCalls.length,
                 models: [...modelsUsed],
                 profile,
-                promptTokens,
-                completionTokens,
+                promptTokens: tokens.promptTokens,
+                completionTokens: tokens.completionTokens,
                 totalTokens,
                 contextLength: context.length,
                 memoryUsed: memory.length > 0
             };
         };
 
+        const persistInput = (output: string, status: 'completed' | 'max_steps') => ({
+            task,
+            agentProfile: options?.profile ?? null,
+            output,
+            context,
+            memory,
+            startTime,
+            endTime: new Date(),
+            durationMs: Date.now() - runStartedAt,
+            toolCalls,
+            diagnosticEntries,
+            status
+        });
+
         for (let step = 0; step < effectiveMaxSteps; step++) {
             const stepStartedAt = Date.now();
 
             // ── Run input processors ─────────────────────────────────────────
-            let inputArgs: IProcessInputStepArgs = {
+            const inputArgs = await this.runInputProcessors({
                 task,
                 context,
                 memory,
                 stepNumber: step,
                 tools: this.tools.map((t) => t.name)
-            };
-            for (const proc of this.processors) {
-                if (proc.processInputStep) {
-                    const result = await proc.processInputStep(inputArgs);
-                    if (result) inputArgs = result;
-                }
-            }
+            });
 
-            // ── Route model (determines profile AND whether tools are needed) ──
+            // ── Route model ──────────────────────────────────────────────────
             const route = await routeModel({
                 task: inputArgs.task,
                 context: inputArgs.context,
@@ -243,89 +399,49 @@ export class Agent {
                 forcedProfile: options?.profile,
                 contextLength: inputArgs.context.length,
                 cumulativeDurationMs: Date.now() - runStartedAt
-            }).catch((error: unknown) => {
-                logger.error('agent_llm_call_failed', {
-                    component: 'agent',
-                    step,
-                    error: String(error)
-                });
-                emit({ type: 'agent:error', payload: { step, error: String(error) } });
-                throw error;
-            });
+            }).catch((error: unknown) => Agent.handleLlmError(error, step));
 
             profilesUsed.add(route.profile);
             emit({
                 type: 'agent:model_routed',
-                payload: { step, profile: route.profile, model: route.model, reason: route.reason }
+                payload: {
+                    step,
+                    profile: route.profile,
+                    model: route.model,
+                    reason: route.reason
+                }
             });
 
-            // ── Direct-answer shortcut: no tools needed ───────────────────────
-            if (step === 0 && !inputArgs.context) {
+            // ── Direct-answer shortcut: no tools available ───────────────────
+            if (step === 0 && !inputArgs.context && this.tools.length === 0) {
                 const memoryBlock =
                     inputArgs.memory.length > 0
                         ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`
                         : '';
-                const directPrompt =
-                    `${memoryBlock}` +
-                    `Task:\n${inputArgs.task}\n\n` +
-                    `Answer concisely and directly.`;
+                const directPrompt = `${memoryBlock}Task:\n${inputArgs.task}\n\nAnswer concisely and directly.`;
                 logger.info('agent_direct_answer', {
                     component: 'agent',
                     step,
                     reason: route.reason
                 });
-                const llmStartedAt = Date.now();
+
                 const directResult = await generateWithMetadata(directPrompt, {
                     model: route.model,
                     options: route.options
-                }).catch((error: unknown) => {
-                    logger.error('agent_llm_call_failed', {
-                        component: 'agent',
-                        step,
-                        error: String(error)
-                    });
-                    emit({ type: 'agent:error', payload: { step, error: String(error) } });
-                    throw error;
-                });
+                }).catch((error: unknown) => Agent.handleLlmError(error, step));
+
                 llmSteps += 1;
                 modelsUsed.add(directResult.model ?? route.model);
-                if (typeof directResult.promptEvalCount === 'number')
-                    promptTokens = (promptTokens ?? 0) + directResult.promptEvalCount;
-                if (typeof directResult.evalCount === 'number')
-                    completionTokens = (completionTokens ?? 0) + directResult.evalCount;
-                logger.info('agent_llm_response_received', {
-                    component: 'agent',
-                    step,
-                    responseLength: directResult.response.length,
-                    durationMs: Date.now() - llmStartedAt,
-                    routedProfile: route.profile,
-                    routedReason: route.reason,
-                    model: directResult.model
-                });
+                Agent.accumulateTokens(tokens, directResult);
+
                 const answer = directResult.response.trim();
                 await addMemory(`Task: ${task} → ${answer}`);
                 emit({ type: 'agent:done', payload: { thought: answer } });
-                await saveAgentRun({
-                    task,
-                    agentProfile: options?.profile ?? null,
-                    output: answer,
-                    context: '',
-                    memory,
-                    startTime,
-                    endTime: new Date(),
-                    durationMs: Date.now() - runStartedAt,
-                    toolCalls: [],
-                    diagnosticEntries,
-                    status: 'completed'
-                }).catch((error: unknown) =>
-                    logger.warn('agent_persist_failed', {
-                        component: 'agent',
-                        error: String(error)
-                    })
-                );
+                await Agent.persistRun(persistInput(answer, 'completed'));
                 return { answer, meta: buildRunMeta() };
             }
 
+            // ── Build prompt and call LLM ────────────────────────────────────
             const prompt = this.buildPrompt(inputArgs.task, inputArgs.context, inputArgs.memory);
             logger.info('agent_step_started', {
                 component: 'agent',
@@ -335,56 +451,32 @@ export class Agent {
                 promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + '…' : prompt
             });
 
-            // ── Call the LLM ─────────────────────────────────────────────────
-            const response = await generateWithMetadata(prompt, {
+            const llmResult = await generateWithMetadata(prompt, {
                 model: route.model,
                 options: route.options
-            })
-                .then((llmResult) => {
-                    llmSteps += 1;
-                    modelsUsed.add(llmResult.model ?? route.model);
-                    if (typeof llmResult.promptEvalCount === 'number') {
-                        promptTokens = (promptTokens ?? 0) + llmResult.promptEvalCount;
-                    }
-                    if (typeof llmResult.evalCount === 'number') {
-                        completionTokens = (completionTokens ?? 0) + llmResult.evalCount;
-                    }
-                    logger.info('agent_llm_response_received', {
-                        component: 'agent',
-                        step,
-                        responseLength: llmResult.response.length,
-                        durationMs: Date.now() - runStartedAt,
-                        routedProfile: route.profile,
-                        routedReason: route.reason,
-                        model: llmResult.model,
-                        done: llmResult.done,
-                        doneReason: llmResult.doneReason,
-                        totalDurationNs: llmResult.totalDurationNs,
-                        loadDurationNs: llmResult.loadDurationNs,
-                        promptEvalCount: llmResult.promptEvalCount,
-                        promptEvalDurationNs: llmResult.promptEvalDurationNs,
-                        evalCount: llmResult.evalCount,
-                        evalDurationNs: llmResult.evalDurationNs
-                    });
-                    return llmResult.response;
-                })
-                .catch((error: unknown) => {
-                    logger.error('agent_llm_call_failed', {
-                        component: 'agent',
-                        step,
-                        error: String(error)
-                    });
-                    emit({ type: 'agent:error', payload: { step, error: String(error) } });
-                    throw error;
-                });
+            }).catch((error: unknown) => Agent.handleLlmError(error, step));
 
-            // ── Parse the LLM response with Zod schema validation ────────────
+            llmSteps += 1;
+            modelsUsed.add(llmResult.model ?? route.model);
+            Agent.accumulateTokens(tokens, llmResult);
+            logger.info('agent_llm_response_received', {
+                component: 'agent',
+                step,
+                responseLength: llmResult.response.length,
+                durationMs: Date.now() - runStartedAt,
+                routedProfile: route.profile,
+                routedReason: route.reason,
+                model: llmResult.model
+            });
+
+            const response = llmResult.response;
+
+            // ── Parse the LLM response ───────────────────────────────────────
             let parsed: AgentStep;
             try {
                 const cleaned = stripCodeFences(response);
                 parsed = agentStepSchema.parse(JSON.parse(cleaned));
             } catch {
-                /* Give the model a chance to self-correct on the next iteration. */
                 context +=
                     '\nYour previous response was not valid JSON. ' +
                     'Please respond ONLY with a single valid JSON object.';
@@ -414,21 +506,14 @@ export class Agent {
             emit({ type: 'agent:step', payload: { step, parsed } });
 
             // ── Run output processors ────────────────────────────────────────
-            let outputArgs: IProcessOutputStepArgs = {
+            const outputArgs = await this.runOutputProcessors({
                 task,
                 stepNumber: step,
                 text: response,
                 thought: parsed.thought,
                 action: parsed.action,
                 toolInput: parsed.input
-            };
-            for (const proc of this.processors) {
-                if (proc.processOutputStep) {
-                    const result = await proc.processOutputStep(outputArgs);
-                    if (result) outputArgs = result;
-                }
-            }
-            /* Reflect any processor overrides back into the parsed step. */
+            });
             parsed = {
                 thought: outputArgs.thought,
                 action: outputArgs.action,
@@ -445,34 +530,8 @@ export class Agent {
                     finalThoughtLength: parsed.thought.length
                 });
                 emit({ type: 'agent:done', payload: { thought: parsed.thought } });
-
-                /* Write diagnostic log even on success when entries were collected. */
-                if (diagnosticEntries.length > 0) {
-                    const logPath = await writeDiagnosticLog(diagnosticEntries, task);
-                    await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
-                    logger.info('agent_diagnostic_log_written', { component: 'agent', logPath });
-                }
-
-                /* Persist run to PostgreSQL (fail-open). */
-                await saveAgentRun({
-                    task,
-                    agentProfile: options?.profile ?? null,
-                    output: parsed.thought,
-                    context,
-                    memory,
-                    startTime,
-                    endTime: new Date(),
-                    durationMs: Date.now() - runStartedAt,
-                    toolCalls,
-                    diagnosticEntries,
-                    status: 'completed'
-                }).catch((error: unknown) =>
-                    logger.warn('agent_persist_failed', {
-                        component: 'agent',
-                        error: String(error)
-                    })
-                );
-
+                await Agent.writeDiagnostics(diagnosticEntries, task);
+                await Agent.persistRun(persistInput(parsed.thought, 'completed'));
                 return { answer: parsed.thought, meta: buildRunMeta() };
             }
 
@@ -503,23 +562,12 @@ export class Agent {
             const toolResult = await tool
                 .execute(parsed.input)
                 .then((result) => {
-                    let resultSize = -1;
-                    try {
-                        resultSize = JSON.stringify(result).length;
-                    } catch {
-                        logger.warn('agent_tool_result_not_serializable', {
-                            component: 'agent',
-                            step,
-                            tool: parsed.action
-                        });
-                    }
                     const durationMs = Date.now() - toolStartedAt;
                     logger.info('agent_tool_executed', {
                         component: 'agent',
                         step,
                         tool: parsed.action,
-                        durationMs,
-                        resultSize
+                        durationMs
                     });
                     toolCalls.push({
                         tool: parsed.action,
@@ -564,10 +612,12 @@ export class Agent {
                     return { success: false as const };
                 });
             if (!toolResult.success) continue;
-            const { result } = toolResult;
 
-            emit({ type: 'tool:result', payload: { tool: parsed.action, result } });
-            context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
+            emit({
+                type: 'tool:result',
+                payload: { tool: parsed.action, result: toolResult.result }
+            });
+            context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(toolResult.result)}`;
             logger.info('agent_step_finished', {
                 component: 'agent',
                 step,
@@ -583,7 +633,7 @@ export class Agent {
             task
         });
 
-        /* ── Phase 2B: Self-debugging summary ─────────────────────────── */
+        /* Self-debugging summary using the fast model. */
         const debugPrompt =
             `You are a debugging assistant.\n` +
             `The agent loop exhausted its steps without completing the task.\n\n` +
@@ -593,7 +643,10 @@ export class Agent {
             `1. What was tried.\n` +
             `2. Where it got stuck.\n` +
             `3. Suggestions for what to try next.`;
-        const summary = await generate(debugPrompt, { model: FAST_MODEL, stream: false })
+        const summary = await generate(debugPrompt, {
+            model: resolveModel('fast'),
+            stream: false
+        })
             .then((result) => result.trim() || 'Max steps reached without a conclusive answer.')
             .catch((error: unknown) => {
                 logger.warn('agent_self_debug_failed', {
@@ -603,87 +656,20 @@ export class Agent {
                 return 'Max steps reached without a conclusive answer.';
             });
 
-        /* Persist the dead-end so future runs can avoid repeating it. */
         await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`).catch((error: unknown) =>
-            logger.warn('agent_memory_add_failed', { component: 'agent', error: String(error) })
-        );
-
-        /* Write the full diagnostic log with the AI commentary. */
-        let diagnosticFile = '';
-        await writeDiagnosticLog(diagnosticEntries, task, summary)
-            .then((logPath) => {
-                diagnosticFile = logPath;
-                return cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
+            logger.warn('agent_memory_add_failed', {
+                component: 'agent',
+                error: String(error)
             })
-            .catch((error: unknown) =>
-                logger.warn('agent_diagnostic_log_failed', {
-                    component: 'agent',
-                    error: String(error)
-                })
-            );
-
-        /* Persist run to PostgreSQL (fail-open). */
-        await saveAgentRun({
-            task,
-            agentProfile: options?.profile ?? null,
-            output: summary,
-            context,
-            memory,
-            startTime,
-            endTime: new Date(),
-            durationMs: Date.now() - runStartedAt,
-            toolCalls,
-            diagnosticEntries,
-            status: 'max_steps'
-        }).catch((error: unknown) =>
-            logger.warn('agent_persist_failed', { component: 'agent', error: String(error) })
         );
+
+        const diagnosticFile = await Agent.writeDiagnostics(diagnosticEntries, task, summary);
+        await Agent.persistRun(persistInput(summary, 'max_steps'));
 
         emit({
             type: 'agent:max_steps',
             payload: { task, summary, diagnosticFile }
         });
         return { answer: summary, meta: buildRunMeta() };
-    }
-
-    /**
-     * Assemble the full prompt string sent to the LLM at each step.
-     *
-     * The prompt contains:
-     * - A system preamble describing the agent's role.
-     * - The user's task.
-     * - Relevant memory entries (if any).
-     * - Accumulated context from previous steps.
-     * - The list of available tools with descriptions.
-     * - The expected JSON response schema.
-     *
-     * @param task    - The user's task description.
-     * @param context - Accumulated context from prior steps.
-     * @param memory  - Relevant memory strings.
-     * @returns The fully assembled prompt string.
-     */
-    private buildPrompt(task: string, context: string, memory: string[]): string {
-        const memoryBlock = memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : '';
-
-        const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
-
-        const toolList = this.tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
-
-        return (
-            `You are an AI agent with access to tools.\n\n` +
-            `Task:\n${task}\n\n` +
-            memoryBlock +
-            contextBlock +
-            `Available tools:\n${toolList}\n\n` +
-            `Respond ONLY with a single valid JSON object — no markdown, no extra text:\n` +
-            `{\n` +
-            `  "thought": "your reasoning or final answer",\n` +
-            `  "action": "tool_name or none",\n` +
-            `  "input": {}\n` +
-            `}\n\n` +
-            `Rules:\n` +
-            `- Only use a tool when you genuinely need to read a file, run a command, or access external data.\n` +
-            `- Use action "none" when the task is fully complete.`
-        );
     }
 }

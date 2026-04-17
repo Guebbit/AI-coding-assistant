@@ -32,10 +32,7 @@ import type { IExtractionResult } from './types';
  * extra model; override with `GRAPH_NER_MODEL` for a dedicated model.
  */
 const NER_MODEL = resolveModel('fast', {
-    preferredModel: process.env.GRAPH_NER_MODEL,
-    includeAgentDefault: false,
-    includeOllamaFallback: false,
-    hardDefault: 'llama3.1:8b'
+    preferredModel: process.env.GRAPH_NER_MODEL
 });
 
 /* ── Zod schemas for the LLM response ──────────────────────────────── */

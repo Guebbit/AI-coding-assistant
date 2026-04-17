@@ -15,10 +15,7 @@ import { createTool } from './tool-builder';
 
 /** Default IDE completion model, configurable via environment variable. */
 const DEFAULT_IDE_MODEL = resolveModel('code', {
-    preferredModel: process.env.TOOL_IDE_MODEL,
-    includeAgentDefault: false,
-    includeOllamaFallback: false,
-    hardDefault: 'starcoder2'
+    preferredModel: process.env.TOOL_IDE_MODEL
 });
 
 /**

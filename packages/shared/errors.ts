@@ -4,10 +4,11 @@
  * @module shared/errors
  */
 
-import { logger } from '../logger/logger';
-
 /**
  * Extended application error carrying HTTP semantics and operational metadata.
+ *
+ * This class intentionally does **not** log; callers decide when and how
+ * to log, keeping this module free from side effects (SRP).
  */
 export class ExtendedError extends Error {
     /** Error class name exposed to clients and logs. */
@@ -34,16 +35,5 @@ export class ExtendedError extends Error {
         this.httpCode = httpCode;
         this.isOperational = isOperational;
         this.errors = errors;
-
-        if (!isOperational) {
-            logger.error({
-                component: 'shared.errors',
-                message: this.message,
-                stack: this.stack,
-                name: this.name,
-                errors: this.errors,
-                httpCode: this.httpCode
-            });
-        }
     }
 }

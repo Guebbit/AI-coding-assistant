@@ -6,6 +6,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+/* Set required model env vars before module-level resolveModel calls. */
+vi.hoisted(() => {
+    process.env.OLLAMA_EMBED_MODEL = 'test-embed-model';
+    process.env.OLLAMA_MODEL = 'test-model';
+});
+
 import { semanticSearchTool } from '@/packages/tools/semantic.search.js';
 
 describe('semanticSearchTool', () => {

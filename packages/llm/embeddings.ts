@@ -24,11 +24,16 @@ import { OLLAMA_BASE_URL, OLLAMA_EMBED_MODEL } from './config';
  * @throws {Error} When the Ollama API returns an error or an empty vector.
  */
 export async function getEmbedding(text: string, model?: string): Promise<number[]> {
+    const effectiveModel = model ?? OLLAMA_EMBED_MODEL;
+    if (!effectiveModel) {
+        throw new Error('No embedding model configured. Set OLLAMA_EMBED_MODEL in your .env file.');
+    }
+
     const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            model: model ?? OLLAMA_EMBED_MODEL,
+            model: effectiveModel,
             prompt: text
         })
     });

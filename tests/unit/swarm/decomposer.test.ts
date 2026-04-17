@@ -13,6 +13,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+/* Set required model env vars before module-level resolveModel calls. */
+vi.hoisted(() => {
+    process.env.OLLAMA_MODEL = 'test-model';
+});
+
 /* ── Mock the Ollama generate function ─────────────────────────────── */
 vi.mock('../../../packages/llm/ollama.js', () => ({
     generate: vi.fn()

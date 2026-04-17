@@ -19,7 +19,7 @@ import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import { generateWithMetadata } from "@/packages/llm/ollama";
 import { logger } from "@/packages/logger/logger";
-import { rejectResponse, successResponse, t, withTimeout, buildResponseMeta, inferLanguage, isTypeScriptLike, isJavaScriptLike } from "@/packages/shared";
+import { rejectResponse, successResponse, t, withTimeout, buildResponseMeta, inferLanguage, isTypeScriptLike, isJavaScriptLike, resolveModel } from "@/packages/shared";
 import type {
   AutocompleteRequest,
   AutocompleteResponse,
@@ -38,12 +38,22 @@ import {
   type IPageReviewResponseBody,
 } from "./ide/typescript-analysis";
 
-/** Default Ollama model for autocomplete requests. */
-const DEFAULT_AUTOCOMPLETE_MODEL = process.env.TOOL_IDE_MODEL ?? "starcoder2";
+/**
+ * Default Ollama model for autocomplete requests.
+ * Uses the IDE-specific env var, then falls back via the standard
+ * `resolveModel` chain.  No hardcoded model name.
+ */
+const DEFAULT_AUTOCOMPLETE_MODEL: string = (() => {
+  const explicit = process.env.TOOL_IDE_MODEL?.trim();
+  if (explicit) return explicit;
+  return resolveModel('code');
+})();
 
-/** Default Ollama model for lint and page-review requests. */
-const DEFAULT_REVIEW_MODEL =
-  process.env.AGENT_MODEL_CODE ?? process.env.OLLAMA_MODEL ?? "starcoder2";
+/**
+ * Default Ollama model for lint and page-review requests.
+ * Uses the code profile via `resolveModel`.  No hardcoded model name.
+ */
+const DEFAULT_REVIEW_MODEL: string = resolveModel('code');
 
 /** Per-endpoint LLM call timeout (ms), configurable via env vars. */
 const endpointTimeoutMs = {
@@ -144,6 +154,28 @@ const pageReviewSchema = z.object({
 // ---------------------------------------------------------------------------
 
 /**
+ * Build token metadata from an LLM result, suitable for response meta.
+ *
+ * Eliminates the repeated spread-and-conditional pattern that was
+ * duplicated across all three IDE endpoints (DRY).
+ *
+ * @param llmResult - Partial LLM result with optional token counts.
+ * @returns An object containing only the token fields that are defined.
+ */
+function buildTokenMeta(
+  llmResult: { promptEvalCount?: number; evalCount?: number; model?: string },
+): Record<string, unknown> {
+  const meta: Record<string, unknown> = {};
+  if (llmResult.model) meta.model = llmResult.model;
+  if (typeof llmResult.promptEvalCount === "number") meta.promptTokens = llmResult.promptEvalCount;
+  if (typeof llmResult.evalCount === "number") meta.completionTokens = llmResult.evalCount;
+  if (typeof llmResult.promptEvalCount === "number" && typeof llmResult.evalCount === "number") {
+    meta.totalTokens = llmResult.promptEvalCount + llmResult.evalCount;
+  }
+  return meta;
+}
+
+/**
  * Extract the client's IP address from the request.
  *
  * Checks `X-Forwarded-For` first (for proxied requests), then falls
@@ -230,10 +262,6 @@ export function registerIdeRoutes(application: express.Express): void {
     )
       .then((llmResult) => {
         const completionTrimmed = llmResult.response.trim();
-        const totalTokens =
-          typeof llmResult.promptEvalCount === "number" && typeof llmResult.evalCount === "number"
-            ? llmResult.promptEvalCount + llmResult.evalCount
-            : undefined;
         const createdAtIso = new Date().toISOString();
         const payload = {
           completion: completionTrimmed,
@@ -252,10 +280,7 @@ export function registerIdeRoutes(application: express.Express): void {
         const typedPayload: AutocompleteResponse = payload;
         successResponse(response, typedPayload, 200, "", {
           ...buildResponseMeta(startedAt, request),
-          model: llmResult.model,
-          ...(typeof llmResult.promptEvalCount === "number" ? { promptTokens: llmResult.promptEvalCount } : {}),
-          ...(typeof llmResult.evalCount === "number" ? { completionTokens: llmResult.evalCount } : {}),
-          ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+          ...buildTokenMeta(llmResult),
         });
       })
       .catch((error: unknown) => {
@@ -361,16 +386,13 @@ export function registerIdeRoutes(application: express.Express): void {
         latencyMs: Date.now() - startedAt.getTime(),
       };
       const typedPayload: LintResponse = payload;
-      const totalTokens =
-        typeof llmPromptTokens === "number" && typeof llmCompletionTokens === "number"
-          ? llmPromptTokens + llmCompletionTokens
-          : undefined;
       successResponse(response, typedPayload, 200, "", {
         ...buildResponseMeta(startedAt, request),
-        ...(llmModelUsed ? { model: llmModelUsed } : {}),
-        ...(typeof llmPromptTokens === "number" ? { promptTokens: llmPromptTokens } : {}),
-        ...(typeof llmCompletionTokens === "number" ? { completionTokens: llmCompletionTokens } : {}),
-        ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+        ...buildTokenMeta({
+          model: llmModelUsed,
+          promptEvalCount: llmPromptTokens,
+          evalCount: llmCompletionTokens,
+        }),
       });
     }).catch((error: unknown) => {
       logger.error("lint_conventions_failed", {
@@ -425,10 +447,6 @@ export function registerIdeRoutes(application: express.Express): void {
     )
       .then((llmResult) => {
         const categories: IPageReviewResponseBody = parsePageReviewBody(llmResult.response);
-        const totalTokens =
-          typeof llmResult.promptEvalCount === "number" && typeof llmResult.evalCount === "number"
-            ? llmResult.promptEvalCount + llmResult.evalCount
-            : undefined;
         const payload = {
           requestId,
           model,
@@ -441,10 +459,7 @@ export function registerIdeRoutes(application: express.Express): void {
         const typedPayload: PageReviewResponse = payload;
         successResponse(response, typedPayload, 200, "", {
           ...buildResponseMeta(startedAt, request),
-          model: llmResult.model,
-          ...(typeof llmResult.promptEvalCount === "number" ? { promptTokens: llmResult.promptEvalCount } : {}),
-          ...(typeof llmResult.evalCount === "number" ? { completionTokens: llmResult.evalCount } : {}),
-          ...(typeof totalTokens === "number" ? { totalTokens } : {}),
+          ...buildTokenMeta(llmResult),
         });
       })
       .catch((error: unknown) => {

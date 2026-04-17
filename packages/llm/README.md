@@ -10,7 +10,7 @@ Thin wrapper around Ollama's local API, plus centralised embedding support.
 
 Options for `generate` / `generateWithMetadata`:
 
-- `model` (defaults to `OLLAMA_MODEL` or `llama3`)
+- `model` (defaults to `OLLAMA_MODEL`; **no hardcoded fallback** — throws if unset)
 - `stream` (defaults to `false`)
 - `suffix` (optional code infill suffix)
 - `system` (optional system prompt override)
@@ -21,8 +21,8 @@ Options for `generate` / `generateWithMetadata`:
 ## Environment variables
 
 - `OLLAMA_BASE_URL` (default: `http://localhost:11434`)
-- `OLLAMA_MODEL` (default: `llama3`)
-- `OLLAMA_EMBED_MODEL` (default: `nomic-embed-text`)
+- `OLLAMA_MODEL` — **required**; no hardcoded fallback model
+- `OLLAMA_EMBED_MODEL` — **required for embeddings**; throws if unset when `getEmbedding` is called
 
 ## Key files
 

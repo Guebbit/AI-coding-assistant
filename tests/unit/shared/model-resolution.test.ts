@@ -55,31 +55,38 @@ describe('resolveModel', () => {
     it('supports disabling AGENT_MODEL_DEFAULT and OLLAMA fallbacks', () => {
         process.env.AGENT_MODEL_DEFAULT = 'default-model';
         process.env.OLLAMA_MODEL = 'ollama-model';
+        process.env.AGENT_MODEL_CODE = 'code-model';
         expect(
             resolveModel('code', {
                 includeAgentDefault: false,
-                includeOllamaFallback: false,
-                hardDefault: 'hard-fallback'
+                includeOllamaFallback: false
             })
-        ).toBe('hard-fallback');
+        ).toBe('code-model');
     });
 
-    it('returns the built-in llama3.1:8b fallback when no env vars are set and no options are provided', () => {
-        /* All MODEL_ENV_KEYS deleted by beforeEach — function must not throw */
-        expect(resolveModel('code')).toBe('llama3.1:8b');
-        expect(resolveModel('fast')).toBe('llama3.1:8b');
-        expect(resolveModel('reasoning')).toBe('llama3.1:8b');
-        expect(resolveModel('default')).toBe('llama3.1:8b');
+    it('throws when no env vars are set (no hardcoded fallback)', () => {
+        /* All MODEL_ENV_KEYS deleted by beforeEach — function must throw */
+        expect(() => resolveModel('code')).toThrow('Unable to resolve model for profile "code"');
+        expect(() => resolveModel('fast')).toThrow('Unable to resolve model for profile "fast"');
+        expect(() => resolveModel('reasoning')).toThrow(
+            'Unable to resolve model for profile "reasoning"'
+        );
+        expect(() => resolveModel('default')).toThrow(
+            'Unable to resolve model for profile "default"'
+        );
     });
 
-    it('throws when hardDefault is explicitly set to empty string and no env vars provide a fallback', () => {
-        /* Caller opted out of the built-in fallback via hardDefault:'' */
+    it('throws when all fallbacks are disabled and profile has no env var', () => {
         expect(() =>
             resolveModel('code', {
                 includeAgentDefault: false,
-                includeOllamaFallback: false,
-                hardDefault: ''
+                includeOllamaFallback: false
             })
         ).toThrow('Unable to resolve model for profile "code"');
+    });
+
+    it('includes the env var name in the error message', () => {
+        expect(() => resolveModel('code')).toThrow('AGENT_MODEL_CODE');
+        expect(() => resolveModel('fast')).toThrow('AGENT_MODEL_FAST');
     });
 });
