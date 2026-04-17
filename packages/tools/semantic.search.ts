@@ -132,7 +132,7 @@ export const semanticSearchTool = createTool({
                 : Math.min(5, ranked.length);
         ranked.sort((a, b) => b.score - a.score);
         return {
-            model: OLLAMA_EMBED_MODEL,
+            model: OLLAMA_EMBED_MODEL ?? 'unknown',
             query,
             totalDocuments: ranked.length,
             results: ranked.slice(0, k)

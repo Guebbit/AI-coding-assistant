@@ -146,6 +146,93 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
     };
 }
 
+/**
+ * Build a `IModelRouteDecision` from a resolved profile and reason string.
+ *
+ * Centralises the repeated `{ profile, model: resolveModel(…), reason, options }` pattern.
+ *
+ * @param profile - The selected profile.
+ * @param reason  - Short human-readable reason for the decision.
+ * @returns A fully populated route decision.
+ */
+function buildDecision(profile: ModelProfile, reason: string): IModelRouteDecision {
+    return {
+        profile,
+        model: resolveModel(profile),
+        reason,
+        options: resolveOptions(profile)
+    };
+}
+
+/* ── Rules-based routing ─────────────────────────────────────────────── */
+
+/** Lowercase keyword sets used by the rules-based router. */
+const CODE_KEYWORDS = [
+    'code', 'function', 'class', 'method', 'refactor', 'debug',
+    'typescript', 'javascript', 'python', 'java', 'rust', 'golang',
+    'sql', 'css', 'html', 'react', 'vue', 'angular', 'svelte',
+    'compile', 'build', 'lint', 'test', 'deploy',
+    'bug', 'fix', 'error', 'exception', 'stack trace',
+    'endpoint', 'route', 'middleware', 'regex', 'script',
+    'import', 'export', 'module', 'package', 'dependency',
+    'repository', 'repo', 'git', 'commit', 'pr', 'pull request',
+    'dockerfile', 'docker', 'yaml', 'json', 'xml',
+    'webpack', 'vite', 'eslint', 'prettier', 'npm'
+] as const;
+
+const REASONING_KEYWORDS = [
+    'analyze', 'analyse', 'compare', 'evaluate', 'tradeoff', 'trade-off',
+    'architecture', 'design', 'strategy', 'plan', 'pros and cons',
+    'explain why', 'reasoning', 'implications', 'consequences',
+    'philosophy', 'ethics', 'debate', 'discuss', 'elaborate'
+] as const;
+
+/**
+ * Fast, deterministic routing via keyword heuristics.  Zero LLM cost.
+ *
+ * Rules (applied in priority order):
+ *  1. Budget overrides: context near ceiling → `reasoning`; duration near ceiling → `fast`.
+ *  2. Keyword scan: code keywords → `code`; reasoning keywords → `reasoning`.
+ *  3. Multi-step heuristic: step ≥ 2 or long task → `reasoning`.
+ *  4. Fallback: `fast`.
+ *
+ * @param input - Routing input containing task, context, step and budget info.
+ * @returns A `IModelRouteDecision` based on keyword heuristics.
+ */
+function routeWithRules(input: IRouteInput): IModelRouteDecision {
+    const contextLength = input.contextLength ?? input.context.length;
+    const durationMs = input.cumulativeDurationMs ?? 0;
+
+    /* Budget-based overrides take highest priority. */
+    if (contextLength > BUDGET_MAX_CONTEXT_CHARS * BUDGET_CONTEXT_THRESHOLD) {
+        return buildDecision('reasoning', 'budget:context_near_ceiling');
+    }
+    if (durationMs > BUDGET_MAX_DURATION_MS * BUDGET_DURATION_THRESHOLD) {
+        return buildDecision('fast', 'budget:duration_near_ceiling');
+    }
+
+    /* Keyword heuristics on the lowercased task + recent context. */
+    const text = `${input.task} ${input.context.slice(-2000)}`.toLowerCase();
+
+    if (CODE_KEYWORDS.some((keyword) => text.includes(keyword))) {
+        return buildDecision('code', 'keyword:code');
+    }
+    if (REASONING_KEYWORDS.some((keyword) => text.includes(keyword))) {
+        return buildDecision('reasoning', 'keyword:reasoning');
+    }
+
+    /* Multi-step or long tasks → reasoning. */
+    if (input.step >= 2) {
+        return buildDecision('reasoning', 'heuristic:multi_step');
+    }
+    if (input.task.length > 280) {
+        return buildDecision('reasoning', 'heuristic:long_task');
+    }
+
+    /* Default to fast for simple, short tasks. */
+    return buildDecision('fast', 'default_fast');
+}
+
 /* ── Model-based routing ─────────────────────────────────────────────── */
 
 /**
@@ -167,7 +254,7 @@ function parseProfile(raw: string): ModelProfile | null {
  * is invalid, the caller should catch the error and fall back.
  *
  * @param input - The current routing input (task, context, step, budgets).
- * @returns A `ModelRouteDecision` based on the LLM's classification.
+ * @returns A `IModelRouteDecision` based on the LLM's classification.
  * @throws {Error} When the LLM response cannot be parsed or contains an invalid profile.
  */
 async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> {
@@ -209,12 +296,7 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
         throw new Error(`Router returned invalid profile: ${String(parsed.profile)}`);
     }
 
-    return {
-        profile,
-        model: resolveModel(profile),
-        reason: parsed.reason?.slice(0, 240) ?? 'router_model_decision',
-        options: resolveOptions(profile),
-    };
+    return buildDecision(profile, parsed.reason?.slice(0, 240) ?? 'router_model_decision');
 }
 
 /* ── Public API ──────────────────────────────────────────────────────── */
@@ -225,29 +307,26 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
  *
  * Resolution order:
  * 1. If `input.forcedProfile` is set → use it immediately (zero cost).
- * 2. If `AGENT_MODEL_ROUTER_MODE` is `"rules"` → keyword heuristic.
- * 3. If `AGENT_MODEL_ROUTER_MODE` is `"model"` → ask the router LLM.
+ * 2. If `AGENT_MODEL_ROUTER_MODE` is `"model"` → ask the router LLM.
  *    Falls back to the `default` profile if the LLM call fails.
+ * 3. Otherwise (default: `"rules"`) → keyword heuristic.
  *
  * @param input - Task, context, step index, and optional forced profile.
- * @returns A `ModelRouteDecision` describing the chosen model.
+ * @returns A `IModelRouteDecision` describing the chosen model.
  */
 export async function routeModel(input: IRouteInput): Promise<IModelRouteDecision> {
-    /* Forced profile — bypass profile selection but still detect tool need via rules. */
+    /* Forced profile — bypass all routing. */
     if (input.forcedProfile) {
-        return {
-            profile: input.forcedProfile,
-            model: resolveModel(input.forcedProfile),
-            reason: 'forced_by_caller',
-            options: resolveOptions(input.forcedProfile),
-        };
+        return buildDecision(input.forcedProfile, 'forced_by_caller');
     }
 
-    /* Model-based routing with fallback. */
-    return routeWithModel(input).catch(() => ({
-        profile: 'default' as ModelProfile,
-        model: resolveModel('default'),
-        reason: 'router_model_failed_fallback_default',
-        options: resolveOptions('default'),
-    }));
+    /* Model-based routing (opt-in). */
+    if (process.env.AGENT_MODEL_ROUTER_MODE === 'model') {
+        return routeWithModel(input).catch(() =>
+            buildDecision('default', 'router_model_failed_fallback_default')
+        );
+    }
+
+    /* Rules-based routing (default). */
+    return routeWithRules(input);
 }

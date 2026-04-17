@@ -22,18 +22,28 @@ interface IEnvironmentValidationLogger {
  *
  * Missing any of these throws at startup rather than silently using a
  * wrong default that causes cryptic runtime failures later.
+ *
+ * `OLLAMA_MODEL` is required because it serves as the last-resort
+ * fallback in the model resolution chain (profile var → AGENT_MODEL_DEFAULT
+ * → OLLAMA_MODEL → throw).  Without it, requests fail with confusing
+ * "Unable to resolve model" errors instead of a clear startup message.
  */
-const REQUIRED_ENV_KEYS = [] as const;
+const REQUIRED_ENV_KEYS = ['OLLAMA_MODEL'] as const;
 
 /**
  * Environment variables that Manna warns about if missing.
  *
- * These are not hard-required (Manna starts anyway using the built-in
- * `llama3.1:8b` fallback) but their absence degrades functionality
- * because the system will use the hardcoded model instead of the one
- * configured for the deployment.
+ * These are not hard-required (Manna starts anyway) but their absence
+ * degrades functionality because all profiles will fall back to
+ * `OLLAMA_MODEL` instead of purpose-tuned models.
  */
-const RECOMMENDED_ENV_KEYS = ['OLLAMA_BASE_URL', 'OLLAMA_MODEL'] as const;
+const RECOMMENDED_ENV_KEYS = [
+    'OLLAMA_BASE_URL',
+    'OLLAMA_EMBED_MODEL',
+    'AGENT_MODEL_FAST',
+    'AGENT_MODEL_REASONING',
+    'AGENT_MODEL_CODE'
+] as const;
 
 /**
  * Throw if any required environment variable is missing or empty.

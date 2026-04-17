@@ -4,6 +4,13 @@
  * Centralises profile-based model fallback chains so tools, processors,
  * and agent components resolve models consistently from environment vars.
  *
+ * Fallback chain per profile:
+ *   profile env var → `AGENT_MODEL_DEFAULT` → `OLLAMA_MODEL` → **throw**
+ *
+ * There is intentionally **no** hardcoded model name.  When none of the
+ * environment variables are set the function throws, forcing operators to
+ * configure at least `OLLAMA_MODEL` before starting Manna.
+ *
  * @module shared/model-resolution
  */
 
@@ -42,21 +49,23 @@ export interface IResolveModelOptions {
      * Default: `true`.
      */
     includeOllamaFallback?: boolean;
-
-    /**
-     * Final hardcoded fallback when no env var is available.
-     * Default: `"llama3.1:8b"` (matches the README-documented fallback chain).
-     */
-    hardDefault?: string;
 }
 
 /**
  * Resolve a model name for a given profile with a shared, configurable
  * fallback strategy.
  *
+ * Resolution order:
+ *  1. `options.preferredModel` (explicit tool/caller override)
+ *  2. Profile-specific env var (e.g. `AGENT_MODEL_CODE`)
+ *  3. `AGENT_MODEL_DEFAULT` (unless opted out)
+ *  4. `OLLAMA_MODEL` (unless opted out)
+ *  5. **throw** — no hardcoded model name
+ *
  * @param profile - One of `fast`, `reasoning`, `code`, or `default`.
  * @param options - Optional chain customisation and explicit preferred model.
  * @returns Resolved model identifier string.
+ * @throws {Error} When no environment variable provides a model for this profile.
  */
 export function resolveModel(profile: ModelProfile, options: IResolveModelOptions = {}): string {
     const preferred = options.preferredModel?.trim();
@@ -66,19 +75,6 @@ export function resolveModel(profile: ModelProfile, options: IResolveModelOption
 
     const includeAgentDefault = options.includeAgentDefault !== false;
     const includeOllamaFallback = options.includeOllamaFallback !== false;
-    /*
-     * When the caller does not explicitly pass `hardDefault`, fall back to
-     * `'llama3.1:8b'` — the documented last-resort in the README fallback
-     * chain: profile var → AGENT_MODEL_DEFAULT → OLLAMA_MODEL → llama3.1:8b.
-     */
-    const hardDefault =
-        options.hardDefault !== undefined ? options.hardDefault.trim() || undefined : 'llama3.1:8b';
-
-    const defaultChain = [
-        includeAgentDefault ? process.env.AGENT_MODEL_DEFAULT : undefined,
-        includeOllamaFallback ? process.env.OLLAMA_MODEL : undefined,
-        hardDefault
-    ];
 
     const profileModel = {
         fast: process.env.AGENT_MODEL_FAST,
@@ -87,11 +83,21 @@ export function resolveModel(profile: ModelProfile, options: IResolveModelOption
         default: process.env.AGENT_MODEL_DEFAULT
     }[profile];
 
-    const resolved = [profileModel, ...defaultChain].find(
+    const candidates = [
+        profileModel,
+        includeAgentDefault ? process.env.AGENT_MODEL_DEFAULT : undefined,
+        includeOllamaFallback ? process.env.OLLAMA_MODEL : undefined
+    ];
+
+    const resolved = candidates.find(
         (value) => typeof value === 'string' && value.trim()
     );
     if (!resolved) {
-        throw new Error(`Unable to resolve model for profile "${profile}"`);
+        const envVar = PROFILE_ENV_VARS[profile];
+        throw new Error(
+            `Unable to resolve model for profile "${profile}". ` +
+            `Set ${envVar}, AGENT_MODEL_DEFAULT, or OLLAMA_MODEL in your .env file.`
+        );
     }
     return resolved;
 }

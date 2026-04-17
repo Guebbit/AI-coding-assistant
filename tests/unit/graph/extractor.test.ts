@@ -11,6 +11,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+/* Set required model env vars before module-level resolveModel calls. */
+vi.hoisted(() => {
+    process.env.OLLAMA_MODEL = 'test-model';
+});
+
 import { extractEntitiesAndRelationships } from '@/packages/graph/extractor.js';
 
 /* ── helpers ─────────────────────────────────────────────────────────── */
