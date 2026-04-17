@@ -4,7 +4,7 @@ Hardware constraints: CPU AMD Ryzen 9 9950X3D (16C/32T), RAM 32 GB DDR5, GPU RTX
 
 ## Recommended `.env` values
 
-**No model name is hardcoded** — all models must be configured via environment variables.  `OLLAMA_MODEL` is **required** at startup.
+**No model name is hardcoded** — all models must be configured via environment variables. `OLLAMA_MODEL` is **required** at startup.
 
 ```
 OLLAMA_MODEL=llama3.1:8b

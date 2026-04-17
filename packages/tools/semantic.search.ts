@@ -132,7 +132,9 @@ export const semanticSearchTool = createTool({
                 : Math.min(5, ranked.length);
         ranked.sort((a, b) => b.score - a.score);
         return {
-            model: OLLAMA_EMBED_MODEL ?? 'unknown',
+            /* OLLAMA_EMBED_MODEL is guaranteed non-null here — getEmbedding() above
+               would have thrown if it were undefined. */
+            model: OLLAMA_EMBED_MODEL!,
             query,
             totalDocuments: ranked.length,
             results: ranked.slice(0, k)

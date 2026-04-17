@@ -202,24 +202,27 @@ export class Agent {
      * @param entries - Diagnostic entries from this run.
      * @param task    - The user's task description (used in the log filename).
      * @param summary - Optional AI commentary appended to the log.
+     * @returns The path to the written diagnostic file, or empty string if none was written.
      */
     private static async writeDiagnostics(
         entries: IDiagnosticEntry[],
         task: string,
         summary?: string
-    ): Promise<void> {
-        if (entries.length === 0 && !summary) return;
-        await writeDiagnosticLog(entries, task, summary)
+    ): Promise<string> {
+        if (entries.length === 0 && !summary) return '';
+        return writeDiagnosticLog(entries, task, summary)
             .then(async (logPath) => {
                 await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
                 logger.info('agent_diagnostic_log_written', { component: 'agent', logPath });
+                return logPath;
             })
-            .catch((error: unknown) =>
+            .catch((error: unknown) => {
                 logger.warn('agent_diagnostic_log_failed', {
                     component: 'agent',
                     error: String(error)
-                })
-            );
+                });
+                return '';
+            });
     }
 
     /**
@@ -660,12 +663,12 @@ export class Agent {
             })
         );
 
-        await Agent.writeDiagnostics(diagnosticEntries, task, summary);
+        const diagnosticFile = await Agent.writeDiagnostics(diagnosticEntries, task, summary);
         await Agent.persistRun(persistInput(summary, 'max_steps'));
 
         emit({
             type: 'agent:max_steps',
-            payload: { task, summary, diagnosticFile: '' }
+            payload: { task, summary, diagnosticFile }
         });
         return { answer: summary, meta: buildRunMeta() };
     }
