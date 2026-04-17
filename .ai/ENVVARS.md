@@ -2,7 +2,7 @@
 
 ## Required (startup validation fails without these)
 
-`OLLAMA_MODEL` — **required** base model fallback (no hardcoded default; used as the last resort in the model resolution chain: profile var → AGENT_MODEL_DEFAULT → OLLAMA_MODEL → throw)
+`OLLAMA_MODEL` — **required** base model fallback (no hardcoded default; used as the last resort in the model resolution chain: profile var → OLLAMA_MODEL → throw)
 
 ## Recommended (warnings on startup if missing)
 
@@ -14,14 +14,14 @@
 
 ## Agent / Router
 
-`AGENT_MODEL_DEFAULT` — secondary fallback model (after profile-specific, before OLLAMA*MODEL)
-`AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — router model (only used when mode=model)
+`AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — classifier LLM used by the model router for every step
 `AGENTS_MAX_STEPS=20` — max loop iterations
-`AGENT_BUDGET*{MAX*DURATION_MS=60000,MAX_CONTEXT_CHARS=50000}`— router budget thresholds (fast downgrade / reasoning upgrade)`AGENT_VERIFICATION*{ENABLED=false,MODEL=AGENT_MODEL_FAST}` — post-tool verification gate/model
+`AGENT_BUDGET_{MAX_DURATION_MS=60000,MAX_CONTEXT_CHARS=50000}` — router budget thresholds (fast downgrade / reasoning upgrade)
+`AGENT_VERIFICATION_{ENABLED=false,MODEL=AGENT_MODEL_FAST}` — post-tool verification gate/model
 
 ## Model resolution chain (per profile)
 
-Resolution order: `AGENT_MODEL_<PROFILE>` → `AGENT_MODEL_DEFAULT` → `OLLAMA_MODEL` → **throw Error**
+Resolution order: `AGENT_MODEL_<PROFILE>` → `OLLAMA_MODEL` → **throw Error**
 
 No hardcoded model names exist anywhere in the codebase.
 

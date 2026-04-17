@@ -33,7 +33,7 @@ for step in 1..MAX_STEPS:
     forcedProfile? => return forced model immediately (no LLM router cost)
     else context > 80% budget => reasoning profile
     else duration > 70% budget => fast profile
-    else router mode: rules(keyword/heuristic) | model(ROUTER_MODEL JSON prompt + budget state)
+    else ROUTER_MODEL classifies task (JSON prompt) => profile; failure => fast
   raw = generateWithMetadata(prompt, { model })
   parsed = parse(raw, agentStepSchema)         // parse fail => append correction + json diagnostic + continue
   out = processOutputStep(parsed)              // includes optional AGENT_VERIFICATION_ENABLED gate
@@ -78,7 +78,7 @@ Core invariants/safety
 Routing/model fallback summary
 
 - Profiles: `fast|reasoning|code|default`
-- Fallback chain per profile: profile var -> `AGENT_MODEL_DEFAULT` -> `OLLAMA_MODEL` -> `llama3.1:8b`
+- Fallback chain per profile: profile var -> `OLLAMA_MODEL` -> throw Error
 
 Update protocol
 

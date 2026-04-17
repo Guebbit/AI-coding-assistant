@@ -11,7 +11,6 @@ OLLAMA_MODEL=llama3.1:8b
 AGENT_MODEL_FAST=llama3.1:8b
 AGENT_MODEL_REASONING=deepseek-r1:32b-qwen-distill-q4_K_M
 AGENT_MODEL_CODE=qwen2.5-coder:14b-instruct-q8_0
-AGENT_MODEL_DEFAULT=llama3.1:8b
 AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest
 OLLAMA_EMBED_MODEL=nomic-embed-text
 TOOL_VISION_MODEL=llava:13b-v1.6-vicuna-q4_K_M
@@ -22,7 +21,7 @@ TOOL_DIAGRAM_MODEL=qwen2.5-coder:14b-instruct-q8_0
 
 ## Model resolution chain
 
-Per profile: `AGENT_MODEL_<PROFILE>` → `AGENT_MODEL_DEFAULT` → `OLLAMA_MODEL` → **throw Error**
+Per profile: `AGENT_MODEL_<PROFILE>` → `OLLAMA_MODEL` → **throw Error**
 
 There are **zero** hardcoded model names anywhere in the codebase.
 

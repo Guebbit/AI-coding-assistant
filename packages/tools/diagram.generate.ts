@@ -23,8 +23,7 @@ const execFileAsync = promisify(execFile);
 
 /** Model used to generate Mermaid markup. Falls back through the standard chain. */
 const DIAGRAM_MODEL = resolveModel('code', {
-    preferredModel: process.env.TOOL_DIAGRAM_MODEL,
-    includeAgentDefault: false
+    preferredModel: process.env.TOOL_DIAGRAM_MODEL
 });
 
 /** Directory where rendered diagram files are written. */

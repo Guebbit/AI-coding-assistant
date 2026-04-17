@@ -23,7 +23,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Agent } from '@/packages/agent/agent.js';
 import type { ITool } from '@/packages/tools/types.js';
 
-/* ── Mock persistence (PostgreSQL) and diagnostics ───────────────────── */
+/* ── Mock persistence (PostgreSQL), diagnostics and model router ─────── */
 vi.mock('@/packages/persistence/db.js', () => ({
     saveAgentRun: vi.fn().mockResolvedValue(null)
 }));
@@ -33,6 +33,15 @@ vi.mock('@/packages/diagnostics/index.js', () => ({
 }));
 vi.mock('@/packages/logger/logger.js', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+}));
+/* Mock the model router to avoid LLM routing calls in integration tests. */
+vi.mock('@/packages/agent/model-router.js', () => ({
+    routeModel: vi.fn().mockResolvedValue({
+        profile: 'fast',
+        model: 'test-model',
+        reason: 'mocked',
+        options: {}
+    })
 }));
 
 /* ── fetch queue ─────────────────────────────────────────────────────── */
@@ -112,9 +121,6 @@ beforeEach(() => {
     process.env.AGENT_MODEL_FAST = 'test-model';
     process.env.AGENT_MODEL_REASONING = 'test-model';
     process.env.AGENT_MODEL_CODE = 'test-model';
-    process.env.AGENT_MODEL_DEFAULT = 'test-model';
-    /* Use rules mode to keep tests deterministic (no extra LLM routing call). */
-    process.env.AGENT_MODEL_ROUTER_MODE = 'rules';
     fetchQueue.length = 0;
     vi.stubGlobal('fetch', mockFetch);
     mockFetch.mockClear();
@@ -125,9 +131,7 @@ afterEach(() => {
     for (const k of [
         'AGENT_MODEL_FAST',
         'AGENT_MODEL_REASONING',
-        'AGENT_MODEL_CODE',
-        'AGENT_MODEL_DEFAULT',
-        'AGENT_MODEL_ROUTER_MODE'
+        'AGENT_MODEL_CODE'
     ]) {
         delete process.env[k];
     }

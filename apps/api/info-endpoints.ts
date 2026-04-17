@@ -41,8 +41,6 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
   reasoning:
     "Larger model optimised for multi-step reasoning, analysis, and complex logic. Uses a wider context window.",
   code: "Code-specialised model (e.g. Qwen-Coder) for coding, refactoring, debugging, and repository tasks.",
-  default:
-    "General-purpose fallback model used when no profile-specific signal is detected by the router.",
 };
 
 /**
@@ -53,8 +51,8 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
  * @returns `{ envVar, model }` pair.
  */
 function resolveProfileModel(profile: ModelProfile): { envVar: string; model: string } {
-  const envVar = PROFILE_ENV_VARS[profile as ModelProfile] ?? 'AGENT_MODEL_DEFAULT';
-  const model = process.env[envVar] ?? process.env.AGENT_MODEL_DEFAULT ?? process.env.OLLAMA_MODEL ?? 'not configured';
+  const envVar = PROFILE_ENV_VARS[profile];
+  const model = process.env[envVar] ?? process.env.OLLAMA_MODEL ?? 'not configured';
   return { envVar, model };
 }
 
@@ -83,7 +81,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
       },
       {
         name: "profile",
-        type: '"fast" | "reasoning" | "code" | "default"',
+        type: '"fast" | "reasoning" | "code"',
         required: false,
         description: "Force a model profile, bypassing automatic routing.",
       },
@@ -103,7 +101,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
       },
       {
         name: "profile",
-        type: '"fast" | "reasoning" | "code" | "default"',
+        type: '"fast" | "reasoning" | "code"',
         required: false,
         description: "Force a model profile.",
       },
@@ -116,7 +114,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
     params: [
       { name: "task", type: "string", required: true, description: "Natural-language task." },
       { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
-      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile." },
+      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile." },
       { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
     ],
   },
@@ -127,7 +125,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
     params: [
       { name: "task", type: "string", required: true, description: "Natural-language task." },
       { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
-      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile." },
+      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile." },
       { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
     ],
   },
@@ -138,7 +136,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
     params: [
       { name: "steps", type: "Array<{ task: string }>", required: true, description: "Ordered step list (1–50 items)." },
       { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools for all steps." },
-      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile for all steps." },
+      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile for all steps." },
       { name: "carry", type: '"none" | "summary" | "full"', required: false, description: 'Context carry mode between steps (default "summary").' },
       { name: "maxStepsPerStep", type: "number", required: false, description: "Per-step agent iteration cap (default AGENTS_MAX_STEPS)." },
     ],
@@ -150,7 +148,7 @@ const HELP_CATALOGUE: GetHelp200ResponseEndpointsInner[] = [
     params: [
       { name: "steps", type: "Array<{ task: string }>", required: true, description: "Ordered step list." },
       { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools for all steps." },
-      { name: "profile", type: '"fast" | "reasoning" | "code" | "default"', required: false, description: "Force a model profile for all steps." },
+      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile for all steps." },
       { name: "carry", type: '"none" | "summary" | "full"', required: false, description: "Context carry mode between steps." },
       { name: "maxStepsPerStep", type: "number", required: false, description: "Per-step agent iteration cap." },
     ],

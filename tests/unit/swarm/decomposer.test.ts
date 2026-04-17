@@ -125,13 +125,13 @@ describe('decomposeTask', () => {
         expect(result.subtasks[0].description).toBe('Subtask 0');
     });
 
-    it('normalises invalid profile to "default"', async () => {
+    it('normalises invalid profile to "fast"', async () => {
         const subtasks = [
             { id: 's-0', description: 'Task', profile: 'unknown-profile', dependsOn: [] }
         ];
         mockGenerate.mockResolvedValueOnce(validDecompositionJson(subtasks));
         const result = await decomposeTask('Bad profile test');
-        expect(result.subtasks[0].profile).toBe('default');
+        expect(result.subtasks[0].profile).toBe('fast');
     });
 
     it('normalises missing dependsOn to empty array', async () => {

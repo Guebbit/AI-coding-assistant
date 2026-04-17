@@ -21,13 +21,11 @@ vi.hoisted(() => {
     process.env.AGENT_MODEL_FAST = 'test-model';
     process.env.AGENT_MODEL_REASONING = 'test-model';
     process.env.AGENT_MODEL_CODE = 'test-model';
-    process.env.AGENT_MODEL_DEFAULT = 'test-model';
-    process.env.AGENT_MODEL_ROUTER_MODE = 'rules';
 });
 
 import { LangGraphSwarmOrchestrator } from '@/packages/orchestrator/graph.js';
 
-/* ── Mock persistence and diagnostics (not under test) ───────────────── */
+/* ── Mock persistence, diagnostics and model router (not under test) ─── */
 vi.mock('@/packages/persistence/db.js', () => ({
     saveAgentRun: vi.fn().mockResolvedValue(null),
     saveSwarmRun: vi.fn().mockResolvedValue(null)
@@ -38,6 +36,14 @@ vi.mock('@/packages/diagnostics/index.js', () => ({
 }));
 vi.mock('@/packages/logger/logger.js', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+}));
+vi.mock('@/packages/agent/model-router.js', () => ({
+    routeModel: vi.fn().mockResolvedValue({
+        profile: 'fast',
+        model: 'test-model',
+        reason: 'mocked',
+        options: {}
+    })
 }));
 
 /* ── fetch queue ─────────────────────────────────────────────────────── */

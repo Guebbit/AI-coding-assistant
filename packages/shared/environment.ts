@@ -5,9 +5,9 @@
  * wrong default that causes cryptic runtime failures later.
  *
  * `OLLAMA_MODEL` is required because it serves as the last-resort
- * fallback in the model resolution chain (profile var → AGENT_MODEL_DEFAULT
- * → OLLAMA_MODEL → throw).  Without it, requests fail with confusing
- * "Unable to resolve model" errors instead of a clear startup message.
+ * fallback in the model resolution chain (profile var → OLLAMA_MODEL → throw).
+ * Without it, requests fail with confusing "Unable to resolve model" errors
+ * instead of a clear startup message.
  */
 const REQUIRED_ENV_KEYS = [
     'OLLAMA_MODEL',

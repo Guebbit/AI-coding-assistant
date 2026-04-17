@@ -56,8 +56,7 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
         `Available agent profiles:\n` +
         `- "fast"      — quick, simple tasks (Q&A, summaries, short answers)\n` +
         `- "code"      — coding, debugging, refactoring, writing code\n` +
-        `- "reasoning" — complex analysis, multi-step logic, architecture decisions\n` +
-        `- "default"   — general-purpose fallback\n\n` +
+        `- "reasoning" — complex analysis, multi-step logic, architecture decisions\n\n` +
         `Rules:\n` +
         `1. Each subtask must be self-contained — it should be understandable without reading the other subtasks.\n` +
         `2. Use the "dependsOn" field to express ordering constraints (subtask IDs that must finish first).\n` +
@@ -71,7 +70,7 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
         `    {\n` +
         `      "id": "subtask-0",\n` +
         `      "description": "what this subtask does",\n` +
-        `      "profile": "fast|code|reasoning|default",\n` +
+        `      "profile": "fast|code|reasoning",\n` +
         `      "dependsOn": []\n` +
         `    }\n` +
         `  ]\n` +
@@ -154,11 +153,11 @@ function normaliseSubtask(raw: unknown, index: number): ISubtask {
             ? object.description.trim()
             : `Subtask ${index}`;
 
-    const validProfiles = new Set(['fast', 'code', 'reasoning', 'default']);
+    const validProfiles = new Set(['fast', 'code', 'reasoning']);
     const profile =
         typeof object.profile === 'string' && validProfiles.has(object.profile)
             ? (object.profile as ISubtask['profile'])
-            : 'default';
+            : 'fast';
 
     const dependsOn = Array.isArray(object.dependsOn)
         ? object.dependsOn.filter((d): d is string => typeof d === 'string')
@@ -183,7 +182,7 @@ function buildFallback(task: string, reason: string): IDecomposition {
             {
                 id: 'subtask-0',
                 description: task,
-                profile: 'default',
+                profile: 'fast',
                 dependsOn: []
             }
         ]
