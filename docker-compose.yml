@@ -101,6 +101,9 @@ services:
             dockerfile: Dockerfile
         ports:
             - '${MANNA_PORT:-3001}:${MANNA_PORT:-3001}'
+        volumes:
+            - .:/app:Z
+            - /app/node_modules
         environment:
             PORT: ${MANNA_PORT:-3001}
             MANNA_DB_HOST: postgres
