@@ -1,23 +1,4 @@
 /**
- * Environment variable validation helpers.
- *
- * @module shared/environment
- */
-
-/**
- * Logger abstraction used by environment validation helpers.
- */
-interface IEnvironmentValidationLogger {
-    /**
-     * Emit a warning log.
-     *
-     * @param message - Log message identifier.
-     * @param meta - Optional structured metadata.
-     */
-    warn: (message: string, meta?: object) => void;
-}
-
-/**
  * Environment variables that MUST be set for Manna to function.
  *
  * Missing any of these throws at startup rather than silently using a
@@ -28,22 +9,14 @@ interface IEnvironmentValidationLogger {
  * → OLLAMA_MODEL → throw).  Without it, requests fail with confusing
  * "Unable to resolve model" errors instead of a clear startup message.
  */
-const REQUIRED_ENV_KEYS = ['OLLAMA_MODEL'] as const;
-
-/**
- * Environment variables that Manna warns about if missing.
- *
- * These are not hard-required (Manna starts anyway) but their absence
- * degrades functionality because all profiles will fall back to
- * `OLLAMA_MODEL` instead of purpose-tuned models.
- */
-const RECOMMENDED_ENV_KEYS = [
+const REQUIRED_ENV_KEYS = [
+    'OLLAMA_MODEL',
     'OLLAMA_BASE_URL',
     'OLLAMA_EMBED_MODEL',
     'AGENT_MODEL_FAST',
     'AGENT_MODEL_REASONING',
     'AGENT_MODEL_CODE'
-] as const;
+];
 
 /**
  * Throw if any required environment variable is missing or empty.
@@ -67,21 +40,3 @@ export const validateRequiredEnvironment = (): void => {
     }
 };
 
-/**
- * Log a warning for each missing recommended environment variable.
- *
- * Does NOT throw — Manna starts regardless.
- *
- * @param logger - Logger instance.
- * @returns Nothing.
- */
-export const validateRecommendedEnvironment = (logger: IEnvironmentValidationLogger): void => {
-    const missing = RECOMMENDED_ENV_KEYS.filter((key) => {
-        const value = process.env[key];
-        return !value || value.trim() === '';
-    });
-
-    if (missing.length > 0) {
-        logger.warn('missing_recommended_env_vars', { missing });
-    }
-};

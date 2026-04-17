@@ -58,40 +58,10 @@ flowchart TD
 
 ---
 
-## Router modes
-
-Set `AGENT_MODEL_ROUTER_MODE` to choose how the router decides:
-
-### `rules` mode (default)
-
-Uses keyword matching and heuristics. Fast, no extra model call needed.
-
-Examples of what triggers each profile:
-
-```
-"fast" triggers:
-  - "what is", "list", "show me", "tell me"
-  - simple one-step questions
-
-"reasoning" triggers:
-  - "analyse", "explain why", "step by step"
-  - "compare", "pros and cons", "tradeoffs"
-
-"code" triggers:
-  - "debug", "refactor", "implement", "write a function"
-  - "typescript", "javascript", "python", file extensions
-
-"default":
-  - anything that does not match the above
-```
-
-### `model` mode
-
-A small, fast model classifies the step and returns a profile name.
+Defined by the user OR via a small LLM (the router model) reads the task and outputs a JSON profile choice. More accurate but adds ~200ms latency:
 
 ```bash
-export AGENT_MODEL_ROUTER_MODE=model
-export AGENT_MODEL_ROUTER_MODEL=qwen3:4b
+export AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest
 ```
 
 When `model` mode fails (model unreachable, bad response), it automatically falls back to `default`.

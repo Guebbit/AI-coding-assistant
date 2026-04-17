@@ -138,22 +138,7 @@ Notice: **1 step, 0 tool calls**. This is a knowledge question — the reasoning
 
 ## How the Router Works
 
-The router has two modes (set via `AGENT_MODEL_ROUTER_MODE`):
-
-### `rules` mode (default)
-
-Keyword and heuristic matching. Fast, no LLM call:
-
-| Signal                                                 | Profile selected |
-| ------------------------------------------------------ | ---------------- |
-| "fix", "error", "TypeScript", "code", "implement"      | `code`           |
-| "explain", "why", "compare", "implications", "analyze" | `reasoning`      |
-| "list", "count", "show", "get"                         | `fast`           |
-| No strong signal                                       | `default`        |
-
-### `model` mode
-
-A small LLM (the router model) reads the task and outputs a JSON profile choice. More accurate but adds ~200ms latency:
+Defined by the user OR via a small LLM (the router model) reads the task and outputs a JSON profile choice. More accurate but adds ~200ms latency:
 
 ```json
 {

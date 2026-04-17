@@ -72,11 +72,12 @@ Core invariants/safety
 - Qdrant/MCP/verification/reranker failures: fail-open, no process crash
 - Diagnostic files constrained to `DIAGNOSTIC_LOG_DIR` via safe path checks
 - Persistence failures logged/ignored (`.catch()` in run paths), never crash run
+- Try to not use try/catch when possible
+- Apply SOLID, DRY, KISS and YAGNI best practices
 
 Routing/model fallback summary
 
 - Profiles: `fast|reasoning|code|default`
-- Router mode (`AGENT_MODEL_ROUTER_MODE`): `rules` (default) or `model`
 - Fallback chain per profile: profile var -> `AGENT_MODEL_DEFAULT` -> `OLLAMA_MODEL` -> `llama3.1:8b`
 
 Update protocol

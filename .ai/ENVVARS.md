@@ -15,7 +15,6 @@
 ## Agent / Router
 
 `AGENT_MODEL_DEFAULT` — secondary fallback model (after profile-specific, before OLLAMA*MODEL)
-`AGENT_MODEL_ROUTER_MODE=rules` — `rules` (keyword heuristic, zero LLM cost) or `model` (LLM-based routing)
 `AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — router model (only used when mode=model)
 `AGENTS_MAX_STEPS=20` — max loop iterations
 `AGENT_BUDGET*{MAX*DURATION_MS=60000,MAX_CONTEXT_CHARS=50000}`— router budget thresholds (fast downgrade / reasoning upgrade)`AGENT_VERIFICATION*{ENABLED=false,MODEL=AGENT_MODEL_FAST}` — post-tool verification gate/model

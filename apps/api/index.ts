@@ -39,7 +39,6 @@ import {
   validateTask,
   validateProfile,
   t,
-  validateRecommendedEnvironment,
   validateRequiredEnvironment
 } from "@/packages/shared";
 import { registerIdeRoutes } from "./ide-endpoints";
@@ -224,10 +223,6 @@ try {
   logger.error('startup_required_env_missing', { component: 'api.server', error: String(error) });
   process.exit(1);
 }
-
-validateRecommendedEnvironment({
-  warn: (message: string, meta?: object) => logger.warn(message, { component: "api.environment", ...meta })
-});
 
 initI18n({ en: { translation: enTranslation } })
   .catch((error: unknown) => {
