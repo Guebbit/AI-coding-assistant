@@ -15,6 +15,10 @@
 
 services:
     ollama:
+        # how long Podman waits before forcing shutdown with SIGKILL; adjust if you have very large models that need more time to unload
+        # Default is SIGTERM which is graceful but may hang
+        stop_signal: SIGKILL
+        stop_grace_period: 5s
         image: ollama/ollama:latest
         ports:
             - '11434:11434'

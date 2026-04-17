@@ -16,7 +16,6 @@
  *
  * Note: tasks used in tests that exercise the full agent loop include at least
  * one tool-signal keyword (e.g. "search", "file", "list") so the model router
- * correctly sets requiresTools=true and does NOT trigger the direct-answer
  * shortcut.  Tasks without tool signals are reserved for direct-answer tests.
  */
 

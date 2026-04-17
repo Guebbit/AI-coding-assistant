@@ -260,7 +260,7 @@ export class Agent {
             });
 
             // ── Direct-answer shortcut: no tools needed ───────────────────────
-            if (!route.requiresTools && step === 0 && !inputArgs.context) {
+            if (step === 0 && !inputArgs.context) {
                 const memoryBlock =
                     inputArgs.memory.length > 0
                         ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`

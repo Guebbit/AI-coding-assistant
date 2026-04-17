@@ -19,6 +19,7 @@
 import { generate } from '../llm/ollama';
 import { envFloat, envInt, resolveModel, stripCodeFences, PROFILE_LIST } from '../shared';
 import type { ModelProfile } from '../shared';
+import { logger } from '@/packages/logger/logger';
 
 /* ── Budget environment variables ────────────────────────────────────── */
 
@@ -66,12 +67,6 @@ export interface IModelRouteDecision {
 
     /** Optional generation options (temperature, top_p, etc.) for this profile. */
     options?: Record<string, unknown>;
-
-    /**
-     * Whether the task is expected to require tool use.
-     * When `false` the agent can answer directly without invoking any tool.
-     */
-    requiresTools: boolean;
 }
 
 /* ── Internal types ──────────────────────────────────────────────────── */
@@ -111,12 +106,6 @@ interface IRouteInput {
     cumulativeDurationMs?: number;
 }
 
-/** Small, fast model used by the *model* routing strategy to classify tasks. */
-const ROUTER_MODEL = process.env.AGENT_MODEL_ROUTER_MODEL ?? 'phi4-mini:latest';
-
-/** Active routing strategy: `"rules"` (default) or `"model"`. */
-const ROUTER_MODE = (process.env.AGENT_MODEL_ROUTER_MODE ?? 'rules').toLowerCase();
-
 /** Default generation options per profile. Extend this map to add a new profile. */
 /* eslint-disable @typescript-eslint/naming-convention -- Ollama API uses snake_case parameter names */
 const PROFILE_OPTION_DEFAULTS: Record<
@@ -155,183 +144,6 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
         top_k: envInt(process.env[`${prefix}_TOP_K`], d.top_k),
         num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], d.num_ctx),
         repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty)
-    };
-}
-
-/* ── Rule-based routing ──────────────────────────────────────────────── */
-
-/**
- * Select a model profile using simple keyword matching on the task + context.
- *
- * Budget-aware heuristics take precedence over keyword heuristics:
- * - When context length exceeds 80 % of `AGENT_BUDGET_MAX_CONTEXT_CHARS`,
- *   the `reasoning` profile (larger `num_ctx`) is selected.
- * - When cumulative duration exceeds 70 % of `AGENT_BUDGET_MAX_DURATION_MS`,
- *   the `fast` profile is selected to finish quickly.
- *
- * The heuristic then checks for code-related keywords first, then reasoning
- * signals, and defaults to the `fast` profile when nothing matches.
- * This is cheap (no LLM call) and deterministic.
- *
- * @param input - The current routing input (task, context, step, budgets).
- * @returns A `ModelRouteDecision` based on budget and keyword heuristics.
- */
-function routeWithRules(input: IRouteInput): IModelRouteDecision {
-    /* ── Budget-aware heuristics (highest priority) ───────────────────── */
-
-    if (input.contextLength ?? input.context.length > BUDGET_MAX_CONTEXT_CHARS * BUDGET_CONTEXT_THRESHOLD) {
-        return {
-            profile: 'reasoning',
-            model: resolveModel('reasoning'),
-            reason: 'budget:context_near_ceiling',
-            options: resolveOptions('reasoning'),
-            requiresTools: true
-        };
-    }
-
-    if (
-        input.cumulativeDurationMs !== undefined &&
-        input.cumulativeDurationMs > BUDGET_MAX_DURATION_MS * BUDGET_DURATION_THRESHOLD
-    ) {
-        return {
-            profile: 'fast',
-            model: resolveModel('fast'),
-            reason: 'budget:duration_near_ceiling',
-            options: resolveOptions('fast'),
-            requiresTools: true
-        };
-    }
-
-    /* ── Keyword heuristics ───────────────────────────────────────────── */
-
-    const text = `${input.task}\n${input.context}`.toLowerCase();
-
-    /* Keywords that strongly suggest a tool call is needed. */
-    const toolSignals = [
-        'file',
-        'read',
-        'write',
-        'open',
-        'load',
-        'save',
-        'run',
-        'execute',
-        'shell',
-        'command',
-        'script',
-        'search',
-        'find',
-        'list',
-        'fetch',
-        'download',
-        'database',
-        'query',
-        'sql',
-        'mongo',
-        'mysql',
-        'postgres',
-        'image',
-        'pdf',
-        'csv',
-        'json',
-        'docx',
-        'markdown',
-        'url',
-        'http',
-        'browser',
-        'website',
-        'ingest',
-        'diagram',
-        'scaffold',
-        'project',
-        'knowledge',
-        'memory',
-        'semantic'
-    ];
-    const requiresTools = toolSignals.some((s) => text.includes(s)) || input.step > 0;
-
-    /* Keywords that indicate the task is code-centric. */
-    const codeSignals = [
-        'code',
-        'refactor',
-        'typescript',
-        'javascript',
-        'python',
-        'golang',
-        'java',
-        'c++',
-        'rust',
-        'function',
-        'class',
-        'method',
-        'test',
-        'unit test',
-        'integration test',
-        'compile',
-        'stack trace',
-        'exception',
-        'repository',
-        'repo',
-        'commit',
-        'pull request',
-        'endpoint',
-        'typescript file',
-        'javascript file',
-        '.ts',
-        '.tsx',
-        '.js',
-        '.py',
-        'sql query',
-        'database migration'
-    ];
-
-    if (codeSignals.some((s) => text.includes(s))) {
-        return {
-            profile: 'code',
-            model: resolveModel('code'),
-            reason: 'keyword_match:code',
-            options: resolveOptions('code'),
-            requiresTools
-        };
-    }
-
-    /* Keywords that indicate multi-step reasoning or analysis. */
-    const reasoningSignals = [
-        'reason',
-        'step by step',
-        'prove',
-        'analyze',
-        'compare',
-        'tradeoff',
-        'mathemat',
-        'logic',
-        'why',
-        'multi-step',
-        'design',
-        'architecture'
-    ];
-
-    if (
-        reasoningSignals.some((s) => text.includes(s)) ||
-        input.task.length > 280 ||
-        input.step >= 2
-    ) {
-        return {
-            profile: 'reasoning',
-            model: resolveModel('reasoning'),
-            reason: 'heuristic:reasoning_or_long_task',
-            options: resolveOptions('reasoning'),
-            requiresTools
-        };
-    }
-
-    /* Nothing matched — use the cheapest profile. */
-    return {
-        profile: 'fast',
-        model: resolveModel('fast'),
-        reason: 'default_fast',
-        options: resolveOptions('fast'),
-        requiresTools
     };
 }
 
@@ -384,7 +196,7 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
         `Context:\n${input.context.slice(-2000)}`;
 
     const response = await generate(routerPrompt, {
-        model: ROUTER_MODEL,
+        model: process.env.AGENT_MODEL_ROUTER_MODEL,
         stream: false,
         format: 'json'
     });
@@ -393,7 +205,6 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
     const parsed = JSON.parse(cleaned) as {
         profile?: string;
         reason?: string;
-        requiresTools?: boolean;
     };
     const profile = parsed.profile ? parseProfile(parsed.profile) : null;
     if (!profile) {
@@ -405,7 +216,6 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
         model: resolveModel(profile),
         reason: parsed.reason?.slice(0, 240) ?? 'router_model_decision',
         options: resolveOptions(profile),
-        requiresTools: parsed.requiresTools !== false
     };
 }
 
@@ -425,21 +235,19 @@ async function routeWithModel(input: IRouteInput): Promise<IModelRouteDecision> 
  * @returns A `ModelRouteDecision` describing the chosen model.
  */
 export async function routeModel(input: IRouteInput): Promise<IModelRouteDecision> {
+    logger.warn('persistence_migrate_dir_not_found', {
+        component: 'test',
+        message: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa',
+        input
+    });
     /* Forced profile — bypass profile selection but still detect tool need via rules. */
     if (input.forcedProfile) {
-        const { requiresTools } = routeWithRules(input);
         return {
             profile: input.forcedProfile,
             model: resolveModel(input.forcedProfile),
             reason: 'forced_by_caller',
             options: resolveOptions(input.forcedProfile),
-            requiresTools
         };
-    }
-
-    /* Rule-based routing (default). */
-    if (ROUTER_MODE !== 'model') {
-        return routeWithRules(input);
     }
 
     /* Model-based routing with fallback. */
@@ -448,6 +256,5 @@ export async function routeModel(input: IRouteInput): Promise<IModelRouteDecisio
         model: resolveModel('default'),
         reason: 'router_model_failed_fallback_default',
         options: resolveOptions('default'),
-        requiresTools: true
     }));
 }
