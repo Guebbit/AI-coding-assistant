@@ -35,3 +35,6 @@ export * from './knowledge.graph';
 export * from './knowledge.graph.query';
 export * from './types';
 export * from './tool-builder';
+export * from './tool-reranker';
+export * from './tool-call-deduplicator';
+export * from './citations';

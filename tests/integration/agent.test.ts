@@ -22,6 +22,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Agent } from '@/packages/agent/agent.js';
 import type { ITool } from '@/packages/tools/types.js';
+import { clearModelCapabilitiesCache } from '@/packages/llm/ollama.js';
 
 /* ── Mock persistence (PostgreSQL), diagnostics and model router ─────── */
 vi.mock('@/packages/persistence/db.js', () => ({
@@ -48,6 +49,8 @@ vi.mock('@/packages/agent/model-router.js', () => ({
 
 /** Pending JSON response bodies returned in order by the mock fetch. */
 const fetchQueue: unknown[] = [];
+const chatQueue: unknown[] = [];
+let nativeToolCallingSupported = false;
 
 /** Build an Ollama /api/generate response body for a given agent step. */
 function agentResponse(
@@ -71,6 +74,26 @@ function debugResponse(summary: string) {
     return { response: summary, model: 'test-model', done: true };
 }
 
+function chatToolCallResponse(name: string, args: Record<string, unknown>) {
+    return {
+        message: {
+            role: 'assistant',
+            content: '',
+            tool_calls: [{ function: { name, arguments: args } }]
+        },
+        model: 'test-model',
+        done: true
+    };
+}
+
+function chatTextResponse(text: string) {
+    return {
+        message: { role: 'assistant', content: text },
+        model: 'test-model',
+        done: true
+    };
+}
+
 /** Fake embedding / Qdrant responses (used by memory module). */
 const embeddingOk = { embedding: [0.1, 0.2, 0.3, 0.4] };
 const qdrantOk = { vectors: { size: 4 }, status: 'green' };
@@ -85,6 +108,24 @@ const FETCH_FAIL = { __fetchFail: true };
 
 const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
     const urlString = url.toString();
+    if (urlString.includes('/api/show')) {
+        return {
+            ok: true,
+            status: 200,
+            text: async () => '{}',
+            json: async () => ({ capabilities: { tools: nativeToolCallingSupported } })
+        };
+    }
+    if (urlString.includes('/api/chat')) {
+        const body = chatQueue.shift();
+        if (body === undefined) throw new Error('chatQueue exhausted');
+        return {
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify(body),
+            json: async () => body
+        };
+    }
     if (urlString.includes('/api/generate')) {
         const body = fetchQueue.shift();
         if (body === undefined) throw new Error('fetchQueue exhausted');
@@ -121,14 +162,23 @@ beforeEach(() => {
     process.env.AGENT_MODEL_FAST = 'test-model';
     process.env.AGENT_MODEL_REASONING = 'test-model';
     process.env.AGENT_MODEL_CODE = 'test-model';
+    process.env.AGENT_MAX_TOOL_CALLS = '1';
     fetchQueue.length = 0;
+    chatQueue.length = 0;
+    nativeToolCallingSupported = false;
+    clearModelCapabilitiesCache();
     vi.stubGlobal('fetch', mockFetch);
     mockFetch.mockClear();
 });
 
 afterEach(() => {
     vi.unstubAllGlobals();
-    for (const k of ['AGENT_MODEL_FAST', 'AGENT_MODEL_REASONING', 'AGENT_MODEL_CODE']) {
+    for (const k of [
+        'AGENT_MODEL_FAST',
+        'AGENT_MODEL_REASONING',
+        'AGENT_MODEL_CODE',
+        'AGENT_MAX_TOOL_CALLS'
+    ]) {
         delete process.env[k];
     }
 });
@@ -213,6 +263,19 @@ describe('Agent.run — happy paths', () => {
         expect(echoTool.execute).toHaveBeenCalledWith({ message: 'hello' });
     });
 
+    it('supports native tool-calling when the model advertises tools capability', async () => {
+        nativeToolCallingSupported = true;
+        process.env.AGENT_MAX_TOOL_CALLS = '3';
+        (echoTool.execute as ReturnType<typeof vi.fn>).mockClear();
+        chatQueue.push(chatToolCallResponse('echo', { message: 'native' }));
+        chatQueue.push(chatTextResponse('Native tool call completed.'));
+
+        const agent = new Agent([echoTool]);
+        const result = await agent.run('Search and echo using native tools');
+        expect(result.answer).toBe('Native tool call completed.');
+        expect(echoTool.execute).toHaveBeenCalledWith({ message: 'native' });
+    });
+
     it('respects a forcedProfile passed in options', async () => {
         fetchQueue.push(agentResponse('Done.', 'none'));
         const agent = new Agent([echoTool]);
@@ -277,6 +340,19 @@ describe('Agent.run — fail-open / retry paths', () => {
         const result = await agent.run('Search and call a failing tool');
         expect(result.answer).toBe('Tool failed but I recovered.');
     });
+
+    it('deduplicates repeated tool calls with identical arguments in a chain', async () => {
+        process.env.AGENT_MAX_TOOL_CALLS = '3';
+        (echoTool.execute as ReturnType<typeof vi.fn>).mockClear();
+        fetchQueue.push(agentResponse('First call', 'echo', { message: 'same' }));
+        fetchQueue.push(agentResponse('Duplicate call', 'echo', { message: 'same' }));
+        fetchQueue.push(agentResponse('Done after duplicate prevention.', 'none'));
+
+        const agent = new Agent([echoTool]);
+        const result = await agent.run('Search and avoid duplicate tool calls', { maxSteps: 1 });
+        expect(result.answer).toBe('Done after duplicate prevention.');
+        expect(echoTool.execute).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('Agent.run — max steps exhaustion', () => {
@@ -324,5 +400,40 @@ describe('Agent.run — processors', () => {
         agent.addProcessor(processor as Parameters<typeof agent.addProcessor>[0]);
         await agent.run('Search for output processor test');
         expect(processOutputStep).toHaveBeenCalledOnce();
+    });
+});
+
+describe('Agent.run — direct output and citations', () => {
+    it('returns immediately when a directOutput tool succeeds', async () => {
+        const directTool: ITool = {
+            name: 'direct_tool',
+            description: 'Returns a final answer directly',
+            directOutput: true,
+            execute: vi.fn(async () => 'direct answer')
+        };
+        fetchQueue.push(agentResponse('Use direct tool', 'direct_tool'));
+
+        const agent = new Agent([directTool]);
+        const result = await agent.run('Search and use direct output tool');
+        expect(result.answer).toBe('direct answer');
+    });
+
+    it('collects citations from tool outputs and returns them with final output', async () => {
+        const citationTool: ITool = {
+            name: 'citation_tool',
+            description: 'Returns citations',
+            execute: vi.fn(async () => ({
+                value: 'ok',
+                citations: [{ id: 'c1', title: 'Source 1', text: 'Quoted text' }]
+            }))
+        };
+        fetchQueue.push(agentResponse('Call citation tool', 'citation_tool'));
+        fetchQueue.push(agentResponse('Done with citations.', 'none'));
+
+        const agent = new Agent([citationTool]);
+        const result = await agent.run('Search and produce citations');
+        expect(result.answer).toBe('Done with citations.');
+        expect(result.citations).toEqual([{ id: 'c1', title: 'Source 1', text: 'Quoted text' }]);
+        expect(result.meta.citations).toEqual(result.citations);
     });
 });

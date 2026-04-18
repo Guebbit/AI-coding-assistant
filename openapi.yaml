@@ -1236,6 +1236,10 @@ components:
             properties:
                 result:
                     type: string
+                citations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ToolCitation'
                 meta:
                     $ref: '#/components/schemas/ResponseMeta'
 
@@ -1309,6 +1313,22 @@ components:
                 memoryUsed:
                     type: boolean
                     description: Whether memory retrieval returned non-empty context.
+                citations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ToolCitation'
+                    description: Tool citations collected during execution.
+
+        ToolCitation:
+            type: object
+            required: [id, title, text]
+            properties:
+                id:
+                    type: string
+                title:
+                    type: string
+                text:
+                    type: string
 
         HealthResponse:
             type: object
@@ -1369,6 +1389,10 @@ components:
                 result:
                     type: string
                     description: The agent's final answer as a plain string.
+                citations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ToolCitation'
                 meta:
                     $ref: '#/components/schemas/ResponseMeta'
 

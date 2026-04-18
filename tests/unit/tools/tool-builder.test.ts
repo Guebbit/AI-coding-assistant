@@ -98,6 +98,16 @@ describe('createTool', () => {
         expect(tool.outputSchema).toBeUndefined();
     });
 
+    it('exposes directOutput flag when provided', () => {
+        const tool = createTool({
+            id: 'direct',
+            description: 'Direct output',
+            directOutput: true,
+            execute: async () => 'done'
+        });
+        expect(tool.directOutput).toBe(true);
+    });
+
     it('passes through extra fields when schema uses .passthrough()', async () => {
         const tool = createTool({
             id: 'passthrough',

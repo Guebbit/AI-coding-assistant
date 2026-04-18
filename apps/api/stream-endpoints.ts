@@ -98,6 +98,7 @@ export function registerStreamRoutes(app: Express): void {
       .then((runResult) => {
         writeEvent("done", {
           result: runResult.answer,
+          citations: runResult.citations,
           meta: {
             ...runResult.meta,
             requestId: req.requestId,

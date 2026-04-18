@@ -140,7 +140,10 @@ app.post("/run", (req, res) => {
         profile: profile ?? null,
         requestId: req.requestId,
       });
-      const response: RunResponse = { result: runResult.answer };
+      const response: RunResponse = {
+        result: runResult.answer,
+        citations: runResult.citations,
+      };
       successResponse(res, response, 200, "", {
         ...runResult.meta,
         requestId: req.requestId,
