@@ -16,7 +16,7 @@
  */
 
 import { createTransport, type SendMailOptions, type SentMessageInfo } from 'nodemailer';
-import { envInt } from './env';
+import { envNumber } from './utils';
 
 /**
  * Returns `true` when the mailer is configured (i.e. `SMTP_HOST` is set).
@@ -44,7 +44,7 @@ const getTransporter = (): ReturnType<typeof createTransport> => {
     if (!transporter) {
         transporter = createTransport({
             host: process.env.SMTP_HOST ?? '',
-            port: envInt(process.env.SMTP_PORT, 587),
+            port: envNumber(process.env.SMTP_PORT, 587),
             secure: process.env.SMTP_SECURE === 'true',
             auth: {
                 user: process.env.SMTP_USER ?? '',

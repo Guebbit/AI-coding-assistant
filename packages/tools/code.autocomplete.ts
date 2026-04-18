@@ -2,15 +2,14 @@
  * Code autocomplete tool — generate IDE-style completions via an
  * Ollama code model.
  *
- * Uses the shared `envFloat` / `envInt` helpers for generation
- * option parsing.
+ * Uses the shared `envNumber` helper for generation option parsing.
  *
  * @module tools/code.autocomplete
  */
 
 import { generate } from '../llm/ollama';
 import { z } from 'zod';
-import { envFloat, envInt, resolveModel } from '../shared';
+import { envNumber, resolveModel } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Default IDE completion model, configurable via environment variable. */
@@ -70,11 +69,11 @@ export const codeAutocompleteTool = createTool({
             stream: false,
             suffix: typeof suffix === 'string' && suffix.trim() ? suffix : undefined,
             options: {
-                temperature: envFloat(process.env.TOOL_IDE_TEMPERATURE, 0.1),
-                top_p: envFloat(process.env.TOOL_IDE_TOP_P, 0.7),
-                top_k: envInt(process.env.TOOL_IDE_TOP_K, 10),
-                num_ctx: envInt(process.env.TOOL_IDE_NUM_CTX, 8192),
-                repeat_penalty: envFloat(process.env.TOOL_IDE_REPEAT_PENALTY, 1.2)
+                temperature: envNumber(process.env.TOOL_IDE_TEMPERATURE, 0.1),
+                top_p: envNumber(process.env.TOOL_IDE_TOP_P, 0.7),
+                top_k: envNumber(process.env.TOOL_IDE_TOP_K, 10),
+                num_ctx: envNumber(process.env.TOOL_IDE_NUM_CTX, 8192),
+                repeat_penalty: envNumber(process.env.TOOL_IDE_REPEAT_PENALTY, 1.2)
             }
         });
 

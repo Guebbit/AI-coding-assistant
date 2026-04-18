@@ -32,7 +32,7 @@ import { on, off } from '@/packages/events/bus';
 import type { IAgentEvent } from '@/packages/events/bus';
 import { logger } from '@/packages/logger/logger';
 import {
-    envInt,
+    envNumber,
     rejectResponse,
     successResponse,
     buildResponseMeta,
@@ -57,7 +57,7 @@ import type {
  * Global step cap read once at startup (mirrors `agent.ts`'s own constant).
  * Used as the default per-step budget when `maxStepsPerStep` is omitted.
  */
-const DEFAULT_MAX_STEPS_PER_STEP = envInt(process.env.AGENTS_MAX_STEPS, 20);
+const DEFAULT_MAX_STEPS_PER_STEP = envNumber(process.env.AGENTS_MAX_STEPS, 20);
 
 /**
  * Hard upper bound on `maxStepsPerStep` to prevent accidental run-away

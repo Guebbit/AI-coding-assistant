@@ -14,8 +14,8 @@ import { resolveSafePath, resolveInsideRoot } from '@/packages/shared/path-safet
 describe('resolveSafePath', () => {
     it('resolves a simple relative path within the project root', () => {
         const cwd = process.cwd();
-        const result = resolveSafePath('packages/shared/env.ts');
-        expect(result).toBe(path.resolve(cwd, 'packages/shared/env.ts'));
+        const result = resolveSafePath('packages/shared/utils.ts');
+        expect(result).toBe(path.resolve(cwd, 'packages/shared/utils.ts'));
     });
 
     it('resolves an absolute path inside the project root', () => {

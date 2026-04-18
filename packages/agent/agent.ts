@@ -31,7 +31,7 @@ import { addMemory, getMemory } from '../memory/memory';
 import { emit } from '../events/bus';
 import type { ITool } from '../tools/types';
 import { logger } from '../logger/logger';
-import { envInt, resolveModel, stripCodeFences } from '../shared';
+import { envNumber, resolveModel, stripCodeFences } from '../shared';
 import { routeModel } from './model-router';
 import type { ModelProfile } from './model-router';
 import { agentStepSchema } from './schemas';
@@ -398,7 +398,7 @@ export class Agent {
             typeof options?.maxSteps === 'number' && options.maxSteps > 0
                 ? options.maxSteps
                 : MAX_STEPS;
-        const effectiveMaxToolCalls = Math.max(1, envInt(process.env.AGENT_MAX_TOOL_CALLS, 10));
+        const effectiveMaxToolCalls = Math.max(1, envNumber(process.env.AGENT_MAX_TOOL_CALLS, 10));
 
         logger.info('agent_run_started', {
             component: 'agent',

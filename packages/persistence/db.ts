@@ -401,13 +401,13 @@ export async function getConversation(
         );
         if (convRows.length === 0) return undefined;
 
-        const { rows: msgRows } = await client.query<IChatMessage>(
+        const { rows: messageRows } = await client.query<IChatMessage>(
             `SELECT ${MESSAGE_COLS} FROM chat_messages
              WHERE conversation_id = $1
              ORDER BY created_at ASC`,
             [id]
         );
-        return { ...convRows[0], messages: msgRows };
+        return { ...convRows[0], messages: messageRows };
     });
 }
 
@@ -421,15 +421,15 @@ export async function updateConversation(
 ): Promise<IConversation | null | undefined> {
     return withClient(async (client) => {
         const sets: string[] = [];
-        const params: unknown[] = [id];
+        const parameters: unknown[] = [id];
 
         if (input.title !== undefined) {
-            params.push(input.title.trim() || 'New Conversation');
-            sets.push(`title = $${params.length}`);
+            parameters.push(input.title.trim() || 'New Conversation');
+            sets.push(`title = $${parameters.length}`);
         }
         if (input.profile !== undefined) {
-            params.push(input.profile);
-            sets.push(`profile = $${params.length}`);
+            parameters.push(input.profile);
+            sets.push(`profile = $${parameters.length}`);
         }
         if (sets.length === 0) {
             const { rows } = await client.query<IConversation>(
@@ -443,7 +443,7 @@ export async function updateConversation(
         const { rows } = await client.query<IConversation>(
             `UPDATE conversations SET ${sets.join(', ')} WHERE id = $1
              RETURNING ${CONVERSATION_COLS}`,
-            params
+            parameters
         );
         return rows[0] ?? undefined;
     });
@@ -455,10 +455,7 @@ export async function updateConversation(
  */
 export async function deleteConversation(id: string): Promise<boolean | null> {
     return withClient(async (client) => {
-        const { rowCount } = await client.query(
-            'DELETE FROM conversations WHERE id = $1',
-            [id]
-        );
+        const { rowCount } = await client.query('DELETE FROM conversations WHERE id = $1', [id]);
         return (rowCount ?? 0) > 0;
     });
 }
@@ -487,10 +484,9 @@ export async function createMessage(
             [conversationId, input.role, input.content]
         );
 
-        await client.query(
-            'UPDATE conversations SET updated_at = NOW() WHERE id = $1',
-            [conversationId]
-        );
+        await client.query('UPDATE conversations SET updated_at = NOW() WHERE id = $1', [
+            conversationId
+        ]);
 
         logger.info('persistence_message_created', {
             component: 'persistence.db',
@@ -519,10 +515,9 @@ export async function updateMessage(
             [input.content, messageId, conversationId]
         );
         if (rows.length === 0) return undefined;
-        await client.query(
-            'UPDATE conversations SET updated_at = NOW() WHERE id = $1',
-            [conversationId]
-        );
+        await client.query('UPDATE conversations SET updated_at = NOW() WHERE id = $1', [
+            conversationId
+        ]);
         return rows[0];
     });
 }

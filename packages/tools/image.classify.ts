@@ -8,14 +8,14 @@
  * When both `path` and `data` are provided, `data` takes precedence.
  *
  * Uses the shared `safeReadFile` helper to prevent path traversal.
- * Uses the shared `envFloat` / `envInt` helpers for option parsing.
+ * Uses the shared `envNumber` helper for option parsing.
  *
  * @module tools/image.classify
  */
 
 import { z } from 'zod';
 import { generate } from '../llm/ollama';
-import { envFloat, envInt, safeReadFile } from '../shared';
+import { envNumber, safeReadFile } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Default vision model, configurable via environment variable. */
@@ -91,11 +91,11 @@ export const imageClassifyTool = createTool({
             stream: false,
             images: [base64Image],
             options: {
-                temperature: envFloat(process.env.TOOL_VISION_TEMPERATURE, 0.2),
-                top_p: envFloat(process.env.TOOL_VISION_TOP_P, 0.8),
-                top_k: envInt(process.env.TOOL_VISION_TOP_K, 20),
-                num_ctx: envInt(process.env.TOOL_VISION_NUM_CTX, 4096),
-                repeat_penalty: envFloat(process.env.TOOL_VISION_REPEAT_PENALTY, 1.3)
+                temperature: envNumber(process.env.TOOL_VISION_TEMPERATURE, 0.2),
+                top_p: envNumber(process.env.TOOL_VISION_TOP_P, 0.8),
+                top_k: envNumber(process.env.TOOL_VISION_TOP_K, 20),
+                num_ctx: envNumber(process.env.TOOL_VISION_NUM_CTX, 4096),
+                repeat_penalty: envNumber(process.env.TOOL_VISION_REPEAT_PENALTY, 1.3)
             }
         });
 

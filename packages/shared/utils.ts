@@ -1,8 +1,25 @@
 /**
- * Generic async utilities shared across tools and endpoints.
+ * Generic utilities shared across tools and endpoints.
  *
  * @module shared/utils
  */
+
+/**
+ * Parse an environment variable as a number.
+ *
+ * Uses `parseFloat` so it handles both integers and decimals.
+ * Callers that need a true integer should pass an integer fallback and
+ * document in the `.env.example` that the value must be a whole number.
+ *
+ * Returns `fallback` when the value is `undefined`, empty, or not a number.
+ *
+ * @param value    - Raw environment variable value (may be `undefined`).
+ * @param fallback - Default to use when parsing fails.
+ */
+export function envNumber(value: string | undefined, fallback: number): number {
+    const parsed = parseFloat(value ?? String(fallback));
+    return Number.isNaN(parsed) ? fallback : parsed;
+}
 
 /**
  * Race a promise against a timeout.

@@ -15,7 +15,6 @@ Comments/JSDoc requirements
 
 Shared utility usage
 
-- Env parsing helpers: `packages/shared/env.ts`
 - Path safety helpers: `packages/shared/path-safety.ts`
 - Reuse shared helpers; do not duplicate utility logic in tools
 

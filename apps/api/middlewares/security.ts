@@ -7,7 +7,7 @@
 import crypto from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
 import type { NextFunction, Request, Response } from 'express';
-import { envInt } from '@/packages/shared/env';
+import { envNumber } from '@/packages/shared';
 
 /**
  * Parse a positive integer environment variable with safe fallback.
@@ -17,7 +17,7 @@ import { envInt } from '@/packages/shared/env';
  * @returns A positive integer.
  */
 function parsePositiveInt(rawValue: string | undefined, fallback: number): number {
-    const parsed = envInt(rawValue, fallback);
+    const parsed = envNumber(rawValue, fallback);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 

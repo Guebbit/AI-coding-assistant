@@ -12,7 +12,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { z } from 'zod';
 import { logger } from '../logger/logger';
-import { envInt } from '../shared/env';
+import { envNumber } from '../shared';
 import type { ITool } from '../tools/types';
 import { checkMCPServerHealth } from './health';
 import type { IMCPConfig, IMCPServerConfig, IMCPToolMeta } from './types';
@@ -259,7 +259,7 @@ export async function loadMCPTools(configPath?: string): Promise<{
     for (const server of config.servers) {
         const timeoutMs =
             server.timeoutMs ??
-            envInt(process.env.MCP_CONNECT_TIMEOUT_MS, DEFAULT_MCP_CONNECT_TIMEOUT_MS);
+            envNumber(process.env.MCP_CONNECT_TIMEOUT_MS, DEFAULT_MCP_CONNECT_TIMEOUT_MS);
         const isWrite = server.writeTools === true;
 
         try {

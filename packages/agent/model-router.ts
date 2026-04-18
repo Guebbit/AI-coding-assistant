@@ -16,7 +16,7 @@
  */
 
 import { generate } from '../llm/ollama';
-import { envFloat, envInt, resolveModel, stripCodeFences, PROFILE_LIST } from '../shared';
+import { envNumber, resolveModel, stripCodeFences, PROFILE_LIST } from '../shared';
 import type { ModelProfile } from '../shared';
 
 /* ── Budget environment variables ────────────────────────────────────── */
@@ -26,14 +26,14 @@ import type { ModelProfile } from '../shared';
  * When cumulative duration exceeds 70 % of this value the router
  * downgrades to the `fast` profile to finish quickly.
  */
-const BUDGET_MAX_DURATION_MS = envInt(process.env.AGENT_BUDGET_MAX_DURATION_MS, 60_000);
+const BUDGET_MAX_DURATION_MS = envNumber(process.env.AGENT_BUDGET_MAX_DURATION_MS, 60_000);
 
 /**
  * Maximum allowed context string length (chars) for a single agent run.
  * When context length exceeds 80 % of this value the router upgrades to
  * the `reasoning` profile which uses a larger `num_ctx`.
  */
-const BUDGET_MAX_CONTEXT_CHARS = envInt(process.env.AGENT_BUDGET_MAX_CONTEXT_CHARS, 50_000);
+const BUDGET_MAX_CONTEXT_CHARS = envNumber(process.env.AGENT_BUDGET_MAX_CONTEXT_CHARS, 50_000);
 
 /**
  * Context length fraction at which the router upgrades to the `reasoning`
@@ -136,11 +136,11 @@ function resolveOptions(profile: ModelProfile): Record<string, unknown> {
     const prefix = `AGENT_MODEL_${profile.toUpperCase()}`;
     const d = PROFILE_OPTION_DEFAULTS[profile];
     return {
-        temperature: envFloat(process.env[`${prefix}_TEMPERATURE`], d.temperature),
-        top_p: envFloat(process.env[`${prefix}_TOP_P`], d.top_p),
-        top_k: envInt(process.env[`${prefix}_TOP_K`], d.top_k),
-        num_ctx: envInt(process.env[`${prefix}_NUM_CTX`], d.num_ctx),
-        repeat_penalty: envFloat(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty)
+        temperature: envNumber(process.env[`${prefix}_TEMPERATURE`], d.temperature),
+        top_p: envNumber(process.env[`${prefix}_TOP_P`], d.top_p),
+        top_k: envNumber(process.env[`${prefix}_TOP_K`], d.top_k),
+        num_ctx: envNumber(process.env[`${prefix}_NUM_CTX`], d.num_ctx),
+        repeat_penalty: envNumber(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty)
     };
 }
 

@@ -5,7 +5,7 @@
  */
 
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { envInt } from '../shared/env';
+import { envNumber } from '../shared';
 
 /** Default per-server MCP connect/check timeout in milliseconds. */
 const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
@@ -20,7 +20,7 @@ const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
  * @throws Never throws. All failures are converted to `false`.
  */
 export async function checkMCPServerHealth(client: Client): Promise<boolean> {
-    const timeoutMs = envInt(process.env.MCP_CONNECT_TIMEOUT_MS, DEFAULT_MCP_CONNECT_TIMEOUT_MS);
+    const timeoutMs = envNumber(process.env.MCP_CONNECT_TIMEOUT_MS, DEFAULT_MCP_CONNECT_TIMEOUT_MS);
 
     try {
         await Promise.race([

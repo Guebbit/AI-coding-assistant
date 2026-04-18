@@ -18,7 +18,7 @@ Directory map
 │  ├─ graph/{types.ts,client.ts,extractor.ts,index.ts}
 │  ├─ processors/{types.ts,processor-builder.ts,verification.ts,tool-reranker.ts,index.ts}
 │  ├─ mcp/{types.ts,health.ts,loader.ts,index.ts}
-│  ├─ shared/{env.ts,path-safety.ts,chunker.ts,response.ts,errors.ts,environment.ts,i18n.ts,mailer.ts,llm-response.ts,math.ts,sse.ts,request-validation.ts,safe-read-file.ts,model-resolution.ts,locales/en.json,index.ts}
+│  ├─ shared/{path-safety.ts,chunker.ts,response.ts,errors.ts,environment.ts,i18n.ts,mailer.ts,llm-response.ts,math.ts,sse.ts,request-validation.ts,safe-read-file.ts,model-resolution.ts,locales/en.json,index.ts}
 │  ├─ evals/{types.ts,scorer-builder.ts,persist.ts,index.ts,scorers/*}
 │  ├─ persistence/{types.ts,db.ts,migrate.ts,index.ts,migrations/001_initial.sql}
 │  └─ logger/logger.ts

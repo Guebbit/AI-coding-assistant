@@ -20,14 +20,14 @@
 
 import { logger } from '../logger/logger';
 import { createProcessor } from './processor-builder';
-import { envInt } from '../shared';
+import { envNumber } from '../shared';
 import { OllamaToolRerankerBackend, ToolReranker } from '../tools/tool-reranker';
 
 /** Enabled only when explicitly opted in. */
 const ENABLED = process.env.TOOL_RERANKER_ENABLED === 'true';
 
 /** Maximum number of tools passed to the agent per step. */
-const TOP_N = envInt(process.env.TOOL_RERANKER_TOP_N, 10);
+const TOP_N = envNumber(process.env.TOOL_RERANKER_TOP_N, 10);
 
 /* ── Processor ───────────────────────────────────────────────────────── */
 

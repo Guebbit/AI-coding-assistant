@@ -31,7 +31,7 @@ import type { ModelProfile } from "@/packages/agent/model-router";
 import { on } from "@/packages/events/bus";
 import { logger } from "@/packages/logger/logger";
 import {
-  envInt,
+  envNumber,
   ExtendedError,
   initI18n,
   rejectResponse,
@@ -222,7 +222,7 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
 });
 
 /* Default port for the Manna API server. */
-const PORT = envInt(process.env.PORT, 3001);
+const PORT = envNumber(process.env.PORT, 3001);
 
 try {
   validateRequiredEnvironment();

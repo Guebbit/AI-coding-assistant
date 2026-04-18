@@ -8,14 +8,14 @@
  */
 
 import { z } from 'zod';
-import { envInt } from '../shared';
+import { envNumber } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Base URL for the external image processor service. */
 export const IMAGE_PROCESSOR_URL = process.env.IMAGE_PROCESSOR_URL ?? 'http://localhost:5000';
 
 /** HTTP timeout (ms) for image-processor requests. */
-export const IMAGE_PROCESSOR_TIMEOUT_MS = envInt(process.env.IMAGE_PROCESSOR_TIMEOUT, 120_000);
+export const IMAGE_PROCESSOR_TIMEOUT_MS = envNumber(process.env.IMAGE_PROCESSOR_TIMEOUT, 120_000);
 
 /**
  * Shared base input schema for image-processor tools.
