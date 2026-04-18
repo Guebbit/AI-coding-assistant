@@ -117,6 +117,58 @@ export interface IEvalResultRecord extends IEvalResultInput {
     createdAt: Date;
 }
 
+/* ── Chat ────────────────────────────────────────────────────────────────── */
+
+/** Role of a chat message sender. */
+export type ChatRole = 'user' | 'assistant' | 'system';
+
+/** A single message within a conversation. */
+export interface IChatMessage {
+    id: string;
+    conversationId: string;
+    role: ChatRole;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/** A conversation row without its messages (used in list responses). */
+export interface IConversation {
+    id: string;
+    title: string;
+    profile: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+/** A conversation with its full message history. */
+export interface IConversationWithMessages extends IConversation {
+    messages: IChatMessage[];
+}
+
+/** Input for creating a conversation. */
+export interface ICreateConversationInput {
+    title?: string;
+    profile?: string | null;
+}
+
+/** Input for updating a conversation. */
+export interface IUpdateConversationInput {
+    title?: string;
+    profile?: string | null;
+}
+
+/** Input for creating a chat message. */
+export interface ICreateMessageInput {
+    role: ChatRole;
+    content: string;
+}
+
+/** Input for updating a chat message. */
+export interface IUpdateMessageInput {
+    content: string;
+}
+
 /* ── Shared query options ────────────────────────────────────────────────── */
 
 /** Options for {@link fetchRecentRuns}. */
