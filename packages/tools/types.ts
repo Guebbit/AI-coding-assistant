@@ -12,6 +12,7 @@
  */
 
 import type { ZodType } from 'zod';
+import type { IToolCitation } from './citations';
 
 /**
  * A Tool represents a single capability the agent can invoke.
@@ -46,6 +47,9 @@ export interface ITool {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     outputSchema?: ZodType<any>;
 
+    /** Return tool result directly as final agent output, skipping extra LLM rounds. */
+    directOutput?: boolean;
+
     /**
      * Execute the tool with the given input.
      *
@@ -53,4 +57,8 @@ export interface ITool {
      * @returns A JSON-serializable result.
      */
     execute(input: Record<string, unknown>): Promise<unknown>;
+}
+
+export interface IToolResultWithCitations {
+    citations: IToolCitation[];
 }

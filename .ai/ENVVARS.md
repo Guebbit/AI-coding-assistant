@@ -16,6 +16,7 @@
 
 `AGENT_MODEL_ROUTER_MODEL=phi4-mini:latest` — classifier LLM used by the model router for every step
 `AGENTS_MAX_STEPS=20` — max loop iterations
+`AGENT_MAX_TOOL_CALLS=10` — max chained tool calls within a single step
 `AGENT_BUDGET_{MAX_DURATION_MS=60000,MAX_CONTEXT_CHARS=50000}` — router budget thresholds (fast downgrade / reasoning upgrade)
 `AGENT_VERIFICATION_{ENABLED=false,MODEL=AGENT_MODEL_FAST}` — post-tool verification gate/model
 

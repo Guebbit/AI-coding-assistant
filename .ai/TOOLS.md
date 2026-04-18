@@ -32,6 +32,19 @@ Registration locations
 - Tool interface: `packages/tools/types.ts`
 - Exports: `packages/tools/index.ts`
 - Runtime arrays: `apps/api/agents.ts` (`readOnlyTools`, `writeTools`)
+- Tool reranker service/backend: `packages/tools/tool-reranker.ts`
+- Tool deduplicator service: `packages/tools/tool-call-deduplicator.ts`
+- Citation schema/buffer: `packages/tools/citations.ts`
+
+Execution notes
+
+- Agent detects Ollama native tool-calling capability per routed model (`/api/show`).
+- Native path uses `/api/chat` with tool definitions and reads `message.tool_calls`.
+- Non-native path uses untooled prompt-injected function calling (`{name,arguments}` JSON) with schema/argument validation.
+- Chained tool calls are capped by `AGENT_MAX_TOOL_CALLS`.
+- Duplicate tool calls are blocked per run via SHA-256 (`toolName + args`).
+- Tools may set `directOutput: true` to return immediately without another LLM round.
+- Tool outputs may include `citations: [{id,title,text}]`; citations are buffered per run and returned in API output.
 
 Add/remove procedure
 

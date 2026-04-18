@@ -20,6 +20,7 @@ import {
     ResponseMetaToJSON,
     ResponseMetaToJSONTyped,
 } from './ResponseMeta';
+import type { ToolCitation } from './ResponseMeta';
 
 /**
  * 
@@ -39,6 +40,12 @@ export interface RunResponse {
      * @memberof RunResponse
      */
     meta?: ResponseMeta;
+    /**
+     *
+     * @type {Array<ToolCitation>}
+     * @memberof RunResponse
+     */
+    citations?: Array<ToolCitation>;
 }
 
 /**
@@ -60,6 +67,7 @@ export function RunResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean
         
         'result': json['result'] == null ? undefined : json['result'],
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
+        'citations': json['citations'] == null ? undefined : json['citations'],
     };
 }
 
@@ -76,6 +84,6 @@ export function RunResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean
         
         'result': value['result'],
         'meta': ResponseMetaToJSON(value['meta']),
+        'citations': value['citations'],
     };
 }
-

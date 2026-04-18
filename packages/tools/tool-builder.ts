@@ -47,6 +47,9 @@ export interface ICreateToolOptions<TInput extends Record<string, unknown>, TOut
      */
     outputSchema?: z.ZodType<TOutput>;
 
+    /** If true, the agent returns this tool result immediately after execution. */
+    directOutput?: boolean;
+
     /**
      * The tool's implementation.
      *
@@ -89,6 +92,7 @@ export function createTool<
         description: options.description,
         inputSchema: options.inputSchema,
         outputSchema: options.outputSchema,
+        directOutput: options.directOutput,
 
         /**
          * Wrapper that validates the raw LLM input against the schema

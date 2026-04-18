@@ -21,16 +21,20 @@
  * @module agent/agent
  */
 
-import { generateWithMetadata, generate } from '../llm/ollama';
+import {
+    generateWithMetadata,
+    generate,
+    chatWithMetadata,
+    modelSupportsNativeToolCalling
+} from '../llm/ollama';
 import { addMemory, getMemory } from '../memory/memory';
 import { emit } from '../events/bus';
-import type { ITool } from '../tools';
+import type { ITool } from '../tools/types';
 import { logger } from '../logger/logger';
-import { resolveModel, stripCodeFences } from '../shared';
+import { envInt, resolveModel, stripCodeFences } from '../shared';
 import { routeModel } from './model-router';
 import type { ModelProfile } from './model-router';
 import { agentStepSchema } from './schemas';
-import type { AgentStep } from './schemas';
 import type {
     IProcessor,
     IProcessInputStepArgs,
@@ -40,7 +44,10 @@ import { writeDiagnosticLog, cleanupOldLogs } from '../diagnostics';
 import type { IDiagnosticEntry } from '../diagnostics';
 import { saveAgentRun } from '../persistence/db';
 import type { IToolCall } from '../persistence/types';
-import type { IGenerateResult } from '../llm/ollama';
+import type { IGenerateResult, IChatResult } from '../llm/ollama';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { ToolCitationBuffer, toolCitationSchema, type IToolCitation } from '../tools/citations';
+import { ToolCallDeduplicator } from '../tools/tool-call-deduplicator';
 
 /**
  * Maximum number of reasoning iterations before the agent gives up.
@@ -85,6 +92,8 @@ export interface IAgentRunMeta {
     contextLength: number;
     /** Whether semantic memory retrieval returned entries. */
     memoryUsed: boolean;
+    /** Citations collected from tool outputs during this run. */
+    citations: IToolCitation[];
 }
 
 /**
@@ -95,6 +104,8 @@ export interface IAgentRunResult {
     answer: string;
     /** Operational metadata captured during the run. */
     meta: IAgentRunMeta;
+    /** Citations collected from tool outputs during this run. */
+    citations: IToolCitation[];
 }
 
 /**
@@ -104,6 +115,12 @@ export interface IAgentRunResult {
 interface ITokenAccumulator {
     promptTokens: number | undefined;
     completionTokens: number | undefined;
+}
+
+interface IParsedToolCall {
+    thought: string;
+    action: string;
+    input: Record<string, unknown>;
 }
 
 /**
@@ -154,7 +171,7 @@ export class Agent {
      */
     private static accumulateTokens(
         accumulator: ITokenAccumulator,
-        llmResult: IGenerateResult
+        llmResult: Pick<IGenerateResult | IChatResult, 'promptEvalCount' | 'evalCount'>
     ): void {
         if (typeof llmResult.promptEvalCount === 'number') {
             accumulator.promptTokens = (accumulator.promptTokens ?? 0) + llmResult.promptEvalCount;
@@ -261,35 +278,92 @@ export class Agent {
         return result;
     }
 
-    /**
-     * Assemble the full prompt string sent to the LLM at each step.
-     *
-     * @param task    - The user's task description.
-     * @param context - Accumulated context from prior steps.
-     * @param memory  - Relevant memory strings.
-     * @returns The fully assembled prompt string.
-     */
-    private buildPrompt(task: string, context: string, memory: string[]): string {
+    private buildUntooledPrompt(
+        task: string,
+        context: string,
+        memory: string[],
+        tools: ITool[]
+    ): string {
         const memoryBlock = memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : '';
         const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
-        const toolList = this.tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
+        const toolBlocks = tools
+            .map((tool) => {
+                const schema = tool.inputSchema
+                    ? zodToJsonSchema(tool.inputSchema)
+                    : { type: 'object' };
+                return (
+                    `Tool: ${tool.name}\n` +
+                    `Description: ${tool.description}\n` +
+                    `Input schema (JSON Schema): ${JSON.stringify(schema)}\n` +
+                    `Example:\n` +
+                    `{"name":"${tool.name}","arguments":{}}\n`
+                );
+            })
+            .join('\n---\n');
 
         return (
             `You are an AI agent with access to tools.\n\n` +
             `Task:\n${task}\n\n` +
             memoryBlock +
             contextBlock +
-            `Available tools:\n${toolList}\n\n` +
-            `Respond ONLY with a single valid JSON object — no markdown, no extra text:\n` +
-            `{\n` +
-            `  "thought": "your reasoning or final answer",\n` +
-            `  "action": "tool_name or none",\n` +
-            `  "input": {}\n` +
-            `}\n\n` +
-            `Rules:\n` +
-            `- Only use a tool when you genuinely need to read a file, run a command, or access external data.\n` +
-            `- Use action "none" when the task is fully complete.`
+            `When a tool is needed, respond ONLY in JSON with this exact format:\n` +
+            `{"name":"tool_name","arguments":{}}\n` +
+            `When no tool is needed and the task is complete, respond with plain text only.\n` +
+            `Never include keys other than "name" and "arguments" for tool calls.\n` +
+            `Never invent tool names or argument fields.\n\n` +
+            `Available tools:\n${toolBlocks}\n`
         );
+    }
+
+    private static getToolInputSchema(tool: ITool): {
+        required: string[];
+        properties: Set<string> | null;
+    } {
+        if (!tool.inputSchema) return { required: [], properties: null };
+        const schema = zodToJsonSchema(tool.inputSchema) as {
+            required?: string[];
+            properties?: Record<string, unknown>;
+        };
+        const properties = schema.properties ? new Set(Object.keys(schema.properties)) : null;
+        return { required: schema.required ?? [], properties };
+    }
+
+    private static validateUntooledCall(
+        tools: ITool[],
+        candidate: { name?: unknown; arguments?: unknown }
+    ): IParsedToolCall | null {
+        if (typeof candidate.name !== 'string') return null;
+        const tool = tools.find((entry) => entry.name === candidate.name);
+        if (!tool) return null;
+        if (typeof candidate.arguments !== 'object' || candidate.arguments === null) return null;
+        if (Array.isArray(candidate.arguments)) return null;
+
+        const input = candidate.arguments as Record<string, unknown>;
+        const { required, properties } = Agent.getToolInputSchema(tool);
+
+        for (const requiredKey of required) {
+            if (!(requiredKey in input)) return null;
+        }
+        if (properties) {
+            for (const key of Object.keys(input)) {
+                if (!properties.has(key)) return null;
+            }
+        }
+        return { thought: `Using tool ${tool.name}`, action: tool.name, input };
+    }
+
+    private static collectCitationsFromToolResult(
+        result: unknown,
+        buffer: ToolCitationBuffer
+    ): void {
+        if (!result || typeof result !== 'object') return;
+        const maybeCitations = (result as { citations?: unknown }).citations;
+        if (!Array.isArray(maybeCitations)) return;
+        const parsed = maybeCitations
+            .map((entry) => toolCitationSchema.safeParse(entry))
+            .filter((entry) => entry.success)
+            .map((entry) => entry.data);
+        buffer.addMany(parsed);
     }
 
     /* ── Public API ──────────────────────────────────────────────────── */
@@ -310,6 +384,8 @@ export class Agent {
         let context = '';
         const diagnosticEntries: IDiagnosticEntry[] = [];
         const toolCalls: IToolCall[] = [];
+        const toolDeduplicator = new ToolCallDeduplicator();
+        const citationBuffer = new ToolCitationBuffer();
         const modelsUsed = new Set<string>();
         const profilesUsed = new Set<ModelProfile>();
         const tokens: ITokenAccumulator = {
@@ -322,6 +398,7 @@ export class Agent {
             typeof options?.maxSteps === 'number' && options.maxSteps > 0
                 ? options.maxSteps
                 : MAX_STEPS;
+        const effectiveMaxToolCalls = Math.max(1, envInt(process.env.AGENT_MAX_TOOL_CALLS, 10));
 
         logger.info('agent_run_started', {
             component: 'agent',
@@ -342,7 +419,9 @@ export class Agent {
 
         emit({ type: 'agent:start', payload: { task } });
 
-        const buildRunMeta = (): IAgentRunMeta => {
+        const buildRunMeta = (
+            citations: IToolCitation[] = citationBuffer.peek()
+        ): IAgentRunMeta => {
             const totalTokens =
                 typeof tokens.promptTokens === 'number' &&
                 typeof tokens.completionTokens === 'number'
@@ -361,7 +440,8 @@ export class Agent {
                 completionTokens: tokens.completionTokens,
                 totalTokens,
                 contextLength: context.length,
-                memoryUsed: memory.length > 0
+                memoryUsed: memory.length > 0,
+                citations
             };
         };
 
@@ -400,6 +480,7 @@ export class Agent {
                 contextLength: inputArgs.context.length,
                 cumulativeDurationMs: Date.now() - runStartedAt
             }).catch((error: unknown) => Agent.handleLlmError(error, step));
+            const availableTools = this.tools.filter((tool) => inputArgs.tools.includes(tool.name));
 
             profilesUsed.add(route.profile);
             emit({
@@ -413,7 +494,7 @@ export class Agent {
             });
 
             // ── Direct-answer shortcut: no tools available ───────────────────
-            if (step === 0 && !inputArgs.context && this.tools.length === 0) {
+            if (step === 0 && !inputArgs.context && availableTools.length === 0) {
                 const memoryBlock =
                     inputArgs.memory.length > 0
                         ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`
@@ -438,186 +519,305 @@ export class Agent {
                 await addMemory(`Task: ${task} → ${answer}`);
                 emit({ type: 'agent:done', payload: { thought: answer } });
                 await Agent.persistRun(persistInput(answer, 'completed'));
-                return { answer, meta: buildRunMeta() };
+                const citations = citationBuffer.flush();
+                return { answer, meta: buildRunMeta(citations), citations };
             }
 
-            // ── Build prompt and call LLM ────────────────────────────────────
-            const prompt = this.buildPrompt(inputArgs.task, inputArgs.context, inputArgs.memory);
-            logger.info('agent_step_started', {
-                component: 'agent',
-                step,
-                contextLength: inputArgs.context.length,
-                promptLength: prompt.length,
-                promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + '…' : prompt
-            });
+            const nativeToolCalling = await modelSupportsNativeToolCalling(route.model);
+            let toolCallsThisStep = 0;
 
-            const llmResult = await generateWithMetadata(prompt, {
-                model: route.model,
-                options: route.options
-            }).catch((error: unknown) => Agent.handleLlmError(error, step));
+            while (toolCallsThisStep < effectiveMaxToolCalls) {
+                let parsed: IParsedToolCall;
+                let rawResponseText = '';
 
-            llmSteps += 1;
-            modelsUsed.add(llmResult.model ?? route.model);
-            Agent.accumulateTokens(tokens, llmResult);
-            logger.info('agent_llm_response_received', {
-                component: 'agent',
-                step,
-                responseLength: llmResult.response.length,
-                durationMs: Date.now() - runStartedAt,
-                routedProfile: route.profile,
-                routedReason: route.reason,
-                model: llmResult.model
-            });
+                if (nativeToolCalling) {
+                    const systemPrompt =
+                        'You are an AI agent. Use tools when needed. ' +
+                        'If no tools are needed, provide the final answer directly.';
+                    const userPrompt =
+                        `Task:\n${inputArgs.task}\n\n` +
+                        `${inputArgs.memory.length > 0 ? `Recent memory:\n${inputArgs.memory.join('\n')}\n\n` : ''}` +
+                        `${context ? `Context so far:\n${context}\n\n` : ''}`;
+                    const nativeTools = availableTools.map((tool) => ({
+                        type: 'function' as const,
+                        function: {
+                            name: tool.name,
+                            description: tool.description,
+                            parameters: (tool.inputSchema
+                                ? (zodToJsonSchema(tool.inputSchema) as Record<string, unknown>)
+                                : { type: 'object', properties: {} }) as Record<string, unknown>
+                        }
+                    }));
+                    const chatResult = await chatWithMetadata(
+                        [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        { model: route.model, options: route.options, tools: nativeTools }
+                    ).catch((error: unknown) => Agent.handleLlmError(error, step));
 
-            const response = llmResult.response;
+                    llmSteps += 1;
+                    modelsUsed.add(chatResult.model ?? route.model);
+                    Agent.accumulateTokens(tokens, chatResult);
+                    rawResponseText = chatResult.message.content ?? '';
+                    const toolCall = chatResult.message.tool_calls?.[0];
+                    if (toolCall?.function?.name) {
+                        const parsedArguments = (() => {
+                            if (typeof toolCall.function.arguments !== 'string') {
+                                return toolCall.function.arguments ?? {};
+                            }
+                            try {
+                                return JSON.parse(toolCall.function.arguments) as unknown;
+                            } catch {
+                                return {};
+                            }
+                        })();
+                        parsed = {
+                            thought: rawResponseText || `Using tool ${toolCall.function.name}`,
+                            action: toolCall.function.name,
+                            input:
+                                typeof parsedArguments === 'object' && parsedArguments
+                                    ? (parsedArguments as Record<string, unknown>)
+                                    : {}
+                        };
+                    } else {
+                        parsed = {
+                            thought: rawResponseText.trim() || 'Task completed.',
+                            action: 'none',
+                            input: {}
+                        };
+                    }
+                } else {
+                    const prompt = this.buildUntooledPrompt(
+                        inputArgs.task,
+                        context,
+                        inputArgs.memory,
+                        availableTools
+                    );
+                    logger.info('agent_step_started', {
+                        component: 'agent',
+                        step,
+                        contextLength: inputArgs.context.length,
+                        promptLength: prompt.length,
+                        promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + '…' : prompt
+                    });
 
-            // ── Parse the LLM response ───────────────────────────────────────
-            let parsed: AgentStep;
-            try {
-                const cleaned = stripCodeFences(response);
-                parsed = agentStepSchema.parse(JSON.parse(cleaned));
-            } catch {
-                context +=
-                    '\nYour previous response was not valid JSON. ' +
-                    'Please respond ONLY with a single valid JSON object.';
-                logger.warn('agent_invalid_json_response', {
-                    component: 'agent',
-                    step,
-                    responseLength: response.length,
-                    contextLength: context.length
-                });
-                diagnosticEntries.push({
-                    timestamp: new Date().toISOString(),
-                    step,
-                    severity: 'warn',
-                    category: 'json',
-                    message: 'Invalid JSON response from LLM — asking model to self-correct.',
-                    metadata: { responseLength: response.length }
-                });
-                continue;
-            }
+                    const llmResult = await generateWithMetadata(prompt, {
+                        model: route.model,
+                        options: route.options
+                    }).catch((error: unknown) => Agent.handleLlmError(error, step));
 
-            logger.info('agent_step_parsed', {
-                component: 'agent',
-                step,
-                action: parsed.action,
-                thoughtLength: parsed.thought.length
-            });
-            emit({ type: 'agent:step', payload: { step, parsed } });
+                    llmSteps += 1;
+                    modelsUsed.add(llmResult.model ?? route.model);
+                    Agent.accumulateTokens(tokens, llmResult);
+                    rawResponseText = llmResult.response;
+                    logger.info('agent_llm_response_received', {
+                        component: 'agent',
+                        step,
+                        responseLength: llmResult.response.length,
+                        durationMs: Date.now() - runStartedAt,
+                        routedProfile: route.profile,
+                        routedReason: route.reason,
+                        model: llmResult.model
+                    });
 
-            // ── Run output processors ────────────────────────────────────────
-            const outputArgs = await this.runOutputProcessors({
-                task,
-                stepNumber: step,
-                text: response,
-                thought: parsed.thought,
-                action: parsed.action,
-                toolInput: parsed.input
-            });
-            parsed = {
-                thought: outputArgs.thought,
-                action: outputArgs.action,
-                input: outputArgs.toolInput
-            };
+                    const cleaned = stripCodeFences(rawResponseText).trim();
+                    try {
+                        const parsedJson = JSON.parse(cleaned) as unknown;
+                        const asAgentStep = agentStepSchema.safeParse(parsedJson);
+                        if (asAgentStep.success) {
+                            parsed = asAgentStep.data;
+                        } else if (parsedJson && typeof parsedJson === 'object') {
+                            const asUntooled = Agent.validateUntooledCall(
+                                availableTools,
+                                parsedJson as { name?: unknown; arguments?: unknown }
+                            );
+                            parsed = asUntooled ?? {
+                                thought: cleaned,
+                                action: 'none',
+                                input: {}
+                            };
+                        } else {
+                            parsed = { thought: cleaned, action: 'none', input: {} };
+                        }
+                    } catch {
+                        context +=
+                            '\nYour previous response was not valid JSON. ' +
+                            'Return plain text for final answers or JSON tool calls only.';
+                        diagnosticEntries.push({
+                            timestamp: new Date().toISOString(),
+                            step,
+                            severity: 'warn',
+                            category: 'json',
+                            message: 'Invalid JSON response from untooled fallback model.',
+                            metadata: { responseLength: rawResponseText.length }
+                        });
+                        break;
+                    }
+                }
 
-            // ── Done — no tool action needed ─────────────────────────────────
-            if (parsed.action === 'none') {
-                await addMemory(`Task: ${task} → ${parsed.thought}`);
-                logger.info('agent_run_completed', {
-                    component: 'agent',
-                    step,
-                    durationMs: Date.now() - runStartedAt,
-                    finalThoughtLength: parsed.thought.length
-                });
-                emit({ type: 'agent:done', payload: { thought: parsed.thought } });
-                await Agent.writeDiagnostics(diagnosticEntries, task);
-                await Agent.persistRun(persistInput(parsed.thought, 'completed'));
-                return { answer: parsed.thought, meta: buildRunMeta() };
-            }
-
-            // ── Find and execute the requested tool ──────────────────────────
-            const tool = this.tools.find((t) => t.name === parsed.action);
-            if (!tool) {
-                logger.warn('agent_unknown_tool', {
+                logger.info('agent_step_parsed', {
                     component: 'agent',
                     step,
                     action: parsed.action,
-                    availableTools: this.tools.map((t) => t.name)
+                    thoughtLength: parsed.thought.length
                 });
-                context +=
-                    `\nTool "${parsed.action}" does not exist. ` +
-                    `Available tools: ${this.tools.map((t) => t.name).join(', ')}.`;
+                emit({ type: 'agent:step', payload: { step, parsed } });
+
+                const outputArgs = await this.runOutputProcessors({
+                    task,
+                    stepNumber: step,
+                    text: rawResponseText,
+                    thought: parsed.thought,
+                    action: parsed.action,
+                    toolInput: parsed.input
+                });
+                parsed = {
+                    thought: outputArgs.thought,
+                    action: outputArgs.action,
+                    input: outputArgs.toolInput
+                };
+
+                if (parsed.action === 'none') {
+                    await addMemory(`Task: ${task} → ${parsed.thought}`);
+                    logger.info('agent_run_completed', {
+                        component: 'agent',
+                        step,
+                        durationMs: Date.now() - runStartedAt,
+                        finalThoughtLength: parsed.thought.length
+                    });
+                    emit({ type: 'agent:done', payload: { thought: parsed.thought } });
+                    await Agent.writeDiagnostics(diagnosticEntries, task);
+                    await Agent.persistRun(persistInput(parsed.thought, 'completed'));
+                    const citations = citationBuffer.flush();
+                    return { answer: parsed.thought, meta: buildRunMeta(citations), citations };
+                }
+
+                const tool = availableTools.find((entry) => entry.name === parsed.action);
+                if (!tool) {
+                    logger.warn('agent_unknown_tool', {
+                        component: 'agent',
+                        step,
+                        action: parsed.action,
+                        availableTools: availableTools.map((entry) => entry.name)
+                    });
+                    context +=
+                        `\nTool "${parsed.action}" does not exist. ` +
+                        `Available tools: ${availableTools.map((entry) => entry.name).join(', ')}.`;
+                    diagnosticEntries.push({
+                        timestamp: new Date().toISOString(),
+                        step,
+                        severity: 'warn',
+                        category: 'tool',
+                        message: `Unknown tool requested: "${parsed.action}".`,
+                        metadata: { availableTools: availableTools.map((entry) => entry.name) }
+                    });
+                    break;
+                }
+
+                if (toolDeduplicator.isDuplicate(parsed.action, parsed.input)) {
+                    context +=
+                        `\nTool "${parsed.action}" with the same arguments was already called recently. ` +
+                        'Try a different tool or different arguments.';
+                    diagnosticEntries.push({
+                        timestamp: new Date().toISOString(),
+                        step,
+                        severity: 'warn',
+                        category: 'tool',
+                        message: `Duplicate tool call prevented for "${parsed.action}".`
+                    });
+                    toolCallsThisStep += 1;
+                    continue;
+                }
+
+                const toolStartedAt = Date.now();
+                const toolResult = await tool
+                    .execute(parsed.input)
+                    .then((result) => {
+                        const durationMs = Date.now() - toolStartedAt;
+                        logger.info('agent_tool_executed', {
+                            component: 'agent',
+                            step,
+                            tool: parsed.action,
+                            durationMs
+                        });
+                        toolCalls.push({
+                            tool: parsed.action,
+                            step,
+                            input: parsed.input,
+                            result,
+                            success: true,
+                            durationMs
+                        });
+                        return { success: true as const, result };
+                    })
+                    .catch((error: unknown) => {
+                        context += `\nTool "${parsed.action}" failed: ${String(error)}`;
+                        const durationMs = Date.now() - toolStartedAt;
+                        logger.warn('agent_tool_failed', {
+                            component: 'agent',
+                            step,
+                            tool: parsed.action,
+                            error: String(error)
+                        });
+                        emit({
+                            type: 'tool:error',
+                            payload: { tool: parsed.action, error: String(error) }
+                        });
+                        diagnosticEntries.push({
+                            timestamp: new Date().toISOString(),
+                            step,
+                            severity: 'error',
+                            category: 'tool',
+                            message: `Tool "${parsed.action}" failed: ${String(error)}`,
+                            metadata: { tool: parsed.action }
+                        });
+                        toolCalls.push({
+                            tool: parsed.action,
+                            step,
+                            input: parsed.input,
+                            result: null,
+                            success: false,
+                            error: String(error),
+                            durationMs
+                        });
+                        return { success: false as const };
+                    });
+                if (!toolResult.success) break;
+
+                Agent.collectCitationsFromToolResult(toolResult.result, citationBuffer);
+                emit({
+                    type: 'tool:result',
+                    payload: { tool: parsed.action, result: toolResult.result }
+                });
+
+                if (tool.directOutput) {
+                    const directAnswer =
+                        typeof toolResult.result === 'string'
+                            ? toolResult.result
+                            : JSON.stringify(toolResult.result);
+                    await addMemory(`Task: ${task} → ${directAnswer}`);
+                    emit({ type: 'agent:done', payload: { thought: directAnswer } });
+                    await Agent.persistRun(persistInput(directAnswer, 'completed'));
+                    const citations = citationBuffer.flush();
+                    return { answer: directAnswer, meta: buildRunMeta(citations), citations };
+                }
+
+                context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(toolResult.result)}`;
+                toolCallsThisStep += 1;
+            }
+
+            if (toolCallsThisStep >= effectiveMaxToolCalls) {
+                context += `\nReached AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}) for step ${step}.`;
                 diagnosticEntries.push({
                     timestamp: new Date().toISOString(),
                     step,
                     severity: 'warn',
                     category: 'tool',
-                    message: `Unknown tool requested: "${parsed.action}".`,
-                    metadata: { availableTools: this.tools.map((t) => t.name) }
+                    message: `Step exceeded AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}).`
                 });
-                continue;
             }
 
-            const toolStartedAt = Date.now();
-            const toolResult = await tool
-                .execute(parsed.input)
-                .then((result) => {
-                    const durationMs = Date.now() - toolStartedAt;
-                    logger.info('agent_tool_executed', {
-                        component: 'agent',
-                        step,
-                        tool: parsed.action,
-                        durationMs
-                    });
-                    toolCalls.push({
-                        tool: parsed.action,
-                        step,
-                        input: parsed.input,
-                        result,
-                        success: true,
-                        durationMs
-                    });
-                    return { success: true as const, result };
-                })
-                .catch((error: unknown) => {
-                    context += `\nTool "${parsed.action}" failed: ${String(error)}`;
-                    const durationMs = Date.now() - toolStartedAt;
-                    logger.warn('agent_tool_failed', {
-                        component: 'agent',
-                        step,
-                        tool: parsed.action,
-                        error: String(error)
-                    });
-                    emit({
-                        type: 'tool:error',
-                        payload: { tool: parsed.action, error: String(error) }
-                    });
-                    diagnosticEntries.push({
-                        timestamp: new Date().toISOString(),
-                        step,
-                        severity: 'error',
-                        category: 'tool',
-                        message: `Tool "${parsed.action}" failed: ${String(error)}`,
-                        metadata: { tool: parsed.action }
-                    });
-                    toolCalls.push({
-                        tool: parsed.action,
-                        step,
-                        input: parsed.input,
-                        result: null,
-                        success: false,
-                        error: String(error),
-                        durationMs
-                    });
-                    return { success: false as const };
-                });
-            if (!toolResult.success) continue;
-
-            emit({
-                type: 'tool:result',
-                payload: { tool: parsed.action, result: toolResult.result }
-            });
-            context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(toolResult.result)}`;
             logger.info('agent_step_finished', {
                 component: 'agent',
                 step,
@@ -670,6 +870,7 @@ export class Agent {
             type: 'agent:max_steps',
             payload: { task, summary, diagnosticFile }
         });
-        return { answer: summary, meta: buildRunMeta() };
+        const citations = citationBuffer.flush();
+        return { answer: summary, meta: buildRunMeta(citations), citations };
     }
 }

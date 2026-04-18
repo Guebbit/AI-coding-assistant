@@ -20,8 +20,8 @@
 
 import { logger } from '../logger/logger';
 import { createProcessor } from './processor-builder';
-import { envInt, cosineSimilarity } from '../shared';
-import { getEmbedding } from '../llm/embeddings';
+import { envInt } from '../shared';
+import { OllamaToolRerankerBackend, ToolReranker } from '../tools/tool-reranker';
 
 /** Enabled only when explicitly opted in. */
 const ENABLED = process.env.TOOL_RERANKER_ENABLED === 'true';
@@ -44,9 +44,8 @@ const TOP_N = envInt(process.env.TOOL_RERANKER_TOP_N, 10);
 export function createToolRerankerProcessor(
     toolDescriptionMap?: Map<string, string>
 ): ReturnType<typeof createProcessor> {
-    const embeddingCache = new Map<string, number[]>();
     const toolDescriptions = new Map(toolDescriptionMap ?? []);
-    let cachedToolSetSignature: string | null = null;
+    const reranker = new ToolReranker(new OllamaToolRerankerBackend());
 
     return createProcessor({
         /**
@@ -58,38 +57,16 @@ export function createToolRerankerProcessor(
         async processInputStep(args) {
             if (!ENABLED) return;
             if (args.tools.length <= TOP_N) return;
+            const toolDefs = args.tools.map((name) => ({
+                name,
+                description: toolDescriptions.get(name) ?? name
+            }));
+            const prompt = `${args.task}\n${args.context}\n${args.memory.join('\n')}`.trim();
 
-            const initCache = async (): Promise<void> => {
-                const signature = [...args.tools].sort().join('\u0000');
-                if (signature === cachedToolSetSignature) return;
-
-                embeddingCache.clear();
-                await Promise.all(
-                    args.tools.map(async (name) => {
-                        const desc = toolDescriptions.get(name) ?? name;
-                        const vector = await getEmbedding(desc);
-                        embeddingCache.set(name, vector);
-                    })
-                );
-
-                cachedToolSetSignature = signature;
-                logger.info('tool_reranker_cache_built', {
-                    component: 'processors.tool_reranker',
-                    toolCount: args.tools.length
-                });
-            };
-
-            return initCache()
-                .then(() => getEmbedding(args.task))
-                .then((taskVector) => {
-                    const scored = args.tools
-                        .filter((name) => embeddingCache.has(name))
-                        .map((name) => ({
-                            name,
-                            score: cosineSimilarity(taskVector, embeddingCache.get(name)!)
-                        }))
-                        .sort((a, b) => b.score - a.score);
-                    const topTools = scored.slice(0, TOP_N).map((t) => t.name);
+            return reranker
+                .rerank(prompt, toolDefs, TOP_N)
+                .then((rankedTools) => {
+                    const topTools = rankedTools.map((tool) => tool.name);
                     logger.info('tool_reranker_filtered', {
                         component: 'processors.tool_reranker',
                         step: args.stepNumber,

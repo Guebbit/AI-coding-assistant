@@ -13,6 +13,11 @@
  */
 
 import { mapValues } from '../runtime';
+export interface ToolCitation {
+    id: string;
+    title: string;
+    text: string;
+}
 /**
  * Optional operational metadata attached to successful responses.
  * @export
@@ -97,6 +102,12 @@ export interface ResponseMeta {
      * @memberof ResponseMeta
      */
     memoryUsed?: boolean;
+    /**
+     * Tool citations collected during execution.
+     * @type {Array<ToolCitation>}
+     * @memberof ResponseMeta
+     */
+    citations?: Array<ToolCitation>;
 }
 
 /**
@@ -129,6 +140,7 @@ export function ResponseMetaFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'contextLength': json['contextLength'] == null ? undefined : json['contextLength'],
         'requestId': json['requestId'] == null ? undefined : json['requestId'],
         'memoryUsed': json['memoryUsed'] == null ? undefined : json['memoryUsed'],
+        'citations': json['citations'] == null ? undefined : json['citations'],
     };
 }
 
@@ -156,6 +168,6 @@ export function ResponseMetaFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'contextLength': value['contextLength'],
         'requestId': value['requestId'],
         'memoryUsed': value['memoryUsed'],
+        'citations': value['citations'],
     };
 }
-

@@ -46,6 +46,50 @@ export interface IGenerateOptions {
     options?: Record<string, unknown>;
 }
 
+export interface IOllamaToolDefinition {
+    type: 'function';
+    function: {
+        name: string;
+        description: string;
+        parameters?: Record<string, unknown>;
+    };
+}
+
+export interface IOllamaToolCall {
+    function: {
+        name: string;
+        arguments?: Record<string, unknown> | string;
+    };
+}
+
+export interface IOllamaChatMessage {
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: string;
+    /* eslint-disable-next-line @typescript-eslint/naming-convention -- Ollama API uses snake_case */
+    tool_calls?: IOllamaToolCall[];
+    name?: string;
+}
+
+export interface IChatOptions {
+    model?: string;
+    stream?: boolean;
+    tools?: IOllamaToolDefinition[];
+    options?: Record<string, unknown>;
+}
+
+export interface IChatResult {
+    message: IOllamaChatMessage;
+    model: string;
+    done: boolean;
+    doneReason?: string;
+    totalDurationNs?: number;
+    loadDurationNs?: number;
+    promptEvalCount?: number;
+    promptEvalDurationNs?: number;
+    evalCount?: number;
+    evalDurationNs?: number;
+}
+
 /**
  * Rich result object returned by `generateWithMetadata`.
  *
@@ -173,6 +217,110 @@ export async function generateWithMetadata(
 
     return {
         response: data.response,
+        model: data.model ?? model,
+        done: data.done ?? true,
+        doneReason: data.done_reason,
+        totalDurationNs: data.total_duration,
+        loadDurationNs: data.load_duration,
+        promptEvalCount: data.prompt_eval_count,
+        promptEvalDurationNs: data.prompt_eval_duration,
+        evalCount: data.eval_count,
+        evalDurationNs: data.eval_duration
+    };
+}
+
+const modelCapabilitiesCache = new Map<string, boolean>();
+
+export function clearModelCapabilitiesCache(): void {
+    modelCapabilitiesCache.clear();
+}
+
+export async function modelSupportsNativeToolCalling(model?: string): Promise<boolean> {
+    const effectiveModel = model?.trim() || OLLAMA_MODEL;
+    if (!effectiveModel) return false;
+    if (modelCapabilitiesCache.has(effectiveModel)) {
+        return modelCapabilitiesCache.get(effectiveModel)!;
+    }
+
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/show`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: effectiveModel })
+    });
+
+    if (!response.ok) {
+        modelCapabilitiesCache.set(effectiveModel, false);
+        return false;
+    }
+
+    const data = (await response.json()) as {
+        capabilities?: string[] | { tools?: boolean };
+        details?: { capabilities?: string[] | { tools?: boolean } };
+        /* eslint-disable-next-line @typescript-eslint/naming-convention -- Ollama API uses snake_case */
+        model_info?: { capabilities?: string[] | { tools?: boolean } };
+    };
+
+    const sources = [data.capabilities, data.details?.capabilities, data.model_info?.capabilities];
+    const supportsTools = sources.some((capability) => {
+        if (!capability) return false;
+        if (Array.isArray(capability)) return capability.includes('tools');
+        if (typeof capability === 'object') return capability.tools === true;
+        return false;
+    });
+
+    modelCapabilitiesCache.set(effectiveModel, supportsTools);
+    return supportsTools;
+}
+
+export async function chatWithMetadata(
+    messages: IOllamaChatMessage[],
+    options: IChatOptions = {}
+): Promise<IChatResult> {
+    const { model: modelOverride, stream = false, tools, options: providerOptions } = options;
+    const model = modelOverride?.trim() || OLLAMA_MODEL;
+    if (!model) {
+        throw new Error(
+            'No model specified and OLLAMA_MODEL environment variable is not set. ' +
+                'Set OLLAMA_MODEL in your .env file (e.g. OLLAMA_MODEL=llama3.1:8b).'
+        );
+    }
+
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model,
+            stream,
+            messages,
+            tools,
+            options: providerOptions
+        })
+    });
+
+    if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(
+            `Ollama API error: ${response.status} ${response.statusText}${body ? ` — ${body}` : ''}`
+        );
+    }
+
+    const data = (await response.json()) as {
+        message: IOllamaChatMessage;
+        model?: string;
+        done?: boolean;
+        /* eslint-disable @typescript-eslint/naming-convention -- Ollama REST API uses snake_case */
+        done_reason?: string;
+        total_duration?: number;
+        load_duration?: number;
+        prompt_eval_count?: number;
+        prompt_eval_duration?: number;
+        eval_count?: number;
+        eval_duration?: number;
+        /* eslint-enable @typescript-eslint/naming-convention */
+    };
+
+    return {
+        message: data.message,
         model: data.model ?? model,
         done: data.done ?? true,
         doneReason: data.done_reason,
