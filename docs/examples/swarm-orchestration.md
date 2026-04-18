@@ -23,76 +23,87 @@ curl -X POST http://localhost:3001/run/swarm \
 
 ## What Happens Under the Hood
 
-The [swarm orchestrator](/glossary#swarm) is a [LangGraph state machine](/glossary#state-machine) with 4 nodes:
+Instead of one dense diagram, this section uses progressive disclosure: start with the high-level state machine, then drill into execution and retry behavior.
+
+### 1) Overview — swarm state machine
+
+The [swarm orchestrator](/glossary#swarm) is a [LangGraph state machine](/glossary#state-machine) with four major nodes:
 
 ```mermaid
 flowchart TD
-    START([START]) --> decompose
-    decompose["🔀 decompose\nBreak task into subtasks"]
-    execute["⚙️ execute_subtasks\nRun each subtask via its own Agent"]
-    review{{"🔍 review\nAll passed?"}}
-    synthesize["🧩 synthesize\nMerge results into final answer"]
-    DONE([END])
-
-    decompose --> execute
-    execute --> review
-    review -->|"✅ all passed"| synthesize
-    review -->|"❌ failures remain\n(retry loop)"| execute
-    synthesize --> DONE
+    START([START]) --> decompose["decompose"]
+    decompose --> execute["execute_subtasks"]
+    execute --> review{"review"}
+    review -->|"pass"| synthesize["synthesize"]
+    review -->|"retry"| execute
+    synthesize --> END([END])
 ```
 
-### Full sequence
+- Shows: only major control-flow transitions.
+- Omits: per-subtask details, event payloads, and timing.
+
+### 2) Runtime view — request to response
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant API
-    participant Orchestrator as Swarm Orchestrator
-    participant Agent1 as Agent (subtask 1)
-    participant Agent2 as Agent (subtask 2)
-    participant Agent3 as Agent (subtask 3)
-    participant Events as Event Bus
+    participant Swarm as Swarm Orchestrator
+    participant Bus as Event Bus
 
-    Client->>API: POST /run/swarm { task, allowWrite, profile, maxSubtasks }
-    API->>Orchestrator: run(task, config)
-    Orchestrator->>Events: emit(swarm:start, { task })
-
-    rect rgb(240, 248, 255)
-        Note over Orchestrator: Node 1 — DECOMPOSE
-        Orchestrator->>Events: emit(swarm:decomposed, { subtasks: [...] })
-        Note over Orchestrator: Plan: 3 subtasks identified
-    end
-
-    rect rgb(240, 255, 240)
-        Note over Orchestrator,Agent3: Node 2 — EXECUTE (parallel)
-        Orchestrator->>Events: emit(swarm:subtask_start, { id: "st-1", task: "Design user schema..." })
-        Orchestrator->>Agent1: agent.run("Design user schema and CRUD endpoints")
-        Orchestrator->>Events: emit(swarm:subtask_start, { id: "st-2", task: "Implement JWT auth..." })
-        Orchestrator->>Agent2: agent.run("Implement JWT authentication middleware")
-        Orchestrator->>Events: emit(swarm:subtask_start, { id: "st-3", task: "Write unit tests..." })
-        Orchestrator->>Agent3: agent.run("Write vitest unit tests for all endpoints")
-
-        Agent1-->>Orchestrator: result (user schema + routes)
-        Orchestrator->>Events: emit(swarm:subtask_done, { id: "st-1", success: true })
-        Agent2-->>Orchestrator: result (JWT middleware)
-        Orchestrator->>Events: emit(swarm:subtask_done, { id: "st-2", success: true })
-        Agent3-->>Orchestrator: result (test suite)
-        Orchestrator->>Events: emit(swarm:subtask_done, { id: "st-3", success: true })
-    end
-
-    rect rgb(240, 248, 255)
-        Note over Orchestrator: Node 3 — REVIEW
-        Note over Orchestrator: All 3 subtasks passed ✅
-    end
-
-    rect rgb(255, 248, 240)
-        Note over Orchestrator: Node 4 — SYNTHESIZE
-        Note over Orchestrator: Merge 3 results into final answer
-        Orchestrator->>Events: emit(swarm:done, { answer: "...", totalDurationMs: 28450 })
-    end
-
-    API-->>Client: 200 JSON response
+    Client->>API: POST /run/swarm
+    API->>Swarm: run(task, config)
+    Swarm->>Bus: swarm:start
+    Swarm->>Bus: swarm:decomposed
+    Swarm->>Swarm: execute_subtasks (parallel)
+    Swarm->>Swarm: review
+    Swarm->>Swarm: synthesize
+    Swarm->>Bus: swarm:done
+    API-->>Client: 200 JSON result
 ```
+
+- Shows: endpoint boundary and orchestration phases in order.
+- Omits: individual subtask payloads and internal agent step logs.
+
+### 3) Execution view — parallel subtasks + dependency gate
+
+```mermaid
+flowchart LR
+    Plan[Decomposition plan]
+    ST1[st-1: schema + CRUD]
+    ST2[st-2: JWT auth]
+    ST3[st-3: tests]
+    Merge[Merge subtask results]
+
+    Plan --> ST1
+    Plan --> ST2
+    Plan --> ST3
+    ST1 --> ST3
+    ST2 --> ST3
+    ST1 --> Merge
+    ST2 --> Merge
+    ST3 --> Merge
+```
+
+- Shows: what runs in parallel vs what must wait on dependencies.
+- Omits: review scoring and retry loop mechanics.
+
+### 4) Review lifecycle — retry or finish
+
+```mermaid
+stateDiagram-v2
+    [*] --> Execute
+    Execute --> Review
+    Review --> Synthesize: all passed
+    Review --> Execute: failures && retries left
+    Review --> Synthesize: retries exhausted
+    Synthesize --> [*]
+```
+
+- Shows: retry decision points and terminal paths.
+- Omits: exact retry limits and event payload schemas.
+
+For retry limits and event field details, see [orchestrator package docs](/packages/orchestrator), [Endpoint Map — `POST /run/swarm`](/endpoint-map#post-runswarm), and [Endpoint Map — `POST /run/swarm/stream`](/endpoint-map#post-runswarmstream).
 
 ### Event log
 
