@@ -13,9 +13,7 @@ export class ToolCallDeduplicator {
     }
 
     isDuplicate(toolName: string, args: Record<string, unknown>): boolean {
-        const hash = createHash('sha256')
-            .update(JSON.stringify({ toolName, args }))
-            .digest('hex');
+        const hash = createHash('sha256').update(JSON.stringify({ toolName, args })).digest('hex');
         const now = Date.now();
         const toolHashes = this.seenByToolName.get(toolName) ?? new Map<string, number>();
         const lastSeen = toolHashes.get(hash);

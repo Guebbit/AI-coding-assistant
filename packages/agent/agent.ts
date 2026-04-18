@@ -46,11 +46,7 @@ import { saveAgentRun } from '../persistence/db';
 import type { IToolCall } from '../persistence/types';
 import type { IGenerateResult, IChatResult } from '../llm/ollama';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import {
-    ToolCitationBuffer,
-    toolCitationSchema,
-    type IToolCitation
-} from '../tools/citations';
+import { ToolCitationBuffer, toolCitationSchema, type IToolCitation } from '../tools/citations';
 import { ToolCallDeduplicator } from '../tools/tool-call-deduplicator';
 
 /**
@@ -282,12 +278,19 @@ export class Agent {
         return result;
     }
 
-    private buildUntooledPrompt(task: string, context: string, memory: string[], tools: ITool[]): string {
+    private buildUntooledPrompt(
+        task: string,
+        context: string,
+        memory: string[],
+        tools: ITool[]
+    ): string {
         const memoryBlock = memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : '';
         const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
         const toolBlocks = tools
             .map((tool) => {
-                const schema = tool.inputSchema ? zodToJsonSchema(tool.inputSchema) : { type: 'object' };
+                const schema = tool.inputSchema
+                    ? zodToJsonSchema(tool.inputSchema)
+                    : { type: 'object' };
                 return (
                     `Tool: ${tool.name}\n` +
                     `Description: ${tool.description}\n` +
@@ -349,7 +352,10 @@ export class Agent {
         return { thought: `Using tool ${tool.name}`, action: tool.name, input };
     }
 
-    private static collectCitationsFromToolResult(result: unknown, buffer: ToolCitationBuffer): void {
+    private static collectCitationsFromToolResult(
+        result: unknown,
+        buffer: ToolCitationBuffer
+    ): void {
         if (!result || typeof result !== 'object') return;
         const maybeCitations = (result as { citations?: unknown }).citations;
         if (!Array.isArray(maybeCitations)) return;
@@ -413,7 +419,9 @@ export class Agent {
 
         emit({ type: 'agent:start', payload: { task } });
 
-        const buildRunMeta = (citations: IToolCitation[] = citationBuffer.peek()): IAgentRunMeta => {
+        const buildRunMeta = (
+            citations: IToolCitation[] = citationBuffer.peek()
+        ): IAgentRunMeta => {
             const totalTokens =
                 typeof tokens.promptTokens === 'number' &&
                 typeof tokens.completionTokens === 'number'
