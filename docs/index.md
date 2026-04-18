@@ -1,7 +1,11 @@
-# Manna — AI Coding Assistant Documentation
+# Manna — Personal AI Agent Platform Documentation
+
+::: tip Canonical documentation
+This VitePress site is the **single source of truth** for setup, architecture, endpoints, tools, model routing, and operational behavior.
+:::
 
 ::: tip TL;DR
-Local-first AI agent API — send a task, get an answer. [Ollama](/glossary#ollama) models, tool execution, [semantic memory](/glossary#semantic-search). New to LLM concepts? Start with the [Glossary](/glossary).
+Local-first AI agent platform for multi-step reasoning, tool execution, orchestration, and domain workflows (coding, research, data, documents, knowledge graphs).
 :::
 
 ## Documentation tracks

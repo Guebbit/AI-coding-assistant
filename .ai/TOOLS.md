@@ -1,61 +1,18 @@
-# Tool registry + lifecycle
+# AI tools quick context
 
-Native tool registry
+Canonical tool documentation is in VitePress:
 
-- `read_file` -> `packages/tools/fs.read.ts` [no]
-- `write_file` -> `packages/tools/fs.write.ts` [yes]
-- `shell` -> `packages/tools/shell.ts` [no]
-- `mysql_query` -> `packages/tools/mysql.query.ts` [no]
-- `browser_fetch` -> `packages/tools/browser.ts` [no]
-- `image_classify` -> `packages/tools/image.classify.ts` [no]
-- `image_sketch` -> `packages/tools/image.sketch.ts` [no]
-- `image_colorize` -> `packages/tools/image.colorize.ts` [no]
-- `semantic_search` -> `packages/tools/semantic.search.ts` [no]
-- `speech_to_text` -> `packages/tools/speech.to.text.ts` [no]
-- `read_pdf` -> `packages/tools/pdf.read.ts` [no]
-- `code_autocomplete` -> `packages/tools/code.autocomplete.ts` [no]
-- `generate_diagram` -> `packages/tools/diagram.generate.ts` [no]
-- `scaffold_project` -> `packages/tools/project.scaffold.ts` [yes]
-- `read_docx` -> `packages/tools/docx.read.ts` [no]
-- `read_csv` -> `packages/tools/csv.read.ts` [no]
-- `read_html` -> `packages/tools/html.read.ts` [no]
-- `read_json` -> `packages/tools/json.read.ts` [no]
-- `read_markdown` -> `packages/tools/markdown.read.ts` [no]
-- `document_ingest` -> `packages/tools/document.ingest.ts` [yes]
-- `knowledge_graph` -> `packages/tools/knowledge.graph.ts` [yes]
-- `query_knowledge_graph` -> `packages/tools/knowledge.graph.query.ts` [no]
+- `docs/packages/tools/`
+- `docs/endpoint-map.md`
 
-Write tools register only when request body has `allowWrite:true`.
+AI-only implementation pointers:
 
-Registration locations
+- Tool interface/types: `packages/tools/types.ts`
+- Tool exports: `packages/tools/index.ts`
+- Runtime registration: `apps/api/agents.ts`
+- Optional processors around tool use: `packages/processors/`
 
-- Tool interface: `packages/tools/types.ts`
-- Exports: `packages/tools/index.ts`
-- Runtime arrays: `apps/api/agents.ts` (`readOnlyTools`, `writeTools`)
-- Tool reranker service/backend: `packages/tools/tool-reranker.ts`
-- Tool deduplicator service: `packages/tools/tool-call-deduplicator.ts`
-- Citation schema/buffer: `packages/tools/citations.ts`
+Critical invariant reminders:
 
-Execution notes
-
-- Agent detects Ollama native tool-calling capability per routed model (`/api/show`).
-- Native path uses `/api/chat` with tool definitions and reads `message.tool_calls`.
-- Non-native path uses untooled prompt-injected function calling (`{name,arguments}` JSON) with schema/argument validation.
-- Chained tool calls are capped by `AGENT_MAX_TOOL_CALLS`.
-- Duplicate tool calls are blocked per run via SHA-256 (`toolName + args`).
-- Tools may set `directOutput: true` to return immediately without another LLM round.
-- Tool outputs may include `citations: [{id,title,text}]`; citations are buffered per run and returned in API output.
-- `image_sketch`/`image_colorize` output includes `imageData: string` (base64); agent loop runs vision description on it and, if model matches `AGENT_MULTIMODAL_MODELS`, forwards raw bytes to the next LLM call.
-
-Add/remove procedure
-
-- Add: create `packages/tools/<name>.ts` implementing `Tool` -> export in `packages/tools/index.ts` -> register in `apps/api/agents.ts` (read-only vs write list) -> update this file + `.ai/STRUCTURE.md` + `.ai/README.md` invariants if needed
-- Remove/rename: update exports + runtime arrays -> update this file + `.ai/STRUCTURE.md` -> remove/rename related env vars in `.ai/ENVVARS.md`
-
-MCP tools
-
-- Bridge files: `packages/mcp/*`
-- Config: `data/mcp-servers.json` (template: `.example`)
-- Global switch: `MCP_ENABLED=false`
-- Runtime namespacing: `mcp_<server>__<tool>`
-- Fail-open on missing config/server failures; startup continues
+- Write-capable tools are registered only for requests with `allowWrite: true`.
+- Keep tool changes aligned with canonical docs in `docs/`.

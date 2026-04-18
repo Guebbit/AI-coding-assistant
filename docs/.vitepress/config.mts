@@ -3,8 +3,8 @@ import { withMermaid } from 'vitepress-plugin-mermaid';
 
 export default withMermaid(
     defineConfig({
-        title: 'AI Coding Assistant Docs',
-        description: 'Practical and theory-driven docs for the local-first agent system',
+        title: 'Manna Documentation',
+        description: 'Canonical documentation for the local-first Manna personal AI agent platform',
         cleanUrls: true,
         themeConfig: {
             nav: [
