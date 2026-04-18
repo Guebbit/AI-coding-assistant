@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { UploadReadPdf200ResponseAllOfData } from './UploadReadPdf200ResponseAllOfData';
+import {
+    UploadReadPdf200ResponseAllOfDataFromJSON,
+    UploadReadPdf200ResponseAllOfDataFromJSONTyped,
+    UploadReadPdf200ResponseAllOfDataToJSON,
+    UploadReadPdf200ResponseAllOfDataToJSONTyped,
+} from './UploadReadPdf200ResponseAllOfData';
 import type { ResponseMeta } from './ResponseMeta';
 import {
     ResponseMetaFromJSON,
@@ -28,17 +35,29 @@ import {
  */
 export interface UploadReadPdf200Response {
     /**
-     * Full extracted text
-     * @type {string}
+     * 
+     * @type {boolean}
      * @memberof UploadReadPdf200Response
      */
-    text?: string;
+    success: boolean;
     /**
-     * Total number of pages in the PDF
+     * 
      * @type {number}
      * @memberof UploadReadPdf200Response
      */
-    pages?: number;
+    status: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof UploadReadPdf200Response
+     */
+    message: string;
+    /**
+     * 
+     * @type {UploadReadPdf200ResponseAllOfData}
+     * @memberof UploadReadPdf200Response
+     */
+    data?: UploadReadPdf200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -51,6 +70,9 @@ export interface UploadReadPdf200Response {
  * Check if a given object implements the UploadReadPdf200Response interface.
  */
 export function instanceOfUploadReadPdf200Response(value: object): value is UploadReadPdf200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -64,8 +86,10 @@ export function UploadReadPdf200ResponseFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
         
-        'text': json['text'] == null ? undefined : json['text'],
-        'pages': json['pages'] == null ? undefined : json['pages'],
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : UploadReadPdf200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -81,8 +105,10 @@ export function UploadReadPdf200ResponseFromJSONTyped(json: any, ignoreDiscrimin
 
     return {
         
-        'text': value['text'],
-        'pages': value['pages'],
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': UploadReadPdf200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

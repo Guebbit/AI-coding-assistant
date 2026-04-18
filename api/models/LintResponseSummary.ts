@@ -38,6 +38,12 @@ export interface LintResponseSummary {
      */
     infos?: number;
     /**
+     * Total number of findings across all severities.
+     * @type {number}
+     * @memberof LintResponseSummary
+     */
+    total?: number;
+    /**
      * 
      * @type {number}
      * @memberof LintResponseSummary
@@ -71,6 +77,7 @@ export function LintResponseSummaryFromJSONTyped(json: any, ignoreDiscriminator:
         'errors': json['errors'] == null ? undefined : json['errors'],
         'warnings': json['warnings'] == null ? undefined : json['warnings'],
         'infos': json['infos'] == null ? undefined : json['infos'],
+        'total': json['total'] == null ? undefined : json['total'],
         'deterministicCount': json['deterministicCount'] == null ? undefined : json['deterministicCount'],
         'llmCount': json['llmCount'] == null ? undefined : json['llmCount'],
     };
@@ -90,6 +97,7 @@ export function LintResponseSummaryFromJSONTyped(json: any, ignoreDiscriminator:
         'errors': value['errors'],
         'warnings': value['warnings'],
         'infos': value['infos'],
+        'total': value['total'],
         'deterministicCount': value['deterministicCount'],
         'llmCount': value['llmCount'],
     };

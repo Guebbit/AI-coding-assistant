@@ -16,19 +16,19 @@
 import * as runtime from '../runtime';
 import type {
   ErrorResponse,
-  HealthResponse,
+  GetHealth200Response,
+  PostRun200Response,
   RunRequest,
-  RunResponse,
 } from '../models/index';
 import {
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
-    HealthResponseFromJSON,
-    HealthResponseToJSON,
+    GetHealth200ResponseFromJSON,
+    GetHealth200ResponseToJSON,
+    PostRun200ResponseFromJSON,
+    PostRun200ResponseToJSON,
     RunRequestFromJSON,
     RunRequestToJSON,
-    RunResponseFromJSON,
-    RunResponseToJSON,
 } from '../models/index';
 
 export interface PostRunRequest {
@@ -48,7 +48,7 @@ export class CoreApi extends runtime.BaseAPI {
      * Returns `{ status: ok }` without calling any LLM. Use for liveness probes.
      * Health check
      */
-    async getHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HealthResponse>> {
+    async getHealthRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetHealth200Response>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -60,14 +60,14 @@ export class CoreApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => HealthResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => GetHealth200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Returns `{ status: ok }` without calling any LLM. Use for liveness probes.
      * Health check
      */
-    async getHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<HealthResponse> {
+    async getHealth(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetHealth200Response> {
         const response = await this.getHealthRaw(initOverrides);
         return await response.value();
     }
@@ -76,7 +76,7 @@ export class CoreApi extends runtime.BaseAPI {
      * Triggers the full agentic loop: model routing → tool selection → execution → repeat (up to `MAX_STEPS`, default 5). Returns the agent\'s final answer as a string.  This is the right endpoint whenever no specialised endpoint covers the use case. 
      * Submit a task to the agent reasoning loop
      */
-    async postRunRaw(requestParameters: PostRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RunResponse>> {
+    async postRunRaw(requestParameters: PostRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostRun200Response>> {
         if (requestParameters['runRequest'] == null) {
             throw new runtime.RequiredError(
                 'runRequest',
@@ -98,14 +98,14 @@ export class CoreApi extends runtime.BaseAPI {
             body: RunRequestToJSON(requestParameters['runRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => RunResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostRun200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Triggers the full agentic loop: model routing → tool selection → execution → repeat (up to `MAX_STEPS`, default 5). Returns the agent\'s final answer as a string.  This is the right endpoint whenever no specialised endpoint covers the use case. 
      * Submit a task to the agent reasoning loop
      */
-    async postRun(requestParameters: PostRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RunResponse> {
+    async postRun(requestParameters: PostRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostRun200Response> {
         const response = await this.postRunRaw(requestParameters, initOverrides);
         return await response.value();
     }

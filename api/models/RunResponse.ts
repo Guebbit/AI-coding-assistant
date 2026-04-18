@@ -20,7 +20,13 @@ import {
     ResponseMetaToJSON,
     ResponseMetaToJSONTyped,
 } from './ResponseMeta';
-import type { ToolCitation } from './ResponseMeta';
+import type { ToolCitation } from './ToolCitation';
+import {
+    ToolCitationFromJSON,
+    ToolCitationFromJSONTyped,
+    ToolCitationToJSON,
+    ToolCitationToJSONTyped,
+} from './ToolCitation';
 
 /**
  * 
@@ -36,16 +42,16 @@ export interface RunResponse {
     result?: string;
     /**
      * 
-     * @type {ResponseMeta}
-     * @memberof RunResponse
-     */
-    meta?: ResponseMeta;
-    /**
-     *
      * @type {Array<ToolCitation>}
      * @memberof RunResponse
      */
     citations?: Array<ToolCitation>;
+    /**
+     * 
+     * @type {ResponseMeta}
+     * @memberof RunResponse
+     */
+    meta?: ResponseMeta;
 }
 
 /**
@@ -66,8 +72,8 @@ export function RunResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean
     return {
         
         'result': json['result'] == null ? undefined : json['result'],
+        'citations': json['citations'] == null ? undefined : ((json['citations'] as Array<any>).map(ToolCitationFromJSON)),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
-        'citations': json['citations'] == null ? undefined : json['citations'],
     };
 }
 
@@ -83,7 +89,8 @@ export function RunResponseFromJSONTyped(json: any, ignoreDiscriminator: boolean
     return {
         
         'result': value['result'],
+        'citations': value['citations'] == null ? undefined : ((value['citations'] as Array<any>).map(ToolCitationToJSON)),
         'meta': ResponseMetaToJSON(value['meta']),
-        'citations': value['citations'],
     };
 }
+

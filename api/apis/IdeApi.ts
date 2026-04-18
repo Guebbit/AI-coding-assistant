@@ -16,28 +16,28 @@
 import * as runtime from '../runtime';
 import type {
   AutocompleteRequest,
-  AutocompleteResponse,
   ErrorResponse,
   LintConventionsRequest,
-  LintResponse,
   PageReviewRequest,
-  PageReviewResponse,
+  PostAutocomplete200Response,
+  PostLintConventions200Response,
+  PostPageReview200Response,
 } from '../models/index';
 import {
     AutocompleteRequestFromJSON,
     AutocompleteRequestToJSON,
-    AutocompleteResponseFromJSON,
-    AutocompleteResponseToJSON,
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
     LintConventionsRequestFromJSON,
     LintConventionsRequestToJSON,
-    LintResponseFromJSON,
-    LintResponseToJSON,
     PageReviewRequestFromJSON,
     PageReviewRequestToJSON,
-    PageReviewResponseFromJSON,
-    PageReviewResponseToJSON,
+    PostAutocomplete200ResponseFromJSON,
+    PostAutocomplete200ResponseToJSON,
+    PostLintConventions200ResponseFromJSON,
+    PostLintConventions200ResponseToJSON,
+    PostPageReview200ResponseFromJSON,
+    PostPageReview200ResponseToJSON,
 } from '../models/index';
 
 export interface PostAutocompleteRequest {
@@ -61,7 +61,7 @@ export class IdeApi extends runtime.BaseAPI {
      * Single LLM call (no agent loop). Returns one or more code completion suggestions for the given cursor position. Uses `TOOL_IDE_MODEL` (default `starcoder2`).  Intended for IDE integration. Responses are cached for identical prefix/suffix pairs. 
      * Cursor-time code completion
      */
-    async postAutocompleteRaw(requestParameters: PostAutocompleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AutocompleteResponse>> {
+    async postAutocompleteRaw(requestParameters: PostAutocompleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostAutocomplete200Response>> {
         if (requestParameters['autocompleteRequest'] == null) {
             throw new runtime.RequiredError(
                 'autocompleteRequest',
@@ -83,14 +83,14 @@ export class IdeApi extends runtime.BaseAPI {
             body: AutocompleteRequestToJSON(requestParameters['autocompleteRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => AutocompleteResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostAutocomplete200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Single LLM call (no agent loop). Returns one or more code completion suggestions for the given cursor position. Uses `TOOL_IDE_MODEL` (default `starcoder2`).  Intended for IDE integration. Responses are cached for identical prefix/suffix pairs. 
      * Cursor-time code completion
      */
-    async postAutocomplete(requestParameters: PostAutocompleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AutocompleteResponse> {
+    async postAutocomplete(requestParameters: PostAutocompleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostAutocomplete200Response> {
         const response = await this.postAutocompleteRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -99,7 +99,7 @@ export class IdeApi extends runtime.BaseAPI {
      * Runs deterministic TypeScript/style checks and optionally enriches findings with LLM explanations. Returns a structured list of findings with severity, rule name, line numbers, and suggested fixes. 
      * Deterministic lint + LLM convention findings
      */
-    async postLintConventionsRaw(requestParameters: PostLintConventionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<LintResponse>> {
+    async postLintConventionsRaw(requestParameters: PostLintConventionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostLintConventions200Response>> {
         if (requestParameters['lintConventionsRequest'] == null) {
             throw new runtime.RequiredError(
                 'lintConventionsRequest',
@@ -121,14 +121,14 @@ export class IdeApi extends runtime.BaseAPI {
             body: LintConventionsRequestToJSON(requestParameters['lintConventionsRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => LintResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostLintConventions200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Runs deterministic TypeScript/style checks and optionally enriches findings with LLM explanations. Returns a structured list of findings with severity, rule name, line numbers, and suggested fixes. 
      * Deterministic lint + LLM convention findings
      */
-    async postLintConventions(requestParameters: PostLintConventionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<LintResponse> {
+    async postLintConventions(requestParameters: PostLintConventionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostLintConventions200Response> {
         const response = await this.postLintConventionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -137,7 +137,7 @@ export class IdeApi extends runtime.BaseAPI {
      * Single LLM call that analyses a full source file and returns categorised review suggestions (correctness, maintainability, performance, security). 
      * Whole-file categorised engineering review
      */
-    async postPageReviewRaw(requestParameters: PostPageReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PageReviewResponse>> {
+    async postPageReviewRaw(requestParameters: PostPageReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostPageReview200Response>> {
         if (requestParameters['pageReviewRequest'] == null) {
             throw new runtime.RequiredError(
                 'pageReviewRequest',
@@ -159,14 +159,14 @@ export class IdeApi extends runtime.BaseAPI {
             body: PageReviewRequestToJSON(requestParameters['pageReviewRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => PageReviewResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostPageReview200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Single LLM call that analyses a full source file and returns categorised review suggestions (correctness, maintainability, performance, security). 
      * Whole-file categorised engineering review
      */
-    async postPageReview(requestParameters: PostPageReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PageReviewResponse> {
+    async postPageReview(requestParameters: PostPageReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostPageReview200Response> {
         const response = await this.postPageReviewRaw(requestParameters, initOverrides);
         return await response.value();
     }

@@ -16,16 +16,16 @@
 import * as runtime from '../runtime';
 import type {
   ErrorResponse,
+  PostWorkflow200Response,
   WorkflowRequest,
-  WorkflowResponse,
 } from '../models/index';
 import {
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
+    PostWorkflow200ResponseFromJSON,
+    PostWorkflow200ResponseToJSON,
     WorkflowRequestFromJSON,
     WorkflowRequestToJSON,
-    WorkflowResponseFromJSON,
-    WorkflowResponseToJSON,
 } from '../models/index';
 
 export interface PostWorkflowRequest {
@@ -45,7 +45,7 @@ export class WorkflowApi extends runtime.BaseAPI {
      * Accepts an array of step task strings and runs each as an independent bounded `agent.run()` sub-call.  Each step has its own `maxStepsPerStep` iteration cap (defaulting to `AGENTS_MAX_STEPS`), so a misbehaving step cannot consume the entire budget.  ### Context carry modes (`carry`)  | Mode      | Behaviour | |-----------|-----------| | `none`    | Steps are fully isolated — no prior context forwarded. | | `summary` | A compact bullet-point summary of prior step results is prepended to each subsequent step prompt. **(default)** | | `full`    | The complete verbatim output of every prior step is appended. Context may grow quickly. |  Use `POST /workflow` when your outer loop is already structured as an ordered list and you want each step bounded independently. 
      * Run an explicit ordered list of steps sequentially
      */
-    async postWorkflowRaw(requestParameters: PostWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowResponse>> {
+    async postWorkflowRaw(requestParameters: PostWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostWorkflow200Response>> {
         if (requestParameters['workflowRequest'] == null) {
             throw new runtime.RequiredError(
                 'workflowRequest',
@@ -67,14 +67,14 @@ export class WorkflowApi extends runtime.BaseAPI {
             body: WorkflowRequestToJSON(requestParameters['workflowRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostWorkflow200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Accepts an array of step task strings and runs each as an independent bounded `agent.run()` sub-call.  Each step has its own `maxStepsPerStep` iteration cap (defaulting to `AGENTS_MAX_STEPS`), so a misbehaving step cannot consume the entire budget.  ### Context carry modes (`carry`)  | Mode      | Behaviour | |-----------|-----------| | `none`    | Steps are fully isolated — no prior context forwarded. | | `summary` | A compact bullet-point summary of prior step results is prepended to each subsequent step prompt. **(default)** | | `full`    | The complete verbatim output of every prior step is appended. Context may grow quickly. |  Use `POST /workflow` when your outer loop is already structured as an ordered list and you want each step bounded independently. 
      * Run an explicit ordered list of steps sequentially
      */
-    async postWorkflow(requestParameters: PostWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowResponse> {
+    async postWorkflow(requestParameters: PostWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostWorkflow200Response> {
         const response = await this.postWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }

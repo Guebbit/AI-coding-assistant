@@ -55,9 +55,9 @@ flowchart LR
 
 ## Fast links
 
-| Area               | Links                                                                                                                                               |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Learn**          | [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                           |
-| **Theory**         | [Agent Loop](/theory/agent-loop) · [RAG](/theory/RAG) · [Vectors](/theory/VECTOR_DATABASES) · [LoRA](/theory/lora-fine-tuning) · [MCP](/theory/MCP) |
+| Area               | Links                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Learn**          | [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                                                              |
+| **Theory**         | [Agent Loop](/theory/agent-loop) · [RAG](/theory/RAG) · [Vectors](/theory/VECTOR_DATABASES) · [LoRA](/theory/lora-fine-tuning) · [MCP](/theory/MCP)                                                    |
 | **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph) |
-| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                               |
+| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                  |

@@ -52,6 +52,24 @@ export interface AutocompleteResponse {
      */
     latencyMs?: number;
     /**
+     * The LLM model used for completion.
+     * @type {string}
+     * @memberof AutocompleteResponse
+     */
+    model?: string;
+    /**
+     * Inferred programming language.
+     * @type {string}
+     * @memberof AutocompleteResponse
+     */
+    language?: string;
+    /**
+     * ISO timestamp when the completion was generated.
+     * @type {Date}
+     * @memberof AutocompleteResponse
+     */
+    createdAtIso?: Date;
+    /**
      * 
      * @type {ResponseMeta}
      * @memberof AutocompleteResponse
@@ -80,6 +98,9 @@ export function AutocompleteResponseFromJSONTyped(json: any, ignoreDiscriminator
         'completion': json['completion'] == null ? undefined : json['completion'],
         'cached': json['cached'] == null ? undefined : json['cached'],
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
+        'model': json['model'] == null ? undefined : json['model'],
+        'language': json['language'] == null ? undefined : json['language'],
+        'createdAtIso': json['createdAtIso'] == null ? undefined : (new Date(json['createdAtIso'])),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -99,6 +120,9 @@ export function AutocompleteResponseFromJSONTyped(json: any, ignoreDiscriminator
         'completion': value['completion'],
         'cached': value['cached'],
         'latencyMs': value['latencyMs'],
+        'model': value['model'],
+        'language': value['language'],
+        'createdAtIso': value['createdAtIso'] == null ? undefined : ((value['createdAtIso']).toISOString()),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

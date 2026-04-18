@@ -20,13 +20,13 @@ import {
     ResponseMetaToJSON,
     ResponseMetaToJSONTyped,
 } from './ResponseMeta';
-import type { GetInfoModes200ResponseModesInner } from './GetInfoModes200ResponseModesInner';
+import type { GetInfoModes200ResponseAllOfData } from './GetInfoModes200ResponseAllOfData';
 import {
-    GetInfoModes200ResponseModesInnerFromJSON,
-    GetInfoModes200ResponseModesInnerFromJSONTyped,
-    GetInfoModes200ResponseModesInnerToJSON,
-    GetInfoModes200ResponseModesInnerToJSONTyped,
-} from './GetInfoModes200ResponseModesInner';
+    GetInfoModes200ResponseAllOfDataFromJSON,
+    GetInfoModes200ResponseAllOfDataFromJSONTyped,
+    GetInfoModes200ResponseAllOfDataToJSON,
+    GetInfoModes200ResponseAllOfDataToJSONTyped,
+} from './GetInfoModes200ResponseAllOfData';
 
 /**
  * 
@@ -35,17 +35,29 @@ import {
  */
 export interface GetInfoModes200Response {
     /**
-     * Number of available modes.
+     * 
+     * @type {boolean}
+     * @memberof GetInfoModes200Response
+     */
+    success: boolean;
+    /**
+     * 
      * @type {number}
      * @memberof GetInfoModes200Response
      */
-    count?: number;
+    status: number;
     /**
      * 
-     * @type {Array<GetInfoModes200ResponseModesInner>}
+     * @type {string}
      * @memberof GetInfoModes200Response
      */
-    modes?: Array<GetInfoModes200ResponseModesInner>;
+    message: string;
+    /**
+     * 
+     * @type {GetInfoModes200ResponseAllOfData}
+     * @memberof GetInfoModes200Response
+     */
+    data?: GetInfoModes200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -58,6 +70,9 @@ export interface GetInfoModes200Response {
  * Check if a given object implements the GetInfoModes200Response interface.
  */
 export function instanceOfGetInfoModes200Response(value: object): value is GetInfoModes200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -71,8 +86,10 @@ export function GetInfoModes200ResponseFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
-        'count': json['count'] == null ? undefined : json['count'],
-        'modes': json['modes'] == null ? undefined : ((json['modes'] as Array<any>).map(GetInfoModes200ResponseModesInnerFromJSON)),
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : GetInfoModes200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -88,8 +105,10 @@ export function GetInfoModes200ResponseFromJSONTyped(json: any, ignoreDiscrimina
 
     return {
         
-        'count': value['count'],
-        'modes': value['modes'] == null ? undefined : ((value['modes'] as Array<any>).map(GetInfoModes200ResponseModesInnerToJSON)),
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': GetInfoModes200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

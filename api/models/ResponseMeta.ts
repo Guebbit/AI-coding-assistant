@@ -13,11 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
-export interface ToolCitation {
-    id: string;
-    title: string;
-    text: string;
-}
+import type { ToolCitation } from './ToolCitation';
+import {
+    ToolCitationFromJSON,
+    ToolCitationFromJSONTyped,
+    ToolCitationToJSON,
+    ToolCitationToJSONTyped,
+} from './ToolCitation';
+
 /**
  * Optional operational metadata attached to successful responses.
  * @export
@@ -140,7 +143,7 @@ export function ResponseMetaFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'contextLength': json['contextLength'] == null ? undefined : json['contextLength'],
         'requestId': json['requestId'] == null ? undefined : json['requestId'],
         'memoryUsed': json['memoryUsed'] == null ? undefined : json['memoryUsed'],
-        'citations': json['citations'] == null ? undefined : json['citations'],
+        'citations': json['citations'] == null ? undefined : ((json['citations'] as Array<any>).map(ToolCitationFromJSON)),
     };
 }
 
@@ -168,6 +171,7 @@ export function ResponseMetaFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'contextLength': value['contextLength'],
         'requestId': value['requestId'],
         'memoryUsed': value['memoryUsed'],
-        'citations': value['citations'],
+        'citations': value['citations'] == null ? undefined : ((value['citations'] as Array<any>).map(ToolCitationToJSON)),
     };
 }
+

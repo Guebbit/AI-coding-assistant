@@ -20,6 +20,13 @@ import {
     ResponseMetaToJSON,
     ResponseMetaToJSONTyped,
 } from './ResponseMeta';
+import type { PageReviewCategories } from './PageReviewCategories';
+import {
+    PageReviewCategoriesFromJSON,
+    PageReviewCategoriesFromJSONTyped,
+    PageReviewCategoriesToJSON,
+    PageReviewCategoriesToJSONTyped,
+} from './PageReviewCategories';
 
 /**
  * 
@@ -34,11 +41,35 @@ export interface PageReviewResponse {
      */
     requestId?: string;
     /**
+     * The LLM model used.
+     * @type {string}
+     * @memberof PageReviewResponse
+     */
+    model?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PageReviewResponse
+     */
+    language?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PageReviewResponse
+     */
+    filePath?: string;
+    /**
      * 
      * @type {Array<object>}
      * @memberof PageReviewResponse
      */
     findings?: Array<object>;
+    /**
+     * 
+     * @type {PageReviewCategories}
+     * @memberof PageReviewResponse
+     */
+    categories?: PageReviewCategories;
     /**
      * 
      * @type {number}
@@ -71,7 +102,11 @@ export function PageReviewResponseFromJSONTyped(json: any, ignoreDiscriminator: 
     return {
         
         'requestId': json['requestId'] == null ? undefined : json['requestId'],
+        'model': json['model'] == null ? undefined : json['model'],
+        'language': json['language'] == null ? undefined : json['language'],
+        'filePath': json['filePath'] == null ? undefined : json['filePath'],
         'findings': json['findings'] == null ? undefined : json['findings'],
+        'categories': json['categories'] == null ? undefined : PageReviewCategoriesFromJSON(json['categories']),
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
@@ -89,7 +124,11 @@ export function PageReviewResponseFromJSONTyped(json: any, ignoreDiscriminator: 
     return {
         
         'requestId': value['requestId'],
+        'model': value['model'],
+        'language': value['language'],
+        'filePath': value['filePath'],
         'findings': value['findings'],
+        'categories': PageReviewCategoriesToJSON(value['categories']),
         'latencyMs': value['latencyMs'],
         'meta': ResponseMetaToJSON(value['meta']),
     };

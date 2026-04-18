@@ -16,16 +16,16 @@
 import * as runtime from '../runtime';
 import type {
   ErrorResponse,
+  PostRunSwarm200Response,
   SwarmRequest,
-  SwarmResponse,
 } from '../models/index';
 import {
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
+    PostRunSwarm200ResponseFromJSON,
+    PostRunSwarm200ResponseToJSON,
     SwarmRequestFromJSON,
     SwarmRequestToJSON,
-    SwarmResponseFromJSON,
-    SwarmResponseToJSON,
 } from '../models/index';
 
 export interface PostRunSwarmRequest {
@@ -45,7 +45,7 @@ export class SwarmApi extends runtime.BaseAPI {
      * Decomposes the task into subtasks using an LLM, executes each subtask through a specialised agent (respecting dependency ordering), and synthesises a final answer from all subtask results.  Use this instead of `POST /run` when the task is complex enough to benefit from divide-and-conquer (e.g. \"build X, write tests, and document it\"). 
      * Run a multi-agent swarm to solve a complex task
      */
-    async postRunSwarmRaw(requestParameters: PostRunSwarmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SwarmResponse>> {
+    async postRunSwarmRaw(requestParameters: PostRunSwarmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PostRunSwarm200Response>> {
         if (requestParameters['swarmRequest'] == null) {
             throw new runtime.RequiredError(
                 'swarmRequest',
@@ -67,14 +67,14 @@ export class SwarmApi extends runtime.BaseAPI {
             body: SwarmRequestToJSON(requestParameters['swarmRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => SwarmResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PostRunSwarm200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Decomposes the task into subtasks using an LLM, executes each subtask through a specialised agent (respecting dependency ordering), and synthesises a final answer from all subtask results.  Use this instead of `POST /run` when the task is complex enough to benefit from divide-and-conquer (e.g. \"build X, write tests, and document it\"). 
      * Run a multi-agent swarm to solve a complex task
      */
-    async postRunSwarm(requestParameters: PostRunSwarmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SwarmResponse> {
+    async postRunSwarm(requestParameters: PostRunSwarmRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PostRunSwarm200Response> {
         const response = await this.postRunSwarmRaw(requestParameters, initOverrides);
         return await response.value();
     }

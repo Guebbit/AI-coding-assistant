@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { UploadImageClassify200ResponseAllOfData } from './UploadImageClassify200ResponseAllOfData';
+import {
+    UploadImageClassify200ResponseAllOfDataFromJSON,
+    UploadImageClassify200ResponseAllOfDataFromJSONTyped,
+    UploadImageClassify200ResponseAllOfDataToJSON,
+    UploadImageClassify200ResponseAllOfDataToJSONTyped,
+} from './UploadImageClassify200ResponseAllOfData';
 import type { ResponseMeta } from './ResponseMeta';
 import {
     ResponseMetaFromJSON,
@@ -28,11 +35,29 @@ import {
  */
 export interface UploadImageClassify200Response {
     /**
-     * Model's description of the image
+     * 
+     * @type {boolean}
+     * @memberof UploadImageClassify200Response
+     */
+    success: boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof UploadImageClassify200Response
+     */
+    status: number;
+    /**
+     * 
      * @type {string}
      * @memberof UploadImageClassify200Response
      */
-    result?: string;
+    message: string;
+    /**
+     * 
+     * @type {UploadImageClassify200ResponseAllOfData}
+     * @memberof UploadImageClassify200Response
+     */
+    data?: UploadImageClassify200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -45,6 +70,9 @@ export interface UploadImageClassify200Response {
  * Check if a given object implements the UploadImageClassify200Response interface.
  */
 export function instanceOfUploadImageClassify200Response(value: object): value is UploadImageClassify200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -58,7 +86,10 @@ export function UploadImageClassify200ResponseFromJSONTyped(json: any, ignoreDis
     }
     return {
         
-        'result': json['result'] == null ? undefined : json['result'],
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : UploadImageClassify200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -74,7 +105,10 @@ export function UploadImageClassify200ResponseFromJSONTyped(json: any, ignoreDis
 
     return {
         
-        'result': value['result'],
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': UploadImageClassify200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

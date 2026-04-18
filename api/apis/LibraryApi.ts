@@ -15,27 +15,27 @@
 
 import * as runtime from '../runtime';
 import type {
-  ArticleExport,
   ErrorResponse,
+  ExportLibrary200Response,
+  ImportLibrary200Response,
   ImportRequest,
-  ImportResult,
-  LibraryInfo,
-  RankedArticle,
+  ListLibraries200Response,
+  SearchLibrary200Response,
   SearchRequest,
 } from '../models/index';
 import {
-    ArticleExportFromJSON,
-    ArticleExportToJSON,
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
+    ExportLibrary200ResponseFromJSON,
+    ExportLibrary200ResponseToJSON,
+    ImportLibrary200ResponseFromJSON,
+    ImportLibrary200ResponseToJSON,
     ImportRequestFromJSON,
     ImportRequestToJSON,
-    ImportResultFromJSON,
-    ImportResultToJSON,
-    LibraryInfoFromJSON,
-    LibraryInfoToJSON,
-    RankedArticleFromJSON,
-    RankedArticleToJSON,
+    ListLibraries200ResponseFromJSON,
+    ListLibraries200ResponseToJSON,
+    SearchLibrary200ResponseFromJSON,
+    SearchLibrary200ResponseToJSON,
     SearchRequestFromJSON,
     SearchRequestToJSON,
 } from '../models/index';
@@ -63,7 +63,7 @@ export class LibraryApi extends runtime.BaseAPI {
      * Returns the full article metadata index for the library as a JSON array. Intended for human review, manual editing, or backup.  The exported JSON can be inspected to verify ingestion quality (summaries, topic tags, page numbers) and re-imported after manual corrections.  Embedding vectors are excluded from the export to keep the response size manageable. Re-embedding is required if the index is rebuilt from scratch. 
      * Export all article metadata as JSON
      */
-    async exportLibraryRaw(requestParameters: ExportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ArticleExport>>> {
+    async exportLibraryRaw(requestParameters: ExportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ExportLibrary200Response>> {
         if (requestParameters['libraryId'] == null) {
             throw new runtime.RequiredError(
                 'libraryId',
@@ -82,14 +82,14 @@ export class LibraryApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ArticleExportFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => ExportLibrary200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Returns the full article metadata index for the library as a JSON array. Intended for human review, manual editing, or backup.  The exported JSON can be inspected to verify ingestion quality (summaries, topic tags, page numbers) and re-imported after manual corrections.  Embedding vectors are excluded from the export to keep the response size manageable. Re-embedding is required if the index is rebuilt from scratch. 
      * Export all article metadata as JSON
      */
-    async exportLibrary(requestParameters: ExportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ArticleExport>> {
+    async exportLibrary(requestParameters: ExportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ExportLibrary200Response> {
         const response = await this.exportLibraryRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -98,7 +98,7 @@ export class LibraryApi extends runtime.BaseAPI {
      * Ingests one or more PDF files (or an entire folder) into the specified library. Runs the two-pass pipeline:  1. **Pass 1 — Structure discovery**: the LLM reads the table-of-contents pages    of each PDF to extract article titles and page ranges. 2. **Pass 2 — Content extraction**: for each article, the LLM summarises the    text and generates topic tags; the summary is embedded and stored in Qdrant.  Accepts **either** `pdfs` (array of specific files) **or** `folder` (directory path). If both are provided, `pdfs` takes precedence.  This is a long-running operation. For large archives (hundreds of PDFs), it may take minutes to hours. The endpoint returns only after all PDFs are processed. Failed PDFs are reported in the `errors` array without aborting the batch.  See the Library Ingestion documentation for full architecture details. 
      * Import PDFs into a library using the two-pass ingestion pipeline
      */
-    async importLibraryRaw(requestParameters: ImportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportResult>> {
+    async importLibraryRaw(requestParameters: ImportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportLibrary200Response>> {
         if (requestParameters['libraryId'] == null) {
             throw new runtime.RequiredError(
                 'libraryId',
@@ -127,14 +127,14 @@ export class LibraryApi extends runtime.BaseAPI {
             body: ImportRequestToJSON(requestParameters['importRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ImportResultFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => ImportLibrary200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Ingests one or more PDF files (or an entire folder) into the specified library. Runs the two-pass pipeline:  1. **Pass 1 — Structure discovery**: the LLM reads the table-of-contents pages    of each PDF to extract article titles and page ranges. 2. **Pass 2 — Content extraction**: for each article, the LLM summarises the    text and generates topic tags; the summary is embedded and stored in Qdrant.  Accepts **either** `pdfs` (array of specific files) **or** `folder` (directory path). If both are provided, `pdfs` takes precedence.  This is a long-running operation. For large archives (hundreds of PDFs), it may take minutes to hours. The endpoint returns only after all PDFs are processed. Failed PDFs are reported in the `errors` array without aborting the batch.  See the Library Ingestion documentation for full architecture details. 
      * Import PDFs into a library using the two-pass ingestion pipeline
      */
-    async importLibrary(requestParameters: ImportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportResult> {
+    async importLibrary(requestParameters: ImportLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImportLibrary200Response> {
         const response = await this.importLibraryRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -143,7 +143,7 @@ export class LibraryApi extends runtime.BaseAPI {
      * Returns all registered libraries with their configuration metadata and ingestion status (article count, last import timestamp). 
      * List all libraries
      */
-    async listLibrariesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<LibraryInfo>>> {
+    async listLibrariesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListLibraries200Response>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -155,14 +155,14 @@ export class LibraryApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(LibraryInfoFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => ListLibraries200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Returns all registered libraries with their configuration metadata and ingestion status (article count, last import timestamp). 
      * List all libraries
      */
-    async listLibraries(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<LibraryInfo>> {
+    async listLibraries(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListLibraries200Response> {
         const response = await this.listLibrariesRaw(initOverrides);
         return await response.value();
     }
@@ -171,7 +171,7 @@ export class LibraryApi extends runtime.BaseAPI {
      * Embeds the query using `OLLAMA_EMBED_MODEL` (default `nomic-embed-text`) and performs ANN cosine similarity search over the library\'s article embedding index in Qdrant.  Returns a ranked list of articles with metadata, PDF path, and similarity score. The caller can use the returned `pdfPath` and `startPage` to open the exact article in the PDF viewer.  Optional `filters` allow narrowing results by publication year and/or month. Optional `topK` controls how many articles are returned (default: 5).  See the Library Ingestion documentation for full architecture details. 
      * Semantic article search within a specific library
      */
-    async searchLibraryRaw(requestParameters: SearchLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RankedArticle>>> {
+    async searchLibraryRaw(requestParameters: SearchLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SearchLibrary200Response>> {
         if (requestParameters['libraryId'] == null) {
             throw new runtime.RequiredError(
                 'libraryId',
@@ -200,14 +200,14 @@ export class LibraryApi extends runtime.BaseAPI {
             body: SearchRequestToJSON(requestParameters['searchRequest']),
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RankedArticleFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => SearchLibrary200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Embeds the query using `OLLAMA_EMBED_MODEL` (default `nomic-embed-text`) and performs ANN cosine similarity search over the library\'s article embedding index in Qdrant.  Returns a ranked list of articles with metadata, PDF path, and similarity score. The caller can use the returned `pdfPath` and `startPage` to open the exact article in the PDF viewer.  Optional `filters` allow narrowing results by publication year and/or month. Optional `topK` controls how many articles are returned (default: 5).  See the Library Ingestion documentation for full architecture details. 
      * Semantic article search within a specific library
      */
-    async searchLibrary(requestParameters: SearchLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<RankedArticle>> {
+    async searchLibrary(requestParameters: SearchLibraryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SearchLibrary200Response> {
         const response = await this.searchLibraryRaw(requestParameters, initOverrides);
         return await response.value();
     }

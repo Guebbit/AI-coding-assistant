@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
-import type { LintResponseFindingsInner } from './LintResponseFindingsInner';
+import type { LintFinding } from './LintFinding';
 import {
-    LintResponseFindingsInnerFromJSON,
-    LintResponseFindingsInnerFromJSONTyped,
-    LintResponseFindingsInnerToJSON,
-    LintResponseFindingsInnerToJSONTyped,
-} from './LintResponseFindingsInner';
+    LintFindingFromJSON,
+    LintFindingFromJSONTyped,
+    LintFindingToJSON,
+    LintFindingToJSONTyped,
+} from './LintFinding';
 import type { ResponseMeta } from './ResponseMeta';
 import {
     ResponseMetaFromJSON,
@@ -67,10 +67,10 @@ export interface LintResponse {
     summary?: LintResponseSummary;
     /**
      * 
-     * @type {Array<LintResponseFindingsInner>}
+     * @type {Array<LintFinding>}
      * @memberof LintResponse
      */
-    findings?: Array<LintResponseFindingsInner>;
+    findings?: Array<LintFinding>;
     /**
      * 
      * @type {string}
@@ -112,7 +112,7 @@ export function LintResponseFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'language': json['language'] == null ? undefined : json['language'],
         'filePath': json['filePath'] == null ? undefined : json['filePath'],
         'summary': json['summary'] == null ? undefined : LintResponseSummaryFromJSON(json['summary']),
-        'findings': json['findings'] == null ? undefined : ((json['findings'] as Array<any>).map(LintResponseFindingsInnerFromJSON)),
+        'findings': json['findings'] == null ? undefined : ((json['findings'] as Array<any>).map(LintFindingFromJSON)),
         'llmModelUsed': json['llmModelUsed'] == null ? undefined : json['llmModelUsed'],
         'latencyMs': json['latencyMs'] == null ? undefined : json['latencyMs'],
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
@@ -134,7 +134,7 @@ export function LintResponseFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'language': value['language'],
         'filePath': value['filePath'],
         'summary': LintResponseSummaryToJSON(value['summary']),
-        'findings': value['findings'] == null ? undefined : ((value['findings'] as Array<any>).map(LintResponseFindingsInnerToJSON)),
+        'findings': value['findings'] == null ? undefined : ((value['findings'] as Array<any>).map(LintFindingToJSON)),
         'llmModelUsed': value['llmModelUsed'],
         'latencyMs': value['latencyMs'],
         'meta': ResponseMetaToJSON(value['meta']),

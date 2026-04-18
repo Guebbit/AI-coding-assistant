@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { UploadSpeechToText200ResponseAllOfData } from './UploadSpeechToText200ResponseAllOfData';
+import {
+    UploadSpeechToText200ResponseAllOfDataFromJSON,
+    UploadSpeechToText200ResponseAllOfDataFromJSONTyped,
+    UploadSpeechToText200ResponseAllOfDataToJSON,
+    UploadSpeechToText200ResponseAllOfDataToJSONTyped,
+} from './UploadSpeechToText200ResponseAllOfData';
 import type { ResponseMeta } from './ResponseMeta';
 import {
     ResponseMetaFromJSON,
@@ -28,11 +35,29 @@ import {
  */
 export interface UploadSpeechToText200Response {
     /**
-     * Transcribed text
+     * 
+     * @type {boolean}
+     * @memberof UploadSpeechToText200Response
+     */
+    success: boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof UploadSpeechToText200Response
+     */
+    status: number;
+    /**
+     * 
      * @type {string}
      * @memberof UploadSpeechToText200Response
      */
-    text?: string;
+    message: string;
+    /**
+     * 
+     * @type {UploadSpeechToText200ResponseAllOfData}
+     * @memberof UploadSpeechToText200Response
+     */
+    data?: UploadSpeechToText200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -45,6 +70,9 @@ export interface UploadSpeechToText200Response {
  * Check if a given object implements the UploadSpeechToText200Response interface.
  */
 export function instanceOfUploadSpeechToText200Response(value: object): value is UploadSpeechToText200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -58,7 +86,10 @@ export function UploadSpeechToText200ResponseFromJSONTyped(json: any, ignoreDisc
     }
     return {
         
-        'text': json['text'] == null ? undefined : json['text'],
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : UploadSpeechToText200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -74,7 +105,10 @@ export function UploadSpeechToText200ResponseFromJSONTyped(json: any, ignoreDisc
 
     return {
         
-        'text': value['text'],
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': UploadSpeechToText200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

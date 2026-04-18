@@ -20,13 +20,13 @@ import {
     ResponseMetaToJSON,
     ResponseMetaToJSONTyped,
 } from './ResponseMeta';
-import type { GetInfoModels200ResponseModelsInner } from './GetInfoModels200ResponseModelsInner';
+import type { GetInfoModels200ResponseAllOfData } from './GetInfoModels200ResponseAllOfData';
 import {
-    GetInfoModels200ResponseModelsInnerFromJSON,
-    GetInfoModels200ResponseModelsInnerFromJSONTyped,
-    GetInfoModels200ResponseModelsInnerToJSON,
-    GetInfoModels200ResponseModelsInnerToJSONTyped,
-} from './GetInfoModels200ResponseModelsInner';
+    GetInfoModels200ResponseAllOfDataFromJSON,
+    GetInfoModels200ResponseAllOfDataFromJSONTyped,
+    GetInfoModels200ResponseAllOfDataToJSON,
+    GetInfoModels200ResponseAllOfDataToJSONTyped,
+} from './GetInfoModels200ResponseAllOfData';
 
 /**
  * 
@@ -35,23 +35,29 @@ import {
  */
 export interface GetInfoModels200Response {
     /**
-     * Number of models available.
+     * 
+     * @type {boolean}
+     * @memberof GetInfoModels200Response
+     */
+    success: boolean;
+    /**
+     * 
      * @type {number}
      * @memberof GetInfoModels200Response
      */
-    count?: number;
+    status: number;
     /**
-     * The Ollama base URL queried.
+     * 
      * @type {string}
      * @memberof GetInfoModels200Response
      */
-    ollamaBaseUrl?: string;
+    message: string;
     /**
      * 
-     * @type {Array<GetInfoModels200ResponseModelsInner>}
+     * @type {GetInfoModels200ResponseAllOfData}
      * @memberof GetInfoModels200Response
      */
-    models?: Array<GetInfoModels200ResponseModelsInner>;
+    data?: GetInfoModels200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -64,6 +70,9 @@ export interface GetInfoModels200Response {
  * Check if a given object implements the GetInfoModels200Response interface.
  */
 export function instanceOfGetInfoModels200Response(value: object): value is GetInfoModels200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -77,9 +86,10 @@ export function GetInfoModels200ResponseFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
         
-        'count': json['count'] == null ? undefined : json['count'],
-        'ollamaBaseUrl': json['ollamaBaseUrl'] == null ? undefined : json['ollamaBaseUrl'],
-        'models': json['models'] == null ? undefined : ((json['models'] as Array<any>).map(GetInfoModels200ResponseModelsInnerFromJSON)),
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : GetInfoModels200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -95,9 +105,10 @@ export function GetInfoModels200ResponseFromJSONTyped(json: any, ignoreDiscrimin
 
     return {
         
-        'count': value['count'],
-        'ollamaBaseUrl': value['ollamaBaseUrl'],
-        'models': value['models'] == null ? undefined : ((value['models'] as Array<any>).map(GetInfoModels200ResponseModelsInnerToJSON)),
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': GetInfoModels200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

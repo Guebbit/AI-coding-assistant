@@ -16,18 +16,18 @@
 import * as runtime from '../runtime';
 import type {
   ErrorResponse,
-  ImageProcessorResponse,
   UploadImageClassify200Response,
+  UploadImageSketch200Response,
   UploadReadPdf200Response,
   UploadSpeechToText200Response,
 } from '../models/index';
 import {
     ErrorResponseFromJSON,
     ErrorResponseToJSON,
-    ImageProcessorResponseFromJSON,
-    ImageProcessorResponseToJSON,
     UploadImageClassify200ResponseFromJSON,
     UploadImageClassify200ResponseToJSON,
+    UploadImageSketch200ResponseFromJSON,
+    UploadImageSketch200ResponseToJSON,
     UploadReadPdf200ResponseFromJSON,
     UploadReadPdf200ResponseToJSON,
     UploadSpeechToText200ResponseFromJSON,
@@ -136,7 +136,7 @@ export class UploadApi extends runtime.BaseAPI {
      * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/colorize`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
      * Colorize an uploaded image
      */
-    async uploadImageColorizeRaw(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImageProcessorResponse>> {
+    async uploadImageColorizeRaw(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UploadImageSketch200Response>> {
         if (requestParameters['file'] == null) {
             throw new runtime.RequiredError(
                 'file',
@@ -184,14 +184,14 @@ export class UploadApi extends runtime.BaseAPI {
             body: formParams,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ImageProcessorResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => UploadImageSketch200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/colorize`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
      * Colorize an uploaded image
      */
-    async uploadImageColorize(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImageProcessorResponse> {
+    async uploadImageColorize(requestParameters: UploadImageColorizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UploadImageSketch200Response> {
         const response = await this.uploadImageColorizeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -200,7 +200,7 @@ export class UploadApi extends runtime.BaseAPI {
      * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/sketch`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
      * Generate sketch/line-art from an uploaded image
      */
-    async uploadImageSketchRaw(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImageProcessorResponse>> {
+    async uploadImageSketchRaw(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UploadImageSketch200Response>> {
         if (requestParameters['file'] == null) {
             throw new runtime.RequiredError(
                 'file',
@@ -248,14 +248,14 @@ export class UploadApi extends runtime.BaseAPI {
             body: formParams,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => ImageProcessorResponseFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => UploadImageSketch200ResponseFromJSON(jsonValue));
     }
 
     /**
      * Accepts a multipart image upload and forwards it to the configured image processor (`IMAGE_PROCESSOR_URL/sketch`). Optional `prompt` and `negative_prompt` are passed through to the processor. Content negotiation: - `Accept: image/png` returns raw PNG bytes - otherwise returns JSON `{ image, duration_ms, model }` 
      * Generate sketch/line-art from an uploaded image
      */
-    async uploadImageSketch(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ImageProcessorResponse> {
+    async uploadImageSketch(requestParameters: UploadImageSketchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UploadImageSketch200Response> {
         const response = await this.uploadImageSketchRaw(requestParameters, initOverrides);
         return await response.value();
     }

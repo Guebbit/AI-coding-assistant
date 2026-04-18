@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
-import type { GetHelp200ResponseEndpointsInner } from './GetHelp200ResponseEndpointsInner';
+import type { GetHelp200ResponseAllOfData } from './GetHelp200ResponseAllOfData';
 import {
-    GetHelp200ResponseEndpointsInnerFromJSON,
-    GetHelp200ResponseEndpointsInnerFromJSONTyped,
-    GetHelp200ResponseEndpointsInnerToJSON,
-    GetHelp200ResponseEndpointsInnerToJSONTyped,
-} from './GetHelp200ResponseEndpointsInner';
+    GetHelp200ResponseAllOfDataFromJSON,
+    GetHelp200ResponseAllOfDataFromJSONTyped,
+    GetHelp200ResponseAllOfDataToJSON,
+    GetHelp200ResponseAllOfDataToJSONTyped,
+} from './GetHelp200ResponseAllOfData';
 import type { ResponseMeta } from './ResponseMeta';
 import {
     ResponseMetaFromJSON,
@@ -36,22 +36,28 @@ import {
 export interface GetHelp200Response {
     /**
      * 
-     * @type {string}
+     * @type {boolean}
      * @memberof GetHelp200Response
      */
-    description?: string;
+    success: boolean;
     /**
      * 
      * @type {number}
      * @memberof GetHelp200Response
      */
-    endpointCount?: number;
+    status: number;
     /**
      * 
-     * @type {Array<GetHelp200ResponseEndpointsInner>}
+     * @type {string}
      * @memberof GetHelp200Response
      */
-    endpoints?: Array<GetHelp200ResponseEndpointsInner>;
+    message: string;
+    /**
+     * 
+     * @type {GetHelp200ResponseAllOfData}
+     * @memberof GetHelp200Response
+     */
+    data?: GetHelp200ResponseAllOfData;
     /**
      * 
      * @type {ResponseMeta}
@@ -64,6 +70,9 @@ export interface GetHelp200Response {
  * Check if a given object implements the GetHelp200Response interface.
  */
 export function instanceOfGetHelp200Response(value: object): value is GetHelp200Response {
+    if (!('success' in value) || value['success'] === undefined) return false;
+    if (!('status' in value) || value['status'] === undefined) return false;
+    if (!('message' in value) || value['message'] === undefined) return false;
     return true;
 }
 
@@ -77,9 +86,10 @@ export function GetHelp200ResponseFromJSONTyped(json: any, ignoreDiscriminator: 
     }
     return {
         
-        'description': json['description'] == null ? undefined : json['description'],
-        'endpointCount': json['endpointCount'] == null ? undefined : json['endpointCount'],
-        'endpoints': json['endpoints'] == null ? undefined : ((json['endpoints'] as Array<any>).map(GetHelp200ResponseEndpointsInnerFromJSON)),
+        'success': json['success'],
+        'status': json['status'],
+        'message': json['message'],
+        'data': json['data'] == null ? undefined : GetHelp200ResponseAllOfDataFromJSON(json['data']),
         'meta': json['meta'] == null ? undefined : ResponseMetaFromJSON(json['meta']),
     };
 }
@@ -95,9 +105,10 @@ export function GetHelp200ResponseFromJSONTyped(json: any, ignoreDiscriminator: 
 
     return {
         
-        'description': value['description'],
-        'endpointCount': value['endpointCount'],
-        'endpoints': value['endpoints'] == null ? undefined : ((value['endpoints'] as Array<any>).map(GetHelp200ResponseEndpointsInnerToJSON)),
+        'success': value['success'],
+        'status': value['status'],
+        'message': value['message'],
+        'data': GetHelp200ResponseAllOfDataToJSON(value['data']),
         'meta': ResponseMetaToJSON(value['meta']),
     };
 }

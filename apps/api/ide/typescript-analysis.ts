@@ -54,8 +54,8 @@ export interface ICategorizedSuggestion {
   title: string;
   /** Detailed explanation or remediation advice. */
   detail: string;
-  /** Importance level for triage. */
-  priority: "high" | "medium" | "low";
+  /** Importance level for triage: 3 = high, 2 = medium, 1 = low. */
+  priority: number;
 }
 
 /**
@@ -301,8 +301,7 @@ export function normalizePageReviewSuggestion(candidate: unknown): ICategorizedS
     typeof objectCandidate.priority === "string"
       ? objectCandidate.priority.toLowerCase()
       : "medium";
-  const priority: "high" | "medium" | "low" =
-    priorityRaw === "high" || priorityRaw === "low" ? priorityRaw : "medium";
+  const priority = priorityRaw === "high" ? 3 : priorityRaw === "low" ? 1 : 2;
 
   return {
     title: objectCandidate.title.trim(),

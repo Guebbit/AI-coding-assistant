@@ -230,7 +230,7 @@ export function registerIdeRoutes(application: express.Express): void {
         language: cacheHit.language,
         cached: true,
         latencyMs: Date.now() - startedAt.getTime(),
-        createdAtIso: cacheHit.createdAtIso,
+        createdAtIso: new Date(cacheHit.createdAtIso),
       };
       const typedPayload: AutocompleteResponse = payload;
       successResponse(response, typedPayload, 200, "", {
@@ -262,20 +262,20 @@ export function registerIdeRoutes(application: express.Express): void {
     )
       .then((llmResult) => {
         const completionTrimmed = llmResult.response.trim();
-        const createdAtIso = new Date().toISOString();
+        const createdAtIsoString = new Date().toISOString();
         const payload = {
           completion: completionTrimmed,
           model: DEFAULT_AUTOCOMPLETE_MODEL,
           language,
           cached: false,
           latencyMs: Date.now() - startedAt.getTime(),
-          createdAtIso,
+          createdAtIso: new Date(createdAtIsoString),
         };
         setCached(cacheKey, {
           completion: payload.completion,
           model: payload.model,
           language: payload.language,
-          createdAtIso,
+          createdAtIso: createdAtIsoString,
         });
         const typedPayload: AutocompleteResponse = payload;
         successResponse(response, typedPayload, 200, "", {
