@@ -40,7 +40,7 @@ flowchart TD
 ```
 
 - Shows: only major control-flow transitions.
-- Omits: per-subtask details, events payloads, and timing.
+- Omits: per-subtask details, event payloads, and timing.
 
 ### 2) Runtime view — request to response
 
@@ -102,6 +102,8 @@ stateDiagram-v2
 
 - Shows: retry decision points and terminal paths.
 - Omits: exact retry limits and event payload schemas.
+
+For retry limits and event field details, see [orchestrator package docs](/packages/orchestrator), [Endpoint Map — `POST /run/swarm`](/endpoint-map#post-runswarm), and [Endpoint Map — `POST /run/swarm/stream`](/endpoint-map#post-runswarmstream).
 
 ### Event log
 
