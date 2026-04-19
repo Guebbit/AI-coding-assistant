@@ -21,8 +21,11 @@
  */
 
 import type express from 'express';
+import type { ModelProfile } from '@/packages/agent/model-router';
+import { routeModel } from '@/packages/agent/model-router';
+import { chatWithMetadata } from '@/packages/llm/ollama';
 import { logger } from '@/packages/logger/logger';
-import { rejectResponse, successResponse, buildResponseMeta } from '@/packages/shared';
+import { rejectResponse, successResponse, buildResponseMeta, sumTokens } from '@/packages/shared';
 import {
     listConversations,
     createConversation,
@@ -33,14 +36,30 @@ import {
     updateMessage,
     deleteMessage
 } from '@/packages/persistence/db';
-import type { ChatRole } from '@/packages/persistence/types';
+import type { ChatRole, IChatMessage } from '@/packages/persistence/types';
 
 /* ── Validation helpers ──────────────────────────────────────────────────── */
 
 const VALID_ROLES = new Set<ChatRole>(['user', 'assistant', 'system']);
+const VALID_CHAT_PROFILES = new Set<ModelProfile>(['fast', 'reasoning', 'code']);
 
 function isValidRole(value: unknown): value is ChatRole {
     return typeof value === 'string' && VALID_ROLES.has(value as ChatRole);
+}
+
+function isValidChatProfile(value: string | null): value is ModelProfile {
+    return value !== null && VALID_CHAT_PROFILES.has(value as ModelProfile);
+}
+
+function buildConversationContext(messages: IChatMessage[]): string {
+    return messages.map((message) => `${message.role}: ${message.content}`).join('\n');
+}
+
+function toOllamaMessages(messages: IChatMessage[]) {
+    return messages.map((message) => ({
+        role: message.role,
+        content: message.content
+    }));
 }
 
 /* ── Route registration ──────────────────────────────────────────────────── */
@@ -179,6 +198,16 @@ export function registerChatRoutes(app: express.Express): void {
             return;
         }
 
+        const conversation = await getConversation(id);
+        if (conversation === null) {
+            rejectResponse(res, 503, 'Service Unavailable', ['Database unavailable']);
+            return;
+        }
+        if (conversation === undefined) {
+            rejectResponse(res, 404, 'Not Found', [`Conversation ${id} not found`]);
+            return;
+        }
+
         logger.info('chat_create_message', { component: 'api.chat', conversationId: id, requestId: req.requestId });
         const result = await createMessage(id, { role, content });
 
@@ -190,6 +219,75 @@ export function registerChatRoutes(app: express.Express): void {
             rejectResponse(res, 404, 'Not Found', [`Conversation ${id} not found`]);
             return;
         }
+
+        if (role !== 'user') {
+            successResponse(res, { message: result }, 201, '', buildResponseMeta(startedAt, req));
+            return;
+        }
+
+        const profile = isValidChatProfile(conversation.profile) ? conversation.profile : 'fast';
+        const promptMessages = [...conversation.messages, result];
+
+        try {
+            const route = await routeModel({
+                task: result.content,
+                context: buildConversationContext(promptMessages),
+                step: 0,
+                forcedProfile: profile
+            });
+            const llmResult = await chatWithMetadata(toOllamaMessages(promptMessages), {
+                model: route.model,
+                options: route.options
+            });
+            const assistantContent = llmResult.message.content.trim();
+
+            if (assistantContent !== '') {
+                const assistantMessage = await createMessage(id, {
+                    role: 'assistant',
+                    content: assistantContent
+                });
+
+                if (assistantMessage === null) {
+                    logger.warn('chat_assistant_reply_persist_failed', {
+                        component: 'api.chat',
+                        conversationId: id,
+                        requestId: req.requestId,
+                        reason: 'database_unavailable'
+                    });
+                } else if (assistantMessage === undefined) {
+                    logger.warn('chat_assistant_reply_persist_failed', {
+                        component: 'api.chat',
+                        conversationId: id,
+                        requestId: req.requestId,
+                        reason: 'conversation_missing_after_user_message'
+                    });
+                }
+            } else {
+                logger.warn('chat_assistant_reply_empty', {
+                    component: 'api.chat',
+                    conversationId: id,
+                    requestId: req.requestId
+                });
+            }
+
+            successResponse(res, { message: result }, 201, '', {
+                ...buildResponseMeta(startedAt, req),
+                model: route.model,
+                profile: route.profile,
+                promptTokens: llmResult.promptEvalCount,
+                completionTokens: llmResult.evalCount,
+                totalTokens: sumTokens(llmResult.promptEvalCount, llmResult.evalCount)
+            });
+            return;
+        } catch (error) {
+            logger.error('chat_assistant_reply_failed', {
+                component: 'api.chat',
+                conversationId: id,
+                requestId: req.requestId,
+                error: String(error)
+            });
+        }
+
         successResponse(res, { message: result }, 201, '', buildResponseMeta(startedAt, req));
     });
 
