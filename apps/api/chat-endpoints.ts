@@ -263,7 +263,7 @@ export function registerChatRoutes(app: express.Express): void {
                         component: 'api.chat',
                         conversationId: id,
                         requestId: req.requestId,
-                        reason: 'conversation_missing_after_user_message'
+                        reason: 'unexpected_missing_conversation_after_reply_generation'
                     });
                 }
             } else {
@@ -290,7 +290,9 @@ export function registerChatRoutes(app: express.Express): void {
                 component: 'api.chat',
                 conversationId: id,
                 requestId: req.requestId,
-                error: String(error)
+                error: String(error),
+                errorName: error instanceof Error ? error.name : typeof error,
+                errorMessage: error instanceof Error ? error.message : String(error)
             });
         }
 
