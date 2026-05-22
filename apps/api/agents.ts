@@ -171,25 +171,26 @@ export let writeEnabledAgent = attachProcessors(
  *
  * @returns Nothing.
  */
-export async function initializeAgents(): Promise<void> {
-  try {
-    const { readTools, writeTools: discoveredWriteTools, meta } = await loadMCPTools();
-    readOnlyTools = [...nativeReadOnlyTools, ...readTools];
-    writeTools = [...nativeWriteTools, ...discoveredWriteTools];
-    rebuildAgents();
+export function initializeAgents(): Promise<void> {
+  return loadMCPTools()
+    .then(({ readTools, writeTools: discoveredWriteTools, meta }) => {
+      readOnlyTools = [...nativeReadOnlyTools, ...readTools];
+      writeTools = [...nativeWriteTools, ...discoveredWriteTools];
+      rebuildAgents();
 
-    logger.info("mcp_tools_loaded", {
-      component: "api.agents",
-      readTools: readTools.length,
-      writeTools: discoveredWriteTools.length,
-      totalMCPTools: meta.length,
+      logger.info("mcp_tools_loaded", {
+        component: "api.agents",
+        readTools: readTools.length,
+        writeTools: discoveredWriteTools.length,
+        totalMCPTools: meta.length,
+      });
+    })
+    .catch((error) => {
+      readOnlyTools = [...nativeReadOnlyTools];
+      writeTools = [...nativeWriteTools];
+      rebuildAgents();
+      logger.warn("mcp_tools_load_failed", { component: "api.agents", error: String(error) });
     });
-  } catch (error) {
-    readOnlyTools = [...nativeReadOnlyTools];
-    writeTools = [...nativeWriteTools];
-    rebuildAgents();
-    logger.warn("mcp_tools_load_failed", { component: "api.agents", error: String(error) });
-  }
 }
 
 /** Recognised model profile names for request validation. */

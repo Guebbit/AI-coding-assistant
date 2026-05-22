@@ -120,12 +120,9 @@ describe('library/search', () => {
             filters: { year: 2025 }
         });
 
-        expect(searchPoints).toHaveBeenCalledWith(
-            'test-lib',
-            MOCK_QUERY_VECTOR,
-            5,
-            { must: [{ key: 'year', match: { value: 2025 } }] }
-        );
+        expect(searchPoints).toHaveBeenCalledWith('test-lib', MOCK_QUERY_VECTOR, 5, {
+            must: [{ key: 'year', match: { value: 2025 } }]
+        });
     });
 
     it('builds Qdrant month filter when filters.month is provided', async () => {
@@ -137,12 +134,9 @@ describe('library/search', () => {
             filters: { month: 'March' }
         });
 
-        expect(searchPoints).toHaveBeenCalledWith(
-            'test-lib',
-            MOCK_QUERY_VECTOR,
-            5,
-            { must: [{ key: 'month', match: { value: 'March' } }] }
-        );
+        expect(searchPoints).toHaveBeenCalledWith('test-lib', MOCK_QUERY_VECTOR, 5, {
+            must: [{ key: 'month', match: { value: 'March' } }]
+        });
     });
 
     it('combines year + month filters', async () => {
@@ -154,17 +148,12 @@ describe('library/search', () => {
             filters: { year: 2026, month: 'January' }
         });
 
-        expect(searchPoints).toHaveBeenCalledWith(
-            'test-lib',
-            MOCK_QUERY_VECTOR,
-            5,
-            {
-                must: [
-                    { key: 'year', match: { value: 2026 } },
-                    { key: 'month', match: { value: 'January' } }
-                ]
-            }
-        );
+        expect(searchPoints).toHaveBeenCalledWith('test-lib', MOCK_QUERY_VECTOR, 5, {
+            must: [
+                { key: 'year', match: { value: 2026 } },
+                { key: 'month', match: { value: 'January' } }
+            ]
+        });
     });
 
     it('returns empty array when no hits', async () => {

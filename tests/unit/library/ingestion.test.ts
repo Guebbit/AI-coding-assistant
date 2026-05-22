@@ -52,7 +52,12 @@ vi.mock('@/packages/logger/logger', () => ({
 
 import { generate } from '@/packages/llm/ollama';
 import { getEmbedding } from '@/packages/llm/embeddings';
-import { upsertLibrary, createArticle, updateLibraryStats, countArticles } from '@/packages/persistence/db';
+import {
+    upsertLibrary,
+    createArticle,
+    updateLibraryStats,
+    countArticles
+} from '@/packages/persistence/db';
 import { ensureCollection, upsertPoint } from '@/packages/library/library-store';
 import { extractPageRange } from '@/packages/library/pdf-extraction';
 import { discoverStructure, importPdf, runImport } from '@/packages/library/ingestion';
@@ -73,7 +78,8 @@ const MOCK_ARTICLE_STUBS = [
 ];
 
 const MOCK_ARTICLE_SUMMARY = {
-    summary: 'This article discusses advances in artificial intelligence and its impact on society.',
+    summary:
+        'This article discusses advances in artificial intelligence and its impact on society.',
     topics: ['AI', 'technology', 'future']
 };
 
@@ -240,13 +246,13 @@ describe('library/ingestion', () => {
             // Setup: each PDF has 1 article
             vi.mocked(extractPageRange).mockResolvedValue(MOCK_TOC_TEXT);
             vi.mocked(generate)
-                .mockResolvedValueOnce(JSON.stringify([{ title: 'Art1', startPage: 1, endPage: 5 }]))
+                .mockResolvedValueOnce(
+                    JSON.stringify([{ title: 'Art1', startPage: 1, endPage: 5 }])
+                )
                 .mockResolvedValue(JSON.stringify(MOCK_ARTICLE_SUMMARY));
             vi.mocked(getEmbedding).mockResolvedValue(MOCK_EMBEDDING);
 
-            const result = await runImport('my-library', [
-                { path: '/storage/lib/2026/01.pdf' }
-            ]);
+            const result = await runImport('my-library', [{ path: '/storage/lib/2026/01.pdf' }]);
 
             // Verifies library was upserted with a humanized name
             expect(upsertLibrary).toHaveBeenCalledWith({

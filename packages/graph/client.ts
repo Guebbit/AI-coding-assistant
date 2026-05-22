@@ -54,11 +54,11 @@ export function getDriver(): Driver {
  *
  * @returns A promise that resolves once the driver is fully closed.
  */
-export async function closeDriver(): Promise<void> {
-    if (_driver) {
-        await _driver.close();
+export function closeDriver(): Promise<void> {
+    if (!_driver) return Promise.resolve();
+    return _driver.close().then(() => {
         _driver = undefined;
-    }
+    });
 }
 
 /* ── Cypher execution ───────────────────────────────────────────────── */
@@ -73,26 +73,27 @@ export async function closeDriver(): Promise<void> {
  * @param parameters - Optional named parameters to bind (`$param` syntax).
  * @returns An array of result rows; empty on failure or no matches.
  */
-export async function runCypher(
+export function runCypher(
     cypher: string,
     parameters: Record<string, unknown> = {}
 ): Promise<GraphQueryRow[]> {
     let session: Session | undefined;
-    try {
-        const driver = getDriver();
-        session = driver.session({ database: NEO4J_DATABASE });
-        const result = await session.run(cypher, parameters);
-        return result.records.map((record) => record.toObject() as GraphQueryRow);
-    } catch (error) {
-        logger.warn('neo4j_query_failed', {
-            component: 'graph.client',
-            error: String(error),
-            cypher: cypher.slice(0, 200)
-        });
-        return [];
-    } finally {
-        await session?.close();
-    }
+    return Promise.resolve()
+        .then(() => {
+            const driver = getDriver();
+            session = driver.session({ database: NEO4J_DATABASE });
+            return session.run(cypher, parameters);
+        })
+        .then((result) => result.records.map((record) => record.toObject() as GraphQueryRow))
+        .catch((error) => {
+            logger.warn('neo4j_query_failed', {
+                component: 'graph.client',
+                error: String(error),
+                cypher: cypher.slice(0, 200)
+            });
+            return [];
+        })
+        .finally(() => session?.close());
 }
 
 /**
@@ -100,18 +101,17 @@ export async function runCypher(
  *
  * @returns `true` if the server is reachable, `false` otherwise.
  */
-export async function isGraphAvailable(): Promise<boolean> {
+export function isGraphAvailable(): Promise<boolean> {
     let session: Session | undefined;
-    try {
-        const driver = getDriver();
-        session = driver.session({ database: NEO4J_DATABASE });
-        await session.run('RETURN 1');
-        return true;
-    } catch {
-        return false;
-    } finally {
-        await session?.close();
-    }
+    return Promise.resolve()
+        .then(() => {
+            const driver = getDriver();
+            session = driver.session({ database: NEO4J_DATABASE });
+            return session.run('RETURN 1');
+        })
+        .then(() => true)
+        .catch(() => false)
+        .finally(() => session?.close());
 }
 
 /* ── Constraint initialisation ──────────────────────────────────────── */
@@ -125,17 +125,9 @@ export async function isGraphAvailable(): Promise<boolean> {
  * **Constraints created:**
  * - `Entity(name, type)` — no two entities may share the same name AND type.
  */
-export async function ensureConstraints(): Promise<void> {
-    try {
-        await runCypher(
-            'CREATE CONSTRAINT entity_unique IF NOT EXISTS ' +
-                'FOR (e:Entity) REQUIRE (e.name, e.type) IS UNIQUE'
-        );
-    } catch (error) {
-        /* Some Neo4j editions / older versions may not support IF NOT EXISTS. */
-        logger.warn('neo4j_constraint_setup_failed', {
-            component: 'graph.client',
-            error: String(error)
-        });
-    }
+export function ensureConstraints(): Promise<void> {
+    return runCypher(
+        'CREATE CONSTRAINT entity_unique IF NOT EXISTS ' +
+            'FOR (e:Entity) REQUIRE (e.name, e.type) IS UNIQUE'
+    ).then(() => undefined);
 }

@@ -131,57 +131,51 @@ function buildExtractionPrompt(text: string): string {
  * @param text - The text to analyse (typically a single document chunk).
  * @returns A structured extraction result (never throws).
  */
-export async function extractEntitiesAndRelationships(text: string): Promise<IExtractionResult> {
+export function extractEntitiesAndRelationships(text: string): Promise<IExtractionResult> {
     const empty: IExtractionResult = { entities: [], relationships: [] };
 
-    if (!text.trim()) {
-        return empty;
-    }
+    if (!text.trim()) return Promise.resolve(empty);
 
-    try {
-        const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: NER_MODEL,
-                prompt: buildExtractionPrompt(text),
-                stream: false,
-                format: 'json'
-            })
-        });
-
-        if (!res.ok) {
-            logger.warn('graph_ner_request_failed', {
+    return fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: NER_MODEL,
+            prompt: buildExtractionPrompt(text),
+            stream: false,
+            format: 'json'
+        })
+    })
+        .then((res) => {
+            if (!res.ok) {
+                logger.warn('graph_ner_request_failed', {
+                    component: 'graph.extractor',
+                    status: res.status,
+                    statusText: res.statusText
+                });
+                return null;
+            }
+            return res.json() as Promise<{ response?: string }>;
+        })
+        .then((raw) => {
+            if (!raw?.response) return empty;
+            const cleaned = stripCodeFences(raw.response);
+            const parsed: unknown = JSON.parse(cleaned);
+            const validated = extractionResponseSchema.safeParse(parsed);
+            if (!validated.success) {
+                logger.warn('graph_ner_schema_invalid', {
+                    component: 'graph.extractor',
+                    issues: validated.error.issues.slice(0, 3)
+                });
+                return empty;
+            }
+            return validated.data;
+        })
+        .catch((error) => {
+            logger.warn('graph_ner_extraction_failed', {
                 component: 'graph.extractor',
-                status: res.status,
-                statusText: res.statusText
+                error: String(error)
             });
             return empty;
-        }
-
-        const raw = (await res.json()) as { response?: string };
-        if (!raw.response) {
-            return empty;
-        }
-
-        const cleaned = stripCodeFences(raw.response);
-        const parsed: unknown = JSON.parse(cleaned);
-        const validated = extractionResponseSchema.safeParse(parsed);
-
-        if (!validated.success) {
-            logger.warn('graph_ner_schema_invalid', {
-                component: 'graph.extractor',
-                issues: validated.error.issues.slice(0, 3)
-            });
-            return empty;
-        }
-
-        return validated.data;
-    } catch (error) {
-        logger.warn('graph_ner_extraction_failed', {
-            component: 'graph.extractor',
-            error: String(error)
         });
-        return empty;
-    }
 }

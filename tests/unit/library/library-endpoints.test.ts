@@ -234,8 +234,12 @@ describe('library-endpoints', () => {
 
         it('rejects topK out of range', async () => {
             vi.mocked(getLibrary).mockResolvedValue({
-                id: 'test-lib', name: 'Test', articleCount: 10,
-                lastImportAt: null, config: {}, createdAt: new Date()
+                id: 'test-lib',
+                name: 'Test',
+                articleCount: 10,
+                lastImportAt: null,
+                config: {},
+                createdAt: new Date()
             } as never);
 
             const res = await fetch(`${baseUrl}/library/test-lib/search`, {
@@ -275,8 +279,12 @@ describe('library-endpoints', () => {
 
         it('returns search results without qdrantPointId', async () => {
             vi.mocked(getLibrary).mockResolvedValue({
-                id: 'test-lib', name: 'Test', articleCount: 10,
-                lastImportAt: null, config: {}, createdAt: new Date()
+                id: 'test-lib',
+                name: 'Test',
+                articleCount: 10,
+                lastImportAt: null,
+                config: {},
+                createdAt: new Date()
             } as never);
             vi.mocked(searchLibrary).mockResolvedValue([
                 {
@@ -320,8 +328,12 @@ describe('library-endpoints', () => {
 
         it('returns exported articles without internal fields', async () => {
             vi.mocked(getLibrary).mockResolvedValue({
-                id: 'test-lib', name: 'Test', articleCount: 1,
-                lastImportAt: null, config: {}, createdAt: new Date()
+                id: 'test-lib',
+                name: 'Test',
+                articleCount: 1,
+                lastImportAt: null,
+                config: {},
+                createdAt: new Date()
             } as never);
             vi.mocked(listArticles).mockResolvedValue([
                 {

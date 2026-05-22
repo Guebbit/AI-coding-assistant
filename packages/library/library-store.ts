@@ -34,22 +34,24 @@ export function collectionName(libraryId: string): string {
  * @param libraryId  - The library identifier.
  * @param vectorSize - Embedding vector dimension (defaults to 768).
  */
-export async function ensureCollection(
+export function ensureCollection(
     libraryId: string,
     vectorSize: number = DEFAULT_VECTOR_SIZE
 ): Promise<void> {
     const name = collectionName(libraryId);
-    try {
-        await qdrant.createCollection(name, {
+    return qdrant
+        .createCollection(name, {
             vectors: { size: vectorSize, distance: 'Cosine' }
+        })
+        .then(() => {
+            logger.info('library_collection_created', {
+                component: 'library.store',
+                collection: name
+            });
+        })
+        .catch(() => {
+            /* Collection already exists — safe to ignore. */
         });
-        logger.info('library_collection_created', {
-            component: 'library.store',
-            collection: name
-        });
-    } catch {
-        /* Collection already exists — safe to ignore. */
-    }
 }
 
 /**
@@ -107,17 +109,19 @@ export async function searchPoints(
  *
  * @param libraryId - Library identifier.
  */
-export async function deleteCollection(libraryId: string): Promise<void> {
+export function deleteCollection(libraryId: string): Promise<void> {
     const name = collectionName(libraryId);
-    try {
-        await qdrant.deleteCollection(name);
-        logger.info('library_collection_deleted', {
-            component: 'library.store',
-            collection: name
+    return qdrant
+        .deleteCollection(name)
+        .then(() => {
+            logger.info('library_collection_deleted', {
+                component: 'library.store',
+                collection: name
+            });
+        })
+        .catch(() => {
+            /* Collection might not exist — ignore. */
         });
-    } catch {
-        /* Collection might not exist — ignore. */
-    }
 }
 
 /** Export the client for testing or advanced use. */

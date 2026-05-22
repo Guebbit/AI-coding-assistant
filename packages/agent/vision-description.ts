@@ -21,24 +21,20 @@ const DEFAULT_VISION_PROMPT = 'Describe this image and identify what it most lik
  * @param prompt - Optional override for the vision prompt.
  * @returns Natural-language description, or `""` on failure.
  */
-export async function getVisionDescription(
+export function getVisionDescription(
     base64Image: string,
     prompt: string = DEFAULT_VISION_PROMPT
 ): Promise<string> {
     const model = process.env.TOOL_VISION_MODEL;
-    if (!model) return '';
+    if (!model) return Promise.resolve('');
 
-    try {
-        const response = await generate(prompt, {
-            model,
-            images: [base64Image]
+    return generate(prompt, { model, images: [base64Image] })
+        .then((response) => response.trim())
+        .catch((error) => {
+            logger.warn('vision_description_failed', {
+                component: 'agent.vision_description',
+                error: String(error)
+            });
+            return '';
         });
-        return response.trim();
-    } catch (error) {
-        logger.warn('vision_description_failed', {
-            component: 'agent.vision_description',
-            error: String(error)
-        });
-        return '';
-    }
 }

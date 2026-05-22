@@ -89,45 +89,35 @@ export async function decomposeTask(task: string, maxSubtasks = 6): Promise<IDec
         format: 'json'
     })
         .then((raw) => {
-            try {
-                const cleaned = stripCodeFences(raw);
-                const parsed = JSON.parse(cleaned) as {
-                    reasoning?: string;
-                    subtasks?: unknown[];
-                };
-
-                if (!Array.isArray(parsed.subtasks) || parsed.subtasks.length === 0) {
-                    return buildFallback(task, 'Decomposer returned no subtasks.');
-                }
-
-                const subtasks = parsed.subtasks
-                    .slice(0, cap)
-                    .map((raw, i) => normaliseSubtask(raw, i));
-
-                logger.info('decomposer_completed', {
-                    component: 'swarm.decomposer',
-                    subtaskCount: subtasks.length,
-                    reasoning: parsed.reasoning?.slice(0, 200)
-                });
-
-                return {
-                    reasoning: parsed.reasoning ?? 'No reasoning provided by decomposer.',
-                    subtasks
-                };
-            } catch (error) {
-                logger.warn('decomposer_parse_failed', {
-                    component: 'swarm.decomposer',
-                    error: String(error)
-                });
-                return buildFallback(task, 'Failed to parse decomposer output.');
+            const cleaned = stripCodeFences(raw);
+            return JSON.parse(cleaned) as { reasoning?: string; subtasks?: unknown[] };
+        })
+        .then((parsed) => {
+            if (!Array.isArray(parsed.subtasks) || parsed.subtasks.length === 0) {
+                return buildFallback(task, 'Decomposer returned no subtasks.');
             }
+
+            const subtasks = parsed.subtasks
+                .slice(0, cap)
+                .map((raw, i) => normaliseSubtask(raw, i));
+
+            logger.info('decomposer_completed', {
+                component: 'swarm.decomposer',
+                subtaskCount: subtasks.length,
+                reasoning: parsed.reasoning?.slice(0, 200)
+            });
+
+            return {
+                reasoning: parsed.reasoning ?? 'No reasoning provided by decomposer.',
+                subtasks
+            };
         })
         .catch((error: unknown) => {
-            logger.warn('decomposer_llm_failed', {
+            logger.warn('decomposer_failed', {
                 component: 'swarm.decomposer',
                 error: String(error)
             });
-            return buildFallback(task, 'LLM call failed — falling back to single subtask.');
+            return buildFallback(task, 'Failed to generate or parse decomposer output.');
         });
 }
 

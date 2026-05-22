@@ -145,9 +145,7 @@ describe('library/library-store', () => {
         });
 
         it('handles null payload gracefully', async () => {
-            mockQdrantClient.search.mockResolvedValue([
-                { id: 'x', score: 0.5, payload: null }
-            ]);
+            mockQdrantClient.search.mockResolvedValue([{ id: 'x', score: 0.5, payload: null }]);
 
             const results = await searchPoints('my-lib', [0.1], 1);
 
@@ -165,9 +163,7 @@ describe('library/library-store', () => {
         });
 
         it('silently ignores errors when collection does not exist', async () => {
-            mockQdrantClient.deleteCollection.mockRejectedValue(
-                new Error('Collection not found')
-            );
+            mockQdrantClient.deleteCollection.mockRejectedValue(new Error('Collection not found'));
 
             await expect(deleteCollection('ghost-lib')).resolves.toBeUndefined();
         });
