@@ -145,13 +145,13 @@ export async function saveAgentRun(input: IAgentRunInput): Promise<IAgentRunReco
     return withClient(async (client) => {
         const { rows } = await client.query<IAgentRunRecord>(
             `INSERT INTO agent_runs
-                (task, agent_profile, output, context, memory,
+                (task, agent_profile, input, output, context, memory,
                  start_time, end_time, duration_ms,
                  tool_calls, diagnostic_log, status)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
              RETURNING
                 id, task, agent_profile AS "agentProfile",
-                output, context,
+                input, output, context,
                 memory, start_time AS "startTime", end_time AS "endTime",
                 duration_ms AS "durationMs",
                 tool_calls AS "toolCalls",
@@ -160,6 +160,7 @@ export async function saveAgentRun(input: IAgentRunInput): Promise<IAgentRunReco
             [
                 input.task,
                 input.agentProfile ?? null,
+                input.input ? JSON.stringify(input.input) : null,
                 input.output,
                 input.context ?? null,
                 input.memory ? JSON.stringify(input.memory) : null,
