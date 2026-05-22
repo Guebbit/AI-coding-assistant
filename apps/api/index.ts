@@ -27,7 +27,6 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import { MulterError } from "multer";
-import type { ModelProfile } from "@/packages/agent/model-router";
 import { on } from "@/packages/events/bus";
 import { logger } from "@/packages/logger/logger";
 import {
@@ -36,8 +35,6 @@ import {
   initI18n,
   rejectResponse,
   successResponse,
-  validateTask,
-  validateProfile,
   t,
   validateRequiredEnvironment
 } from "@/packages/shared";
@@ -49,10 +46,11 @@ import { registerInfoRoutes } from "./info-endpoints";
 import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { registerChatRoutes } from "./chat-endpoints";
 import { registerLibraryRoutes } from "./library-endpoints";
-import { createAgent, initializeAgents, VALID_PROFILES } from "./agents";
+import { initializeAgents } from "./agents";
+import { registerRunRoutes } from "./run-endpoints";
 import { runMigrations } from "@/packages/persistence/migrate";
 import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
-import type { HealthResponse, RunRequest, RunResponse } from "@/api";
+import type { HealthResponse } from "@/api";
 import enTranslation from "@/packages/shared/locales/en.json";
 
 /* ── Observability: log every agent/tool event to stdout ─────────────── */
@@ -92,76 +90,8 @@ registerChatRoutes(app);
 
 /* Register library endpoints (/library, /library/:id/import, etc.). */
 registerLibraryRoutes(app);
-
-/**
- * POST /run — submit a task to the agent reasoning loop.
- *
- * Request body:
- * ```json
- * {
- *   "task":       "describe what you want the agent to do",
- *   "allowWrite": false,
- *   "profile":    "fast"
- * }
- * ```
- *
- * - `task` (required) — natural-language task description.
- * - `allowWrite` (optional, default `false`) — enable `write_file`
- *   and `scaffold_project` tools.
- * - `profile` (optional) — force a model profile (`fast`, `reasoning`,
- *   or `code`), bypassing automatic routing.
- *
- * Response: `{ "result": "agent's final answer" }`
- */
-app.post("/run", (req, res) => {
-  const { task: rawTask, allowWrite, profile } = req.body as Partial<RunRequest>;
-
-  const taskResult = validateTask(rawTask);
-  if ('error' in taskResult) {
-    rejectResponse(res, 400, "Bad Request", [taskResult.error]);
-    return;
-  }
-  const task = taskResult.task;
-
-  const profileError = validateProfile(profile, VALID_PROFILES);
-  if (profileError) {
-    rejectResponse(res, 400, "Bad Request", [profileError]);
-    return;
-  }
-
-  logger.info("run_request_received", {
-    component: "api.server",
-    task,
-    profile: profile ?? null,
-    requestId: req.requestId
-  });
-  const writeEnabled = allowWrite === true;
-  const agent = createAgent(writeEnabled);
-
-  agent
-    .run(task, profile ? { profile: profile as ModelProfile } : undefined)
-    .then((runResult) => {
-      logger.info("run_request_completed", {
-        component: "api.server",
-        taskLength: task.length,
-        writeEnabled,
-        profile: profile ?? null,
-        requestId: req.requestId,
-      });
-      const response: RunResponse = {
-        result: runResult.answer,
-        citations: runResult.citations,
-      };
-      successResponse(res, response, 200, "", {
-        ...runResult.meta,
-        requestId: req.requestId,
-      });
-    })
-    .catch((error: unknown) => {
-      logger.error("run_request_failed", { component: "api.server", error: String(error), requestId: req.requestId });
-      rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
-    });
-});
+/* Register run endpoint (POST /run). */
+registerRunRoutes(app);
 
 /**
  * GET /health — simple liveness check.
