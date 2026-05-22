@@ -66,6 +66,11 @@ Manna API  (default port :3001)
 ├── PUT    /chat/conversations/:id/messages/:msgId        — Chat: edit message
 ├── DELETE /chat/conversations/:id/messages/:msgId        — Chat: delete message
 │
+├── GET  /library                                         — Library: list all libraries
+├── POST /library/:libraryId/import                       — Library: import PDFs (two-pass pipeline)
+├── POST /library/:libraryId/search                       — Library: semantic article search
+├── GET  /library/:libraryId/export                       — Library: export article metadata as JSON
+│
 ├── GET  /info/modes                 — Info: list agent routing profiles (modes)
 ├── GET  /info/models                — Info: list models available in Ollama
 ├── GET  /help                       — Info: structured overview of all API endpoints

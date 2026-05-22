@@ -170,6 +170,57 @@ export interface IUpdateMessageInput {
     content: string;
 }
 
+/* ── Library ─────────────────────────────────────────────────────────────── */
+
+/** A library row as stored in PostgreSQL. */
+export interface ILibraryRecord {
+    id: string;
+    name: string;
+    config: Record<string, unknown>;
+    articleCount: number;
+    lastImportAt: Date | null;
+    createdAt: Date;
+}
+
+/** Input for creating/upserting a library. */
+export interface IUpsertLibraryInput {
+    id: string;
+    name: string;
+    config?: Record<string, unknown>;
+}
+
+/** A library article row as stored in PostgreSQL. */
+export interface ILibraryArticleRecord {
+    id: string;
+    libraryId: string;
+    title: string;
+    summary: string;
+    topics: string[];
+    year: number | null;
+    month: string | null;
+    startPage: number;
+    endPage: number | null;
+    pdfPath: string;
+    pdfPageOffset: number;
+    qdrantPointId: string;
+    createdAt: Date;
+}
+
+/** Input for inserting an article. */
+export interface ICreateArticleInput {
+    libraryId: string;
+    title: string;
+    summary: string;
+    topics: string[];
+    year?: number | null;
+    month?: string | null;
+    startPage: number;
+    endPage?: number | null;
+    pdfPath: string;
+    pdfPageOffset?: number;
+    qdrantPointId: string;
+}
+
 /* ── Shared query options ────────────────────────────────────────────────── */
 
 /** Options for {@link fetchRecentRuns}. */
