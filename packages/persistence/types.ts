@@ -43,6 +43,7 @@ export type RunStatus = 'completed' | 'max_steps' | 'error' | 'hard_stopped';
 export interface IAgentRunInput {
     task: string;
     agentProfile?: string | null;
+    input?: Record<string, unknown> | null;
     output: string;
     context?: string | null;
     memory?: string[] | null;

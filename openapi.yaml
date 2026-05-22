@@ -2,14 +2,14 @@ openapi: '3.1.0'
 
 info:
     title: Manna AI Agent API
-    version: '1.0.0'
+    version: '0.15.0-alpha'
     contact:
         name: Manna API
         url: https://github.com/Guebbit/manna
     description: |
-        Local-first agentic AI platform. Exposes the agent reasoning loop, IDE-specific
-        direct-LLM endpoints, file-upload helpers,
-        and a multi-library PDF ingestion and semantic search system.
+        Local-first agentic AI platform. Exposes the agent reasoning loop,
+        multi-agent swarm orchestration, sequential workflows, chat persistence,
+        IDE-specific direct-LLM endpoints, and file-upload helpers.
 
         **Base URL (default):** `http://localhost:3001`
 
@@ -1409,7 +1409,7 @@ components:
                     schema:
                         $ref: '#/components/schemas/ErrorResponse'
         NotFound:
-            description: The requested library or resource was not found
+            description: The requested resource was not found
             content:
                 application/json:
                     schema:
@@ -1810,7 +1810,7 @@ components:
                         Default `false`.
                 profile:
                     type: string
-                    enum: [fast, reasoning, code, default]
+                    enum: [fast, reasoning, code]
                     description: |
                         Force a specific model profile, bypassing automatic routing.
                         If omitted, the router selects a profile based on the task text.
@@ -1844,7 +1844,7 @@ components:
                     description: When `true`, unlocks write tools for all subtask agents.
                 profile:
                     type: string
-                    enum: [fast, reasoning, code, default]
+                    enum: [fast, reasoning, code]
                     description: |
                         Force a specific model profile for all subtask agents,
                         overriding the decomposer's per-subtask suggestions.
@@ -1931,7 +1931,7 @@ components:
                         tools for all steps.
                 profile:
                     type: string
-                    enum: [fast, reasoning, code, default]
+                    enum: [fast, reasoning, code]
                     description: |
                         Force a specific model profile for all steps, bypassing automatic routing.
                 carry:

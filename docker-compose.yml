@@ -4,6 +4,8 @@
 # Services:
 #   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
 #   qdrant        — Local vector database for agent memory
+#   postgres      — Primary persistence (agent/swarm runs, chat, evals)
+#   neo4j         — Knowledge graph (entity/relationship store)
 #   manna         — Manna Express API (containerized apps/api server)
 #
 # Usage:
@@ -109,6 +111,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
+            target: dev
         ports:
             - '${MANNA_PORT:-3001}:${MANNA_PORT:-3001}'
         env_file:
@@ -124,8 +127,10 @@ services:
             OLLAMA_BASE_URL: http://ollama:${OLLAMA_PORT:-11434}
             QDRANT_URL: http://qdrant:${QDRANT_PORT:-6333}
         depends_on:
-            - postgres
-            - neo4j
+            postgres:
+                condition: service_healthy
+            neo4j:
+                condition: service_started
         restart: unless-stopped
 
 volumes:

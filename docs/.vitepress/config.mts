@@ -23,7 +23,7 @@ export default withMermaid(
                     text: 'Getting Started',
                     items: [
                         { text: 'Home', link: '/' },
-                        { text: 'Identity Card (overview)', link: '/identity-card' },
+                        { text: 'Identity Card (overview)', link: 'https://github.com/Guebbit/manna#readme' },
                         { text: 'Use the Application', link: '/use-the-application' },
                         { text: 'Endpoint Map', link: '/endpoint-map' },
                         { text: 'Library Ingestion & Search', link: '/library-ingestion' },
