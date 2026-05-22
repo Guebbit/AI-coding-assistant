@@ -88,26 +88,29 @@ export async function runMigrations(): Promise<void> {
             const filePath = path.join(MIGRATIONS_DIR, filename);
             const sql = await fs.readFile(filePath, 'utf-8');
 
-            await client.query('BEGIN');
-            try {
-                await client.query(sql);
-                await client.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [
-                    filename
-                ]);
-                await client.query('COMMIT');
-                logger.info('persistence_migrate_applied', {
-                    component: 'persistence.migrate',
-                    filename
-                });
-            } catch (error: unknown) {
-                await client.query('ROLLBACK');
-                logger.warn('persistence_migrate_failed', {
-                    component: 'persistence.migrate',
-                    filename,
-                    error: String(error)
-                });
-                throw error;
-            }
+            await client
+                .query('BEGIN')
+                .then(() => client.query(sql))
+                .then(() =>
+                    client.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [filename])
+                )
+                .then(() => client.query('COMMIT'))
+                .then(() => {
+                    logger.info('persistence_migrate_applied', {
+                        component: 'persistence.migrate',
+                        filename
+                    });
+                })
+                .catch((error: unknown) =>
+                    client.query('ROLLBACK').then(() => {
+                        logger.warn('persistence_migrate_failed', {
+                            component: 'persistence.migrate',
+                            filename,
+                            error: String(error)
+                        });
+                        throw error;
+                    })
+                );
         }
 
         logger.info('persistence_migrate_done', { component: 'persistence.migrate' });

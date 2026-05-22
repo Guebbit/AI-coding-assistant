@@ -59,7 +59,9 @@ vi.mock('@/packages/persistence/db', () => ({
     listLibraries: vi.fn(async () => [...libraries.values()]),
     getLibrary: vi.fn(async (libraryId: string) => libraries.get(libraryId)),
     listArticles: vi.fn(async (libraryId: string) => articlesByLibrary.get(libraryId) ?? []),
-    countArticles: vi.fn(async (libraryId: string) => (articlesByLibrary.get(libraryId) ?? []).length)
+    countArticles: vi.fn(
+        async (libraryId: string) => (articlesByLibrary.get(libraryId) ?? []).length
+    )
 }));
 
 vi.mock('@/packages/library', () => ({
@@ -96,21 +98,19 @@ vi.mock('@/packages/library', () => ({
             errors: []
         };
     }),
-    searchLibrary: vi.fn(
-        async (libraryId: string, request: { query: string; topK?: number }) => {
-            const articles = articlesByLibrary.get(libraryId) ?? [];
-            const normalizedQuery = request.query.toLowerCase();
-            const matched = articles.filter(
-                (article) =>
-                    article.title.toLowerCase().includes(normalizedQuery) ||
-                    article.summary.toLowerCase().includes(normalizedQuery)
-            );
-            return matched.slice(0, request.topK ?? 10).map((article) => ({
-                ...article,
-                score: article.score ?? 0.99
-            }));
-        }
-    )
+    searchLibrary: vi.fn(async (libraryId: string, request: { query: string; topK?: number }) => {
+        const articles = articlesByLibrary.get(libraryId) ?? [];
+        const normalizedQuery = request.query.toLowerCase();
+        const matched = articles.filter(
+            (article) =>
+                article.title.toLowerCase().includes(normalizedQuery) ||
+                article.summary.toLowerCase().includes(normalizedQuery)
+        );
+        return matched.slice(0, request.topK ?? 10).map((article) => ({
+            ...article,
+            score: article.score ?? 0.99
+        }));
+    })
 }));
 
 import { registerLibraryRoutes } from '@/apps/api/library-endpoints';

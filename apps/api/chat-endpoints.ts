@@ -280,63 +280,66 @@ export function registerChatRoutes(app: express.Express): void {
         const profile = isValidChatProfile(conversation.profile) ? conversation.profile : DEFAULT_CHAT_PROFILE;
         const promptMessages = [...conversation.messages, result];
 
-        try {
-            const route = await routeModel({
-                task: result.content,
-                context: buildConversationContext(promptMessages),
-                step: 0,
-                forcedProfile: profile
-            });
-            const llmResult = await chatWithMetadata(toOllamaMessages(promptMessages), {
-                model: route.model,
-                options: route.options
-            });
-            const assistantContent = llmResult.message.content.trim();
+        routeModel({
+            task: result.content,
+            context: buildConversationContext(promptMessages),
+            step: 0,
+            forcedProfile: profile
+        })
+            .then((route) =>
+                chatWithMetadata(toOllamaMessages(promptMessages), {
+                    model: route.model,
+                    options: route.options
+                }).then((llmResult) => ({ route, llmResult }))
+            )
+            .then(({ route, llmResult }) => {
+                const assistantContent = llmResult.message.content.trim();
 
-            if (assistantContent !== '') {
-                const assistantMessage = await createMessage(id, {
+                if (assistantContent === '') {
+                    logger.warn('chat_assistant_reply_empty', { component: 'api.chat', conversationId: id, requestId: req.requestId });
+                    writeEvent('error', { error: 'Assistant returned an empty reply' });
+                    return;
+                }
+
+                return createMessage(id, {
                     role: 'assistant',
                     content: assistantContent
+                }).then((assistantMessage) => {
+                    if (assistantMessage) {
+                        writeEvent('reply', {
+                            message: assistantMessage,
+                            meta: {
+                                ...buildResponseMeta(startedAt, req),
+                                model: route.model,
+                                profile: route.profile,
+                                promptTokens: llmResult.promptEvalCount,
+                                completionTokens: llmResult.evalCount,
+                                totalTokens: sumTokens(llmResult.promptEvalCount, llmResult.evalCount)
+                            }
+                        });
+                    } else {
+                        logger.warn('chat_assistant_reply_persist_failed', {
+                            component: 'api.chat',
+                            conversationId: id,
+                            requestId: req.requestId,
+                            reason: assistantMessage === null ? 'database_unavailable' : 'conversation_missing'
+                        });
+                        writeEvent('error', { error: 'Assistant reply could not be saved' });
+                    }
                 });
-
-                if (assistantMessage) {
-                    writeEvent('reply', {
-                        message: assistantMessage,
-                        meta: {
-                            ...buildResponseMeta(startedAt, req),
-                            model: route.model,
-                            profile: route.profile,
-                            promptTokens: llmResult.promptEvalCount,
-                            completionTokens: llmResult.evalCount,
-                            totalTokens: sumTokens(llmResult.promptEvalCount, llmResult.evalCount)
-                        }
-                    });
-                } else {
-                    logger.warn('chat_assistant_reply_persist_failed', {
-                        component: 'api.chat',
-                        conversationId: id,
-                        requestId: req.requestId,
-                        reason: assistantMessage === null ? 'database_unavailable' : 'conversation_missing'
-                    });
-                    writeEvent('error', { error: 'Assistant reply could not be saved' });
-                }
-            } else {
-                logger.warn('chat_assistant_reply_empty', { component: 'api.chat', conversationId: id, requestId: req.requestId });
-                writeEvent('error', { error: 'Assistant returned an empty reply' });
-            }
-        } catch (error) {
-            logger.error('chat_assistant_reply_failed', {
-                component: 'api.chat',
-                conversationId: id,
-                requestId: req.requestId,
-                error: String(error),
-                errorName: error instanceof Error ? error.name : typeof error,
-                errorMessage: error instanceof Error ? error.message : String(error)
-            });
-            writeEvent('error', { error: 'Assistant reply failed' });
-        }
-
-        res.end();
+            })
+            .catch((error) => {
+                logger.error('chat_assistant_reply_failed', {
+                    component: 'api.chat',
+                    conversationId: id,
+                    requestId: req.requestId,
+                    error: String(error),
+                    errorName: error instanceof Error ? error.name : typeof error,
+                    errorMessage: error instanceof Error ? error.message : String(error)
+                });
+                writeEvent('error', { error: 'Assistant reply failed' });
+            })
+            .finally(() => res.end());
     });
 
     /* ── PUT /chat/conversations/:id/messages/:msgId ─────────────────────── */

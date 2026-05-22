@@ -12,17 +12,17 @@ Local-first AI agent platform for multi-step reasoning, tool execution, orchestr
 
 ## Documentation tracks
 
-| Track                     | What you'll find                                                            | Start here                                   |
-| ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------- |
+| Track                     | What you'll find                                                            | Start here                                           |
+| ------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
 | **Identity Card**         | One-page "what is Manna?" overview — stack, tools, patterns, strategies     | [README.md](https://github.com/Guebbit/manna#readme) |
-| **Getting Started**       | First run, setup, use cases                                                 | [Quickstart](./quickstart.md)                |
-| **Full Setup**            | All use cases, IDE integration, write mode, knowledge base                  | [Use the Application](/use-the-application)  |
-| **Practical Examples**    | Request → under-the-hood → response walkthroughs                            | [Examples](/examples/)                       |
-| **Scenarios**             | Hands-on drills (10 min each)                                               | [Scenarios](/scenarios/)                     |
-| **Architecture & Theory** | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered) |
-| **API Surface**           | All HTTP endpoints                                                          | [Endpoint Map](/endpoint-map)                |
-| **Package Reference**     | Code contracts per package                                                  | [Packages](/packages/)                       |
-| **Glossary**              | Every technical term explained                                              | [Glossary](/glossary)                        |
+| **Getting Started**       | First run, setup, use cases                                                 | [Quickstart](./quickstart.md)                        |
+| **Full Setup**            | All use cases, IDE integration, write mode, knowledge base                  | [Use the Application](/use-the-application)          |
+| **Practical Examples**    | Request → under-the-hood → response walkthroughs                            | [Examples](/examples/)                               |
+| **Scenarios**             | Hands-on drills (10 min each)                                               | [Scenarios](/scenarios/)                             |
+| **Architecture & Theory** | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered)         |
+| **API Surface**           | All HTTP endpoints                                                          | [Endpoint Map](/endpoint-map)                        |
+| **Package Reference**     | Code contracts per package                                                  | [Packages](/packages/)                               |
+| **Glossary**              | Every technical term explained                                              | [Glossary](/glossary)                                |
 
 ---
 

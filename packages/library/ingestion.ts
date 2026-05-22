@@ -139,8 +139,8 @@ function inferMetaFromPath(pdfPath: string): { year?: number; month?: string } {
     let month: string | undefined;
     if (filenameMatch) {
         const name = filenameMatch[1];
-        const monthNum = Number.parseInt(name, 10);
-        if (monthNum >= 1 && monthNum <= 12) {
+        const monthNumber = Number.parseInt(name, 10);
+        if (monthNumber >= 1 && monthNumber <= 12) {
             const months = [
                 'January',
                 'February',
@@ -155,7 +155,7 @@ function inferMetaFromPath(pdfPath: string): { year?: number; month?: string } {
                 'November',
                 'December'
             ];
-            month = months[monthNum - 1];
+            month = months[monthNumber - 1];
         } else if (/^[a-z]/i.test(name)) {
             month = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
         }

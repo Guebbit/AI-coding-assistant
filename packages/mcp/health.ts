@@ -19,21 +19,13 @@ const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
  * @returns `true` when the check succeeds within timeout, otherwise `false`.
  * @throws Never throws. All failures are converted to `false`.
  */
-export async function checkMCPServerHealth(client: Client): Promise<boolean> {
+export function checkMCPServerHealth(client: Client): Promise<boolean> {
     const timeoutMs = envNumber(process.env.MCP_CONNECT_TIMEOUT_MS, DEFAULT_MCP_CONNECT_TIMEOUT_MS);
 
-    try {
-        await Promise.race([
-            client.listTools(),
-            new Promise((_, reject) => {
-                setTimeout(
-                    () => reject(new Error(`MCP health check timed out after ${timeoutMs}ms`)),
-                    timeoutMs
-                );
-            })
-        ]);
-        return true;
-    } catch {
-        return false;
-    }
+    return Promise.race([
+        client.listTools().then(() => true),
+        new Promise<boolean>((resolve) => {
+            setTimeout(() => resolve(false), timeoutMs);
+        })
+    ]).catch(() => false);
 }

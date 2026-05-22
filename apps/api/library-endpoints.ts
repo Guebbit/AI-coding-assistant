@@ -153,28 +153,27 @@ export function registerLibraryRoutes(app: express.Express): void {
             }
         }
 
-        try {
-            /* Parse optional TOC pages from env or library config. */
-            const tocPagesEnv = process.env.LIBRARY_TOC_PAGES;
-            let tocPages: [number, number] | undefined;
-            if (tocPagesEnv) {
-                const parts = tocPagesEnv.split(',').map(Number);
-                if (parts.length === 2 && parts.every((n) => !Number.isNaN(n))) {
-                    tocPages = parts as [number, number];
-                }
+        /* Parse optional TOC pages from env or library config. */
+        const tocPagesEnv = process.env.LIBRARY_TOC_PAGES;
+        let tocPages: [number, number] | undefined;
+        if (tocPagesEnv) {
+            const parts = tocPagesEnv.split(',').map(Number);
+            if (parts.length === 2 && parts.every((n) => !Number.isNaN(n))) {
+                tocPages = parts as [number, number];
             }
-
-            const result = await runImport(libraryId, entries, tocPages);
-            successResponse(res, result);
-        } catch (error) {
-            logger.error('library_import_error', {
-                component: 'api.library',
-                libraryId,
-                error: String(error),
-                requestId: req.requestId
-            });
-            rejectResponse(res, 500, 'Import failed', [String(error)]);
         }
+
+        runImport(libraryId, entries, tocPages)
+            .then((result) => successResponse(res, result))
+            .catch((error: unknown) => {
+                logger.error('library_import_error', {
+                    component: 'api.library',
+                    libraryId,
+                    error: String(error),
+                    requestId: req.requestId
+                });
+                rejectResponse(res, 500, 'Import failed', [String(error)]);
+            });
     });
 
     /* ── POST /library/:libraryId/search ─────────────────────────────── */
@@ -215,25 +214,25 @@ export function registerLibraryRoutes(app: express.Express): void {
             return;
         }
 
-        try {
-            const results = await searchLibrary(libraryId, {
+        searchLibrary(libraryId, {
                 query: body.query.trim(),
                 topK: body.topK,
                 filters: body.filters
+            })
+            .then((results) => {
+                /* Strip internal qdrantPointId from response. */
+                const data = results.map(({ qdrantPointId: _, ...rest }) => rest);
+                successResponse(res, data);
+            })
+            .catch((error: unknown) => {
+                logger.error('library_search_error', {
+                    component: 'api.library',
+                    libraryId,
+                    error: String(error),
+                    requestId: req.requestId
+                });
+                rejectResponse(res, 500, 'Search failed', [String(error)]);
             });
-
-            /* Strip internal qdrantPointId from response. */
-            const data = results.map(({ qdrantPointId: _, ...rest }) => rest);
-            successResponse(res, data);
-        } catch (error) {
-            logger.error('library_search_error', {
-                component: 'api.library',
-                libraryId,
-                error: String(error),
-                requestId: req.requestId
-            });
-            rejectResponse(res, 500, 'Search failed', [String(error)]);
-        }
     });
 
     /* ── GET /library/:libraryId/export ───────────────────────────────── */

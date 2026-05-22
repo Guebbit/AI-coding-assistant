@@ -60,30 +60,31 @@ export interface IScorerRunInputWithRunId extends IScorerRunInput {
  * @param input  - The run description (task input, agent output, optional metadata).
  * @returns The persisted eval result record, or `null` on failure.
  */
-export async function scoreAndPersist(
+export function scoreAndPersist(
     scorer: IScorer,
     input: IScorerRunInputWithRunId
 ): Promise<IEvalResultRecord | null> {
-    let scorerResult;
-    try {
-        scorerResult = await scorer.score(input);
-    } catch (error: unknown) {
-        logger.warn('evals_scorer_failed', {
-            component: 'evals.persist',
-            scorer: scorer.id,
-            error: String(error)
+    return scorer
+        .score(input)
+        .catch((error: unknown) => {
+            logger.warn('evals_scorer_failed', {
+                component: 'evals.persist',
+                scorer: scorer.id,
+                error: String(error)
+            });
+            return null;
+        })
+        .then((scorerResult) => {
+            if (scorerResult === null) return null;
+            return saveEvalResult({
+                runId: input.runId ?? null,
+                runType: input.runType ?? null,
+                scorer: scorer.id,
+                score: scorerResult.score,
+                reasoning: scorerResult.reasoning,
+                metadata: scorerResult.metadata ?? null
+            });
         });
-        return null;
-    }
-
-    return saveEvalResult({
-        runId: input.runId ?? null,
-        runType: input.runType ?? null,
-        scorer: scorer.id,
-        score: scorerResult.score,
-        reasoning: scorerResult.reasoning,
-        metadata: scorerResult.metadata ?? null
-    });
 }
 
 /**

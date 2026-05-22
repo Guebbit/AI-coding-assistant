@@ -229,26 +229,26 @@ export async function loadMCPTools(configPath?: string): Promise<{
         ? configuredPath
         : path.resolve(process.cwd(), configuredPath);
 
-    try {
-        await access(absoluteConfigPath, fsConstants.F_OK);
-    } catch {
+    const fileExists = await access(absoluteConfigPath, fsConstants.F_OK)
+        .then(() => true)
+        .catch(() => false);
+    if (!fileExists) {
         logger.info('mcp_config_not_found', { component: 'mcp', path: absoluteConfigPath });
         return { readTools: [], writeTools: [], meta: [] };
     }
 
-    let config: IMCPConfig | null = null;
-    try {
-        config = await parseMCPConfig(absoluteConfigPath);
-    } catch (error) {
-        logger.warn('mcp_config_parse_failed', {
-            component: 'mcp',
-            path: absoluteConfigPath,
-            error: String(error)
-        });
-        return { readTools: [], writeTools: [], meta: [] };
-    }
+    const config: IMCPConfig | null | 'error' = await parseMCPConfig(absoluteConfigPath).catch(
+        (error: unknown) => {
+            logger.warn('mcp_config_parse_failed', {
+                component: 'mcp',
+                path: absoluteConfigPath,
+                error: String(error)
+            });
+            return 'error' as const;
+        }
+    );
 
-    if (!config) {
+    if (config === 'error' || config === null) {
         return { readTools: [], writeTools: [], meta: [] };
     }
 

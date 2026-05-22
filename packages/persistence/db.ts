@@ -107,19 +107,26 @@ export async function closePool(): Promise<void> {
  *
  * @internal
  */
-async function withClient<T>(executor: (client: pg.PoolClient) => Promise<T>): Promise<T | null> {
-    if (!DB_ENABLED) return null;
+function withClient<T>(executor: (client: pg.PoolClient) => Promise<T>): Promise<T | null> {
+    if (!DB_ENABLED) return Promise.resolve(null);
     const pool = getPool();
     let client: pg.PoolClient | null = null;
-    try {
-        client = await pool.connect();
-        return await executor(client);
-    } catch (error: unknown) {
-        logger.warn('persistence_db_error', { component: 'persistence.db', error: String(error) });
-        return null;
-    } finally {
-        client?.release();
-    }
+    return pool
+        .connect()
+        .then((c) => {
+            client = c;
+            return executor(client);
+        })
+        .catch((error: unknown) => {
+            logger.warn('persistence_db_error', {
+                component: 'persistence.db',
+                error: String(error)
+            });
+            return null;
+        })
+        .finally(() => {
+            client?.release();
+        });
 }
 
 /* ── saveAgentRun ────────────────────────────────────────────────────────── */
