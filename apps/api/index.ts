@@ -48,6 +48,7 @@ import { registerSwarmRoutes } from "./swarm-endpoints";
 import { registerInfoRoutes } from "./info-endpoints";
 import { registerWorkflowRoutes } from "./workflow-endpoints";
 import { registerChatRoutes } from "./chat-endpoints";
+import { registerLibraryRoutes } from "./library-endpoints";
 import { createAgent, initializeAgents, VALID_PROFILES } from "./agents";
 import { runMigrations } from "@/packages/persistence/migrate";
 import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
@@ -88,6 +89,9 @@ registerInfoRoutes(app);
 
 /* Register chat endpoints (/chat/conversations). */
 registerChatRoutes(app);
+
+/* Register library endpoints (/library, /library/:id/import, etc.). */
+registerLibraryRoutes(app);
 
 /**
  * POST /run — submit a task to the agent reasoning loop.
