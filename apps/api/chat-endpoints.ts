@@ -13,7 +13,8 @@
  * | GET    | /chat/conversations/:id                     | Get conversation + messages   |
  * | PUT    | /chat/conversations/:id                     | Update title / profile        |
  * | DELETE | /chat/conversations/:id                     | Delete conversation + cascade |
- * | POST   | /chat/conversations/:id/messages            | Add a message                 |
+ * | POST   | /chat/conversations/:id/messages            | Add a message (JSON)          |
+ * | POST   | /chat/conversations/:id/messages/stream     | Add a user message + stream   |
  * | PUT    | /chat/conversations/:id/messages/:msgId     | Edit message content          |
  * | DELETE | /chat/conversations/:id/messages/:msgId     | Delete a single message       |
  *
@@ -229,13 +230,47 @@ export function registerChatRoutes(app: express.Express): void {
             return;
         }
 
+        successResponse(res, { message: result }, 201, '', buildResponseMeta(startedAt, req));
+    });
+
+    /* ── POST /chat/conversations/:id/messages/stream ────────────────────── */
+
+    app.post('/chat/conversations/:id/messages/stream', async (req, res) => {
+        const startedAt = new Date();
+        const { id } = req.params;
+        const { role, content } = req.body as { role?: unknown; content?: unknown };
+
         if (role !== 'user') {
-            successResponse(res, { message: result }, 201, '', buildResponseMeta(startedAt, req));
+            rejectResponse(res, 400, 'Bad Request', ['role must be user for streaming']);
+            return;
+        }
+        if (typeof content !== 'string' || content.trim() === '') {
+            rejectResponse(res, 400, 'Bad Request', ['content is required and must be a non-empty string']);
             return;
         }
 
-        // Switch to SSE for user messages: emit the saved message immediately,
-        // then stream the assistant reply once the model finishes.
+        const conversation = await getConversation(id);
+        if (conversation === null) {
+            rejectResponse(res, 503, 'Service Unavailable', ['Database unavailable']);
+            return;
+        }
+        if (conversation === undefined) {
+            rejectResponse(res, 404, 'Not Found', [`Conversation ${id} not found`]);
+            return;
+        }
+
+        logger.info('chat_create_message_stream', { component: 'api.chat', conversationId: id, requestId: req.requestId });
+        const result = await createMessage(id, { role, content });
+
+        if (result === null) {
+            rejectResponse(res, 503, 'Service Unavailable', ['Database unavailable']);
+            return;
+        }
+        if (result === undefined) {
+            rejectResponse(res, 404, 'Not Found', [`Conversation ${id} not found`]);
+            return;
+        }
+
         setupSSEHeaders(res);
         const writeEvent = createSseWriter(res);
         onSSEClose(req, () => res.end());

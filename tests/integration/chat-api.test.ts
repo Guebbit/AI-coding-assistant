@@ -196,6 +196,25 @@ async function startServer(): Promise<{ server: Server; baseUrl: string }> {
     };
 }
 
+interface ISseEvent {
+    event: string;
+    data: unknown;
+}
+
+function parseSseEvents(payload: string): ISseEvent[] {
+    return payload
+        .trim()
+        .split('\n\n')
+        .filter((chunk) => chunk.startsWith('event: '))
+        .map((chunk) => {
+            const lines = chunk.split('\n');
+            const event = lines[0]?.replace('event: ', '') ?? '';
+            const dataLine = lines.find((line) => line.startsWith('data: '));
+            const data = dataLine ? JSON.parse(dataLine.replace('data: ', '')) : null;
+            return { event, data };
+        });
+}
+
 describe('chat API', () => {
     beforeEach(() => {
         persistenceState.conversations.clear();
@@ -210,7 +229,7 @@ describe('chat API', () => {
         vi.unstubAllGlobals();
     });
 
-    it('creates an assistant reply for user messages with the fast profile', async () => {
+    it('creates a user message as JSON on /messages without streaming', async () => {
         const { server, baseUrl } = await startServer();
 
         try {
@@ -234,7 +253,6 @@ describe('chat API', () => {
             const postMessageBody = (await postMessageResponse.json()) as {
                 success: boolean;
                 data: { message: { role: string; content: string } };
-                meta: { model?: string; profile?: string; totalTokens?: number };
             };
 
             expect(postMessageResponse.status).toBe(201);
@@ -243,10 +261,70 @@ describe('chat API', () => {
                 role: 'user',
                 content: 'Hello, how are you?'
             });
-            expect(postMessageBody.meta).toMatchObject({
-                model: 'fast-model',
-                profile: 'fast',
-                totalTokens: 17
+
+            const getConversationResponse = await fetch(
+                `${baseUrl}/chat/conversations/${createConversationBody.data.conversation.id}`
+            );
+            const getConversationBody = (await getConversationResponse.json()) as {
+                data: {
+                    conversation: {
+                        messages: Array<{ role: string; content: string }>;
+                    };
+                };
+            };
+
+            expect(getConversationResponse.status).toBe(200);
+            expect(getConversationBody.data.conversation.messages).toMatchObject([
+                { role: 'user', content: 'Hello, how are you?' }
+            ]);
+            const ollamaCalls = mockFetch.mock.calls.filter(([url]) =>
+                url.toString().startsWith('http://ollama.test/')
+            );
+            expect(ollamaCalls).toHaveLength(0);
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+        }
+    });
+
+    it('streams assistant replies on /messages/stream for user messages', async () => {
+        const { server, baseUrl } = await startServer();
+
+        try {
+            const createConversationResponse = await fetch(`${baseUrl}/chat/conversations`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const createConversationBody = (await createConversationResponse.json()) as {
+                data: { conversation: { id: string } };
+            };
+
+            const streamResponse = await fetch(
+                `${baseUrl}/chat/conversations/${createConversationBody.data.conversation.id}/messages/stream`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'user', content: 'Hello, how are you?' })
+                }
+            );
+            const streamBody = await streamResponse.text();
+            const events = parseSseEvents(streamBody);
+
+            expect(streamResponse.status).toBe(200);
+            expect(streamResponse.headers.get('content-type')).toContain('text/event-stream');
+            expect(events).toHaveLength(2);
+            expect(events[0]).toMatchObject({
+                event: 'message',
+                data: { role: 'user', content: 'Hello, how are you?' }
+            });
+            expect(events[1]).toMatchObject({
+                event: 'reply',
+                data: {
+                    message: { role: 'assistant', content: 'Hi! I am doing well.' },
+                    meta: { model: 'fast-model', profile: 'fast', totalTokens: 17 }
+                }
             });
 
             const getConversationResponse = await fetch(

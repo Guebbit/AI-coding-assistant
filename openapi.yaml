@@ -1257,8 +1257,11 @@ paths:
             - $ref: '#/components/parameters/conversationId'
         post:
             tags: [chat]
-            summary: Add a message to a conversation
+            summary: Add a message to a conversation (JSON)
             operationId: createMessage
+            description: |
+                Creates and persists a chat message and returns a normal JSON envelope.
+                For live assistant streaming, use `POST /chat/conversations/{conversationId}/messages/stream`.
             requestBody:
                 required: true
                 content:
@@ -1291,6 +1294,62 @@ paths:
                                               properties:
                                                   message:
                                                       $ref: '#/components/schemas/ChatMessage'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '404':
+                    $ref: '#/components/responses/NotFound'
+                '503':
+                    $ref: '#/components/responses/ServiceUnavailable'
+
+    /chat/conversations/{conversationId}/messages/stream:
+        parameters:
+            - $ref: '#/components/parameters/conversationId'
+        post:
+            tags: [chat]
+            summary: Add a user message and stream the assistant reply
+            description: |
+                Creates a `user` message, then streams SSE events for the saved user message
+                and the generated assistant reply.
+
+                This endpoint requires `role: user` in the request body.
+
+                **SSE event types**:
+                - `message` — the persisted user message (`ChatMessage`)
+                - `reply` — the persisted assistant message plus generation metadata
+                - `error` — stream failure payload `{ error }`
+            operationId: createMessageStream
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateMessageRequest'
+                        examples:
+                            userMessage:
+                                summary: User message
+                                value:
+                                    role: user
+                                    content: 'Can you explain how the model router works?'
+            responses:
+                '200':
+                    description: |
+                        SSE stream — connection kept open until the assistant generation finishes.
+
+                        SSE event payload schemas:
+                        - `message` event: `ChatMessage`
+                        - `reply` event: `{ message: ChatMessage, meta: ResponseMeta & token/model metadata }`
+                        - `error` event: `SseErrorEvent`
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                                description: Newline-delimited SSE frames
+                            example: |
+                                event: message
+                                data: {"id":"7c9e6679-7425-40de-944b-e07fc1f90ae7","conversationId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","role":"user","content":"Hello","createdAt":"2026-01-01T00:00:01.000Z","updatedAt":"2026-01-01T00:00:01.000Z"}
+
+                                event: reply
+                                data: {"message":{"id":"7c9e6679-7425-40de-944b-e07fc1f90ae8","conversationId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","role":"assistant","content":"Hi!","createdAt":"2026-01-01T00:00:02.000Z","updatedAt":"2026-01-01T00:00:02.000Z"},"meta":{"model":"fast-model","profile":"fast","promptTokens":12,"completionTokens":5,"totalTokens":17}}
                 '400':
                     $ref: '#/components/responses/BadRequest'
                 '404':

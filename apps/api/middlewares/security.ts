@@ -21,17 +21,34 @@ function parsePositiveInt(rawValue: string | undefined, fallback: number): numbe
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Parse a non-negative integer environment variable with safe fallback.
+ *
+ * Allows `0` to support explicit "disabled" semantics.
+ *
+ * @param rawValue - Raw environment variable value.
+ * @param fallback - Fallback value when parsing fails.
+ * @returns A non-negative integer.
+ */
+function parseNonNegativeInt(rawValue: string | undefined, fallback: number): number {
+    const parsed = envNumber(rawValue, fallback);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
 const rateLimitWindowMs = parsePositiveInt(process.env.RATE_LIMIT_WINDOW_MS, 900000);
-const rateLimitMax = parsePositiveInt(process.env.RATE_LIMIT_MAX, 100);
+const rateLimitMax = parseNonNegativeInt(process.env.RATE_LIMIT_MAX, 100);
+const isRateLimitDisabled = rateLimitMax === 0;
 
 /**
  * Global rate limiter applied before any DB or LLM access.
  *
  * Defaults to 100 requests per IP per 15-minute window.
+ * Set RATE_LIMIT_MAX=0 to disable rate limiting.
  */
 export const rateLimiter = rateLimit({
     windowMs: rateLimitWindowMs,
-    limit: rateLimitMax,
+    limit: isRateLimitDisabled ? 1 : rateLimitMax,
+    skip: () => isRateLimitDisabled,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
 });
