@@ -1,4 +1,3 @@
-
 # Manna
 
 > **This file is the single source of truth** for the Manna application identity, architecture, and conventions.
