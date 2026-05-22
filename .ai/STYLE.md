@@ -1,5 +1,9 @@
 # Coding/style contract
 
+Source of truth for what Manna is and how it is built: [`./README.md`](./README.md).
+Linting source of truth: [`../eslint.config.ts`](../eslint.config.ts).
+Formatting source of truth: [`../.prettierrc`](../.prettierrc).
+
 Core principles
 
 - Apply SOLID
