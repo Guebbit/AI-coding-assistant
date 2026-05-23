@@ -112,18 +112,16 @@ describe('run API', () => {
     });
 
     it('creates a fresh agent per request so run state does not leak between calls', async () => {
-        mockRun
-            .mockRejectedValueOnce(new Error('E_CONSECUTIVE_ERRORS'))
-            .mockResolvedValueOnce({
-                answer: 'second request works',
-                citations: [],
-                meta: {
-                    startedAt: '2026-01-01T00:00:01.000Z',
-                    durationMs: 8,
-                    profile: 'fast',
-                    model: 'fast-model'
-                }
-            });
+        mockRun.mockRejectedValueOnce(new Error('E_CONSECUTIVE_ERRORS')).mockResolvedValueOnce({
+            answer: 'second request works',
+            citations: [],
+            meta: {
+                startedAt: '2026-01-01T00:00:01.000Z',
+                durationMs: 8,
+                profile: 'fast',
+                model: 'fast-model'
+            }
+        });
 
         const { server, baseUrl } = await startServer();
 
