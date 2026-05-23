@@ -47,6 +47,10 @@ export default withMermaid(
                     items: [
                         { text: 'How It Works (Layered)', link: '/theory/how-it-works-layered' },
                         { text: 'Agent Loop Mental Model', link: '/theory/agent-loop' },
+                        {
+                            text: 'Tool Selection Strategy Plan',
+                            link: '/theory/tool-selection-strategy-plan'
+                        },
                         { text: 'Prompt, Context, Memory', link: '/theory/prompt-context-memory' },
                         {
                             text: 'Event-Driven Observability',

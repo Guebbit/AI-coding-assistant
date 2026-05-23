@@ -10,7 +10,14 @@
 import type { Express, Request, Response } from "express";
 import type { ModelProfile } from "@/packages/agent/model-router";
 import { logger } from "@/packages/logger/logger";
-import { rejectResponse, successResponse, t, validateProfile, validateTask } from "@/packages/shared";
+import {
+  rejectResponse,
+  successResponse,
+  t,
+  validateProfile,
+  validateTask,
+  validateToolPolicy,
+} from "@/packages/shared";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { RunRequest, RunResponse } from "@/api";
 
@@ -19,7 +26,7 @@ import type { RunRequest, RunResponse } from "@/api";
  */
 export function registerRunRoutes(app: Express): void {
   app.post("/run", (req: Request, res: Response) => {
-    const { task: rawTask, allowWrite, profile } = req.body as Partial<RunRequest>;
+    const { task: rawTask, allowWrite, profile, toolPolicy } = req.body as Partial<RunRequest>;
 
     const taskResult = validateTask(rawTask);
     if ("error" in taskResult) {
@@ -34,10 +41,17 @@ export function registerRunRoutes(app: Express): void {
       return;
     }
 
+    const toolPolicyResult = validateToolPolicy(toolPolicy);
+    if (toolPolicyResult.error) {
+      rejectResponse(res, 400, "Bad Request", [toolPolicyResult.error]);
+      return;
+    }
+
     logger.info("run_request_received", {
       component: "api.run.endpoints",
       task,
       profile: profile ?? null,
+      toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
       requestId: req.requestId,
     });
 

@@ -107,6 +107,15 @@ paths:
                                 value:
                                     task: "Create a new file at data/hello.txt with the content 'hello'"
                                     allowWrite: true
+                            withToolPolicy:
+                                summary: Provide request-level tool-selection policy hints
+                                value:
+                                    task: 'Read me the project index file'
+                                    toolPolicy:
+                                        mode: hybrid
+                                        allowlist: [read_file, read_markdown]
+                                        denylist: [browser_fetch]
+                                        preferred: [read_markdown]
             responses:
                 '200':
                     description: Agent completed successfully
@@ -1998,6 +2007,41 @@ components:
 
         # ── Core schemas ─────────────────────────────────────────────────────────
 
+        ToolPolicy:
+            type: object
+            description: |
+                Optional request-level controls for tool selection.
+                These controls are designed for guidance and scoped authorization,
+                and never bypass platform capability gates (e.g., write-tool gating).
+            properties:
+                mode:
+                    type: string
+                    enum: [guidance, authorization, hybrid]
+                    default: guidance
+                    description: |
+                        How to interpret this policy:
+                        - `guidance` — ranking/selection hints only.
+                        - `authorization` — request-scoped executable-set constraint.
+                        - `hybrid` — enforce denylist while using allowlist/preferred as hints.
+                allowlist:
+                    type: array
+                    uniqueItems: true
+                    items:
+                        type: string
+                    description: Candidate tools to prioritize or permit for this request.
+                denylist:
+                    type: array
+                    uniqueItems: true
+                    items:
+                        type: string
+                    description: Tools to avoid or block for this request.
+                preferred:
+                    type: array
+                    uniqueItems: true
+                    items:
+                        type: string
+                    description: Soft-priority tools for reranking when viable.
+
         RunRequest:
             type: object
             required: [task]
@@ -2018,6 +2062,8 @@ components:
                     description: |
                         Force a specific model profile, bypassing automatic routing.
                         If omitted, the router selects a profile based on the task text.
+                toolPolicy:
+                    $ref: '#/components/schemas/ToolPolicy'
 
         RunResponse:
             type: object

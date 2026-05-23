@@ -214,6 +214,11 @@ Three lifecycle hooks: `processInputStep`, `processOutputStep`, `processToolResu
 Typed errors: `PolicyViolationError` (codes like `E_PERMISSION_DENIED`,
 `E_CONSECUTIVE_ERRORS`, `E_HARD_STOP_BUDGET`) and `PathSafetyError`.
 
+Planned evolution for tool selection (deterministic pre-routing for ambiguous
+intents, suitability guards, conservative path inference, discovery-before-read,
+and request-level `toolPolicy` guidance/authorization controls) is documented in
+[`docs/theory/tool-selection-strategy-plan.md`](../docs/theory/tool-selection-strategy-plan.md).
+
 ---
 
 ## 10. Native tool catalogue — `packages/tools/`
@@ -322,13 +327,14 @@ flowchart LR
 
 ## 15. Topic-specific AI briefs
 
-| File                             | Topic                                                |
-| -------------------------------- | ---------------------------------------------------- |
-| [`MODELS.md`](./MODELS.md)       | Model routing, profile resolution chain              |
-| [`TOOLS.md`](./TOOLS.md)         | Tool interface, registration, `allowWrite` invariant |
-| [`ENVVARS.md`](./ENVVARS.md)     | Most-used env var pointers                           |
-| [`STRUCTURE.md`](./STRUCTURE.md) | Brief repo map / edit targets                        |
-| [`STYLE.md`](./STYLE.md)         | Code/style/comment/JSDoc/naming contract             |
+| File                                          | Topic                                                |
+| --------------------------------------------- | ---------------------------------------------------- |
+| [`MODELS.md`](./MODELS.md)                    | Model routing, profile resolution chain              |
+| [`TOOLS.md`](./TOOLS.md)                      | Tool interface, registration, `allowWrite` invariant |
+| [`ENVVARS.md`](./ENVVARS.md)                  | Most-used env var pointers                           |
+| [`STRUCTURE.md`](./STRUCTURE.md)              | Brief repo map / edit targets                        |
+| [`STYLE.md`](./STYLE.md)                      | Code/style/comment/JSDoc/naming contract             |
+| `docs/theory/tool-selection-strategy-plan.md` | Phased roadmap for next-gen tool selection           |
 
 Long-form human documentation lives in `docs/` (VitePress) — start at
 [`docs/index.md`](../docs/index.md). It is downstream of this file.

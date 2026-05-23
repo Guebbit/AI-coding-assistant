@@ -35,7 +35,7 @@ Manna API  (default port :3001)
 ├── POST /run                        — Generic agentic loop (handles everything)
 │   ├── Reasoning, tool selection, multi-step execution
 │   ├── Access to ALL registered tools
-│   └── Params: task (required), allowWrite?, profile?
+│   └── Params: task (required), allowWrite?, profile?, toolPolicy?
 │
 ├── POST /run/stream                 — Streaming variant of /run (SSE)
 │
@@ -151,11 +151,12 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
 
 **Request body**
 
-| Field        | Type                                           | Required | Description                                                                                                                   |
-| ------------ | ---------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `task`       | `string`                                       | ✅       | Natural-language description of what the agent should do                                                                      |
-| `allowWrite` | `boolean`                                      | —        | When `true`, unlocks `write_file` and `scaffold_project` tools. Default `false`.                                              |
-| `profile`    | `"fast" \| "reasoning" \| "code" \| "default"` | —        | Force a specific model profile, bypassing automatic routing. If omitted, the router selects a profile based on the task text. |
+| Field        | Type                                           | Required | Description                                                                                                                                      |
+| ------------ | ---------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `task`       | `string`                                       | ✅       | Natural-language description of what the agent should do                                                                                         |
+| `allowWrite` | `boolean`                                      | —        | When `true`, unlocks `write_file` and `scaffold_project` tools. Default `false`.                                                                 |
+| `profile`    | `"fast" \| "reasoning" \| "code"`              | —        | Force a specific model profile, bypassing automatic routing. If omitted, the router selects a profile based on the task text.                    |
+| `toolPolicy` | `{ mode?, allowlist?, denylist?, preferred? }` | —        | Optional request-level selection controls. `mode` is `guidance \| authorization \| hybrid`; policy is scoped and cannot bypass capability gates. |
 
 **Response** `200 OK`
 
@@ -184,10 +185,10 @@ This is the right endpoint whenever no specialized endpoint covers the use case.
 
 **Error responses**
 
-| Status | When                                                                                        |
-| ------ | ------------------------------------------------------------------------------------------- |
-| `400`  | `task` is missing, empty, or not a string; or `profile` is not one of the four valid values |
-| `500`  | Unhandled error inside the agent loop                                                       |
+| Status | When                                                                            |
+| ------ | ------------------------------------------------------------------------------- |
+| `400`  | `task` is missing/empty, `profile` is invalid, or `toolPolicy` shape is invalid |
+| `500`  | Unhandled error inside the agent loop                                           |
 
 **How the loop works** (see also [Agent Loop Mental Model](/theory/agent-loop) and [How It Works (Layered)](/theory/how-it-works-layered))
 
@@ -233,7 +234,8 @@ The original `POST /run` is completely unchanged.
 | ------------ | ---------------------------------------------- | -------- | ------------------------------------------------------ |
 | `task`       | `string`                                       | ✅       | Natural-language task description                      |
 | `allowWrite` | `boolean`                                      | —        | Unlock write tools. Default `false`.                   |
-| `profile`    | `"fast" \| "reasoning" \| "code" \| "default"` | —        | Force a specific model profile, bypassing auto-routing |
+| `profile`    | `"fast" \| "reasoning" \| "code"`              | —        | Force a specific model profile, bypassing auto-routing |
+| `toolPolicy` | `{ mode?, allowlist?, denylist?, preferred? }` | —        | Optional request-level policy scaffold for selection   |
 
 **Response headers**
 
@@ -264,7 +266,7 @@ sequenceDiagram
     participant B as Event Bus
     participant A as Agent
 
-    C->>S: POST { task, allowWrite?, profile? }
+    C->>S: POST { task, allowWrite?, profile?, toolPolicy? }
     S-->>C: 200 (text/event-stream headers)
     S->>B: on("*", handler)
     S->>A: agent.run(task)
