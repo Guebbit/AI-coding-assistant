@@ -10,3 +10,6 @@
 
 Long-form human documentation: [`docs/`](./docs/index.md) (VitePress site —
 `npm run docs:dev`).
+
+Planning artifact for next-gen tool selection:
+[`docs/theory/tool-selection-strategy-plan.md`](./docs/theory/tool-selection-strategy-plan.md).

@@ -110,4 +110,34 @@ describe('run API', () => {
             });
         }
     });
+
+    it('returns 400 when toolPolicy is malformed', async () => {
+        const { server, baseUrl } = await startServer();
+
+        try {
+            const response = await fetch(`${baseUrl}/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    task: 'Read package.json',
+                    toolPolicy: { allowlist: ['read_file', 123] }
+                })
+            });
+            const body = (await response.json()) as {
+                success: boolean;
+                status: number;
+                errors: string[];
+            };
+
+            expect(response.status).toBe(400);
+            expect(body.success).toBe(false);
+            expect(body.status).toBe(400);
+            expect(body.errors[0]).toContain('toolPolicy.allowlist');
+            expect(mockCreateAgent).not.toHaveBeenCalled();
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+        }
+    });
 });

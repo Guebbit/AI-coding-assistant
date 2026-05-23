@@ -50,6 +50,7 @@ export { SwarmRequest } from './models/SwarmRequest';
 export type { SwarmResponse } from './models/SwarmResponse';
 export type { SwarmSubtaskResult } from './models/SwarmSubtaskResult';
 export type { ToolCitation } from './models/ToolCitation';
+export { ToolPolicy } from './models/ToolPolicy';
 export { UpdateConversationRequest } from './models/UpdateConversationRequest';
 export type { UpdateMessageRequest } from './models/UpdateMessageRequest';
 export { WorkflowRequest } from './models/WorkflowRequest';
