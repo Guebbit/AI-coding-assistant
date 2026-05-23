@@ -48,6 +48,7 @@ import { registerChatRoutes } from "./chat-endpoints";
 import { registerLibraryRoutes } from "./library-endpoints";
 import { initializeAgents } from "./agents";
 import { registerRunRoutes } from "./run-endpoints";
+import { registerLogsRoutes } from "./logs-endpoints";
 import { runMigrations } from "@/packages/persistence/migrate";
 import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
 import type { HealthResponse } from "@/api";
@@ -92,6 +93,9 @@ registerChatRoutes(app);
 registerLibraryRoutes(app);
 /* Register run endpoint (POST /run). */
 registerRunRoutes(app);
+
+/* Register logs endpoint (GET /logs/errors). */
+registerLogsRoutes(app);
 
 /**
  * GET /health — simple liveness check.

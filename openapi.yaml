@@ -45,6 +45,10 @@ tags:
           Multi-library PDF ingestion and semantic search.
           Each library is an independent collection of PDFs (e.g. a magazine back-issue archive).
           Articles are indexed by LLM-generated summaries and embeddings for instant semantic retrieval.
+    - name: logs
+      description: |
+          Read-only access to the structured error log written by Winston.
+          Useful for inspecting recent errors without tailing log files manually.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
@@ -1422,6 +1426,77 @@ paths:
                 '503':
                     $ref: '#/components/responses/ServiceUnavailable'
 
+    # ── Logs ──────────────────────────────────────────────────────────────────
+
+    /logs/errors:
+        get:
+            tags: [logs]
+            summary: List recent error-level log entries
+            description: |
+                Returns JSON-line entries from `LOG_ERROR_FILE` (default `error.log`) in
+                reverse-chronological order.  Entries are the raw Winston structured log
+                objects; non-parseable lines are silently skipped.
+
+                Also includes a short list of recent per-run diagnostic Markdown file
+                names from `DIAGNOSTIC_LOG_DIR` for cross-reference.
+            operationId: getLogsErrors
+            parameters:
+                - name: limit
+                  in: query
+                  required: false
+                  description: Maximum number of entries to return (default 100, max 500).
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 500
+                      default: 100
+                      example: 50
+                - name: component
+                  in: query
+                  required: false
+                  description: Filter entries by the `component` field.
+                  schema:
+                      type: string
+                      example: api.run.endpoints
+                - name: requestId
+                  in: query
+                  required: false
+                  description: Filter entries by the `requestId` field.
+                  schema:
+                      type: string
+                      example: cc5ee276-2849-470e-9802-5a00f94b7013
+                - name: code
+                  in: query
+                  required: false
+                  description: 'Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`).'
+                  schema:
+                      type: string
+                      example: E_CONSECUTIVE_ERRORS
+                - name: since
+                  in: query
+                  required: false
+                  description: Return only entries with a `timestamp` after this ISO 8601 value.
+                  schema:
+                      type: string
+                      format: date-time
+                      example: '2026-05-23T15:00:00.000Z'
+            responses:
+                '200':
+                    description: Log entries returned successfully
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/LogsErrorsResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '500':
+                    $ref: '#/components/responses/InternalError'
+
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1758,6 +1833,76 @@ components:
                     type: string
                     description: Human-readable error message.
                     example: "Library 'scientific-american' not found"
+
+        # ── Logs schemas ──────────────────────────────────────────────────────
+
+        LogEntry:
+            type: object
+            description: |
+                A single parsed Winston JSON log line from the error log file.
+                Fields beyond the documented ones may be present depending on the
+                logging context (e.g. `tool`, `step`, `taskLength`).
+            properties:
+                timestamp:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp set by Winston.
+                level:
+                    type: string
+                    description: Log severity (always `"error"` in this endpoint).
+                    example: error
+                message:
+                    type: string
+                    description: Human-readable log message.
+                    example: run_request_failed
+                component:
+                    type: string
+                    description: Subsystem that emitted the log line.
+                    example: api.run.endpoints
+                requestId:
+                    type: string
+                    description: Request correlation ID when available.
+                    example: cc5ee276-2849-470e-9802-5a00f94b7013
+                code:
+                    type: string
+                    description: Typed error code when the entry records a classified failure.
+                    example: E_CONSECUTIVE_ERRORS
+                service:
+                    type: string
+                    description: Service name set in Winston defaultMeta.
+                    example: manna
+
+        LogsErrorsResponse:
+            type: object
+            required: [entries, total, logFile, diagnostics]
+            properties:
+                entries:
+                    type: array
+                    description: Filtered error log entries, newest first.
+                    items:
+                        $ref: '#/components/schemas/LogEntry'
+                total:
+                    type: integer
+                    description: Total number of entries that matched the applied filters.
+                    example: 7
+                logFile:
+                    type: string
+                    description: Path of the error log file that was read.
+                    example: error.log
+                diagnostics:
+                    type: object
+                    required: [recentFiles]
+                    properties:
+                        recentFiles:
+                            type: array
+                            description: |
+                                Basenames of the most recent per-run diagnostic Markdown
+                                files from `DIAGNOSTIC_LOG_DIR` (up to 10, newest first).
+                                Empty when no diagnostic files exist.
+                            items:
+                                type: string
+                            example:
+                                - '2026-05-23T15-06-11-310Z_read-me-the-index.md'
 
         ResponseMeta:
             type: object
