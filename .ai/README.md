@@ -46,6 +46,7 @@ Capabilities:
 - **Knowledge**: Qdrant vector memory + Neo4j knowledge graph (GraphRAG).
 - **Library**: multi-library PDF ingestion + semantic article search (`/library/...`).
 - **Instance metadata**: `/info/modes`, `/info/models`, `/help`, `/health`.
+- **Error logs**: `/logs/errors` — read-only access to structured Winston error entries.
 - **MCP integration**: external Model Context Protocol servers loaded at startup.
 
 The REST contract is owned by **[`openapi.yaml`](../openapi.yaml)** (Spectral-linted).

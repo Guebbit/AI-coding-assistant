@@ -71,6 +71,8 @@ Manna API  (default port :3001)
 ├── POST /library/:libraryId/search                       — Library: semantic article search
 ├── GET  /library/:libraryId/export                       — Library: export article metadata as JSON
 │
+├── GET  /logs/errors                — Logs: recent error-level log entries (no LLM)
+│
 ├── GET  /info/modes                 — Info: list agent routing profiles (modes)
 ├── GET  /info/models                — Info: list models available in Ollama
 ├── GET  /help                       — Info: structured overview of all API endpoints
@@ -901,6 +903,82 @@ Benefits:
 - **Predictable schema** — frontend code can be strongly typed against a stable response shape.
 - **Easier integration** — WebStorm plugin, web dashboard, CLI, and mobile apps each call the most appropriate endpoint directly without constructing natural-language prompts.
 - **Independent rate limits and timeouts** — an autocomplete flood doesn't eat into the `/run` capacity.
+
+---
+
+## Logs endpoints
+
+Read-only access to the structured error log. No LLM calls.
+
+File: `apps/api/logs-endpoints.ts`
+Registered via `registerLogsRoutes(app)` in `apps/api/index.ts`.
+
+### `GET /logs/errors`
+
+Returns recent error-level log entries from `LOG_ERROR_FILE` (default `error.log`) in reverse-chronological order. Each line in the log file is expected to be a Winston JSON object; non-parseable lines are silently skipped.
+
+Also includes a short list of recent per-run diagnostic Markdown file names from `DIAGNOSTIC_LOG_DIR` for cross-reference.
+
+**Query parameters**
+
+| Param       | Type     | Default | Description                                                         |
+| ----------- | -------- | ------- | ------------------------------------------------------------------- |
+| `limit`     | integer  | `100`   | Max entries to return (max 500)                                     |
+| `component` | string   | —       | Filter entries by the `component` field                             |
+| `requestId` | string   | —       | Filter entries by the `requestId` field                             |
+| `code`      | string   | —       | Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`)    |
+| `since`     | ISO 8601 | —       | Return only entries with a `timestamp` after this value             |
+
+**Response** `200 OK`
+
+```json
+{
+    "success": true,
+    "status": 200,
+    "message": "",
+    "data": {
+        "entries": [
+            {
+                "timestamp": "2026-05-23T15:30:00.000Z",
+                "level": "error",
+                "message": "run_request_failed",
+                "component": "api.run.endpoints",
+                "requestId": "cc5ee276-2849-470e-9802-5a00f94b7013",
+                "code": "E_CONSECUTIVE_ERRORS"
+            }
+        ],
+        "total": 1,
+        "logFile": "error.log",
+        "diagnostics": {
+            "recentFiles": ["2026-05-23T15-30-run-abc123.md"]
+        }
+    },
+    "meta": {
+        "startedAt": "2026-05-23T15:31:00.000Z",
+        "durationMs": 12
+    }
+}
+```
+
+**Error responses**
+
+| Status | When                                            |
+| ------ | ----------------------------------------------- |
+| `400`  | `since` is not a valid ISO 8601 timestamp       |
+| `500`  | Unexpected error reading the log file           |
+
+**Environment variables**
+
+| Variable            | Default            | Purpose                                          |
+| ------------------- | ------------------ | ------------------------------------------------ |
+| `LOG_ERROR_FILE`    | `error.log`        | Path to the Winston error-only log file          |
+| `DIAGNOSTIC_LOG_DIR`| `data/diagnostics` | Directory for per-run diagnostic Markdown files  |
+
+**curl example**
+
+```bash
+curl "http://localhost:3001/logs/errors?limit=50&component=api.run.endpoints"
+```
 
 ---
 
