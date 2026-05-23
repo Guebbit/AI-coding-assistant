@@ -255,6 +255,20 @@ const HELP_CATALOGUE: IHelpEndpoint[] = [
     summary: "This endpoint — returns a structured overview of all available REST API endpoints.",
     params: [],
   },
+
+  /* ── Logs ────────────────────────────────────────────────────────────── */
+  {
+    method: "GET",
+    path: "/logs/errors",
+    summary: "Return recent error-level log entries from LOG_ERROR_FILE in the standard response envelope.",
+    params: [
+      { name: "limit", type: "number", required: false, description: "Max entries to return (default 100, max 500)." },
+      { name: "component", type: "string", required: false, description: "Filter by log component field." },
+      { name: "requestId", type: "string", required: false, description: "Filter by requestId field." },
+      { name: "code", type: "string", required: false, description: "Filter by error code field (e.g. E_CONSECUTIVE_ERRORS)." },
+      { name: "since", type: "ISO 8601 string", required: false, description: "Return only entries after this timestamp." },
+    ],
+  },
 ];
 
 /* ── Route registration ──────────────────────────────────────────────── */

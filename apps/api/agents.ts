@@ -197,13 +197,19 @@ export function initializeAgents(): Promise<void> {
 export const VALID_PROFILES = new Set<ModelProfile>(PROFILE_LIST);
 
 /**
- * Select the correct pre-built agent instance based on write permissions.
+ * Create a fresh `Agent` instance for a single request.
+ *
+ * A new agent (with fresh processors) is constructed on every call so that
+ * stateful processor state (e.g. the consecutive-error budget in
+ * `PolicyProcessor`) never leaks from one request into the next.
+ * Tool lists are shared module-level state updated by `initializeAgents`.
  *
  * @param allowWrite - Whether write tools should be available.
- * @returns The matching `Agent` instance.
+ * @returns A freshly-constructed `Agent` instance for this request.
  */
 export function createAgent(allowWrite: boolean): Agent {
-  return allowWrite ? writeEnabledAgent : readOnlyAgent;
+  const tools = allowWrite ? [...readOnlyTools, ...writeTools] : readOnlyTools;
+  return attachProcessors(new Agent(tools), allowWrite);
 }
 
 /* ── Swarm factory ───────────────────────────────────────────────────── */
