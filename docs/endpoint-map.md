@@ -73,6 +73,8 @@ Manna API  (default port :3001)
 │
 ├── GET  /logs/errors                — Logs: recent error-level log entries (no LLM)
 │
+├── GET  /events/stream              — Events: live SSE stream of ALL internal events (no LLM)
+│
 ├── GET  /info/modes                 — Info: list agent routing profiles (modes)
 ├── GET  /info/models                — Info: list models available in Ollama
 ├── GET  /help                       — Info: structured overview of all API endpoints
@@ -980,6 +982,58 @@ Also includes a short list of recent per-run diagnostic Markdown file names from
 
 ```bash
 curl "http://localhost:3001/logs/errors?limit=50&component=api.run.endpoints"
+```
+
+---
+
+## Events endpoint
+
+Live SSE stream of all internal bus events. No LLM calls. Designed for monitoring dashboards and dev tools.
+
+File: `apps/api/events-endpoints.ts`
+Registered via `registerEventsRoutes(app)` in `apps/api/index.ts`.
+
+### `GET /events/stream`
+
+Opens a persistent Server-Sent Events connection that broadcasts **every** event emitted by the Manna event bus in real time. The stream stays open until the client disconnects.
+
+**SSE event types** (mirror internal bus event types):
+
+| SSE event type        | When emitted                     | Payload shape                           |
+| --------------------- | -------------------------------- | --------------------------------------- |
+| `connected`           | Immediately on connect           | `{ message, timestamp }`                |
+| `heartbeat`           | Every ~30 s (keep-alive)         | `{ timestamp }`                         |
+| `agent:start`         | Agent run started                | `{ task }`                              |
+| `agent:step`          | Agent completed a reasoning step | `{ step, parsed: { thought, action } }` |
+| `agent:done`          | Agent run finished               | `{ answer, citations, meta }`           |
+| `agent:error`         | Agent run failed                 | `{ error }`                             |
+| `agent:max_steps`     | Step limit exhausted             | `{ task, summary, diagnosticFile? }`    |
+| `agent:hard_stop`     | Policy hard stop triggered       | `{ step, code, reason }`                |
+| `agent:model_routed`  | Model profile selected           | `{ profile, model, reason }`            |
+| `tool:result`         | Tool executed successfully       | `{ tool, result }`                      |
+| `tool:error`          | Tool execution failed            | `{ tool, error }`                       |
+| `swarm:decomposed`    | Swarm task decomposed            | `{ subtasks }`                          |
+| `swarm:subtask_start` | Swarm subtask started            | `{ index, task }`                       |
+| `swarm:subtask_done`  | Swarm subtask completed          | `{ index, result }`                     |
+| `swarm:subtask_error` | Swarm subtask failed             | `{ index, error }`                      |
+
+**Response** — `200 OK` with `Content-Type: text/event-stream`
+
+```
+event: connected
+data: {"message":"Event stream active","timestamp":"2026-05-24T12:00:00.000Z"}
+
+event: agent:step
+data: {"step":0,"parsed":{"thought":"Reading the file...","action":"read_file"}}
+
+event: heartbeat
+data: {"timestamp":"2026-05-24T12:00:30.000Z"}
+```
+
+**curl example**
+
+```bash
+curl -N "http://localhost:3001/events/stream"
 ```
 
 ---

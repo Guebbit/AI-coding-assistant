@@ -78,7 +78,7 @@ export class ChatService {
                 'conversationId': conversationId,
             },
             errors: {
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });
@@ -108,7 +108,7 @@ export class ChatService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request body or parameters`,
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });
@@ -133,13 +133,16 @@ export class ChatService {
                 'conversationId': conversationId,
             },
             errors: {
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });
     }
     /**
-     * Add a message to a conversation
+     * Add a message to a conversation (JSON)
+     * Creates and persists a chat message and returns a normal JSON envelope.
+     * For live assistant streaming, use `POST /chat/conversations/{conversationId}/messages/stream`.
+     *
      * @param conversationId UUID of the conversation.
      * @param requestBody
      * @returns any Message created
@@ -163,7 +166,49 @@ export class ChatService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request body or parameters`,
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
+                503: `Database is unavailable — retry later`,
+            },
+        });
+    }
+    /**
+     * Add a user message and stream the assistant reply
+     * Creates a `user` message, then streams SSE events for the saved user message
+     * and the generated assistant reply.
+     *
+     * This endpoint requires `role: user` in the request body.
+     *
+     * **SSE event types**:
+     * - `message` — the persisted user message (`ChatMessage`)
+     * - `reply` — the persisted assistant message plus generation metadata
+     * - `error` — stream failure payload `{ error }`
+     *
+     * @param conversationId UUID of the conversation.
+     * @param requestBody
+     * @returns string SSE stream — connection kept open until the assistant generation finishes.
+     *
+     * SSE event payload schemas:
+     * - `message` event: `ChatMessage`
+     * - `reply` event: `{ message: ChatMessage, meta: ResponseMeta & token/model metadata }`
+     * - `error` event: `SseErrorEvent`
+     *
+     * @throws ApiError
+     */
+    public static createMessageStream(
+        conversationId: string,
+        requestBody: CreateMessageRequest,
+    ): CancelablePromise<string> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/chat/conversations/{conversationId}/messages/stream',
+            path: {
+                'conversationId': conversationId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request body or parameters`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });
@@ -196,7 +241,7 @@ export class ChatService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request body or parameters`,
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });
@@ -224,7 +269,7 @@ export class ChatService {
                 'messageId': messageId,
             },
             errors: {
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 503: `Database is unavailable — retry later`,
             },
         });

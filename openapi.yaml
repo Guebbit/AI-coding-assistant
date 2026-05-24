@@ -49,6 +49,10 @@ tags:
       description: |
           Read-only access to the structured error log written by Winston.
           Useful for inspecting recent errors without tailing log files manually.
+    - name: events
+      description: |
+          Live Server-Sent Events stream of all internal bus events.
+          Provides a unified firehose for monitoring dashboards and dev tools.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
@@ -1505,6 +1509,52 @@ paths:
                     $ref: '#/components/responses/BadRequest'
                 '500':
                     $ref: '#/components/responses/InternalError'
+
+    # ── Events ─────────────────────────────────────────────────────────────────
+
+    /events/stream:
+        get:
+            tags: [events]
+            summary: Live SSE stream of all internal events
+            description: |
+                Opens a persistent Server-Sent Events connection that forwards
+                **every** event emitted on the Manna in-process event bus.
+
+                Designed for monitoring dashboards, developer tools, and external
+                UIs that want a unified live feed of everything Manna is doing.
+
+                **SSE event types** (mirror the internal bus types):
+                - `connected`         — sent immediately on connect: `{ message, timestamp }`
+                - `heartbeat`         — sent every ~30 s to keep the connection alive: `{ timestamp }`
+                - `agent:start`       — agent run started: `{ task }`
+                - `agent:step`        — agent completed a reasoning step: `{ step, parsed: { thought, action } }`
+                - `agent:done`        — agent run finished: `{ answer, citations, meta }`
+                - `agent:error`       — agent run failed: `{ error }`
+                - `agent:max_steps`   — step limit reached: `{ task, summary, diagnosticFile? }`
+                - `agent:hard_stop`   — policy hard stop: `{ step, code, reason }`
+                - `agent:model_routed`— model profile selected: `{ profile, model, reason }`
+                - `tool:result`       — tool executed successfully: `{ tool, result }`
+                - `tool:error`        — tool execution failed: `{ tool, error }`
+                - `swarm:decomposed`  — swarm task decomposed: `{ subtasks }`
+                - `swarm:subtask_start` — swarm subtask started: `{ index, task }`
+                - `swarm:subtask_done`  — swarm subtask completed: `{ index, result }`
+                - `swarm:subtask_error` — swarm subtask failed: `{ index, error }`
+
+                The connection stays open indefinitely until the client disconnects.
+            operationId: getEventsStream
+            responses:
+                '200':
+                    description: SSE stream opened — events arrive continuously.
+                    content:
+                        text/event-stream:
+                            schema:
+                                type: string
+                                description: |
+                                    Each SSE frame has the format:
+                                    ```
+                                    event: <type>
+                                    data: <json payload>
+                                    ```
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS

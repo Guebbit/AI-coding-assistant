@@ -43,7 +43,6 @@ export namespace WorkflowRequest {
         FAST = 'fast',
         REASONING = 'reasoning',
         CODE = 'code',
-        DEFAULT = 'default',
     }
     /**
      * How prior step outputs are carried into subsequent steps.

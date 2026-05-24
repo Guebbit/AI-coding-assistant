@@ -32,7 +32,6 @@ export namespace SwarmRequest {
         FAST = 'fast',
         REASONING = 'reasoning',
         CODE = 'code',
-        DEFAULT = 'default',
     }
 }
 
