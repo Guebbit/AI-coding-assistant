@@ -999,23 +999,23 @@ Opens a persistent Server-Sent Events connection that broadcasts **every** event
 
 **SSE event types** (mirror internal bus event types):
 
-| SSE event type        | When emitted                              | Payload shape                                      |
-| --------------------- | ----------------------------------------- | -------------------------------------------------- |
-| `connected`           | Immediately on connect                    | `{ message, timestamp }`                           |
-| `heartbeat`           | Every ~30 s (keep-alive)                  | `{ timestamp }`                                    |
-| `agent:start`         | Agent run started                         | `{ task }`                                         |
-| `agent:step`          | Agent completed a reasoning step          | `{ step, parsed: { thought, action } }`            |
-| `agent:done`          | Agent run finished                        | `{ answer, citations, meta }`                      |
-| `agent:error`         | Agent run failed                          | `{ error }`                                        |
-| `agent:max_steps`     | Step limit exhausted                      | `{ task, summary, diagnosticFile? }`               |
-| `agent:hard_stop`     | Policy hard stop triggered                | `{ step, code, reason }`                           |
-| `agent:model_routed`  | Model profile selected                    | `{ profile, model, reason }`                       |
-| `tool:result`         | Tool executed successfully                | `{ tool, result }`                                 |
-| `tool:error`          | Tool execution failed                     | `{ tool, error }`                                  |
-| `swarm:decomposed`    | Swarm task decomposed                     | `{ subtasks }`                                     |
-| `swarm:subtask_start` | Swarm subtask started                     | `{ index, task }`                                  |
-| `swarm:subtask_done`  | Swarm subtask completed                   | `{ index, result }`                                |
-| `swarm:subtask_error` | Swarm subtask failed                      | `{ index, error }`                                 |
+| SSE event type        | When emitted                     | Payload shape                           |
+| --------------------- | -------------------------------- | --------------------------------------- |
+| `connected`           | Immediately on connect           | `{ message, timestamp }`                |
+| `heartbeat`           | Every ~30 s (keep-alive)         | `{ timestamp }`                         |
+| `agent:start`         | Agent run started                | `{ task }`                              |
+| `agent:step`          | Agent completed a reasoning step | `{ step, parsed: { thought, action } }` |
+| `agent:done`          | Agent run finished               | `{ answer, citations, meta }`           |
+| `agent:error`         | Agent run failed                 | `{ error }`                             |
+| `agent:max_steps`     | Step limit exhausted             | `{ task, summary, diagnosticFile? }`    |
+| `agent:hard_stop`     | Policy hard stop triggered       | `{ step, code, reason }`                |
+| `agent:model_routed`  | Model profile selected           | `{ profile, model, reason }`            |
+| `tool:result`         | Tool executed successfully       | `{ tool, result }`                      |
+| `tool:error`          | Tool execution failed            | `{ tool, error }`                       |
+| `swarm:decomposed`    | Swarm task decomposed            | `{ subtasks }`                          |
+| `swarm:subtask_start` | Swarm subtask started            | `{ index, task }`                       |
+| `swarm:subtask_done`  | Swarm subtask completed          | `{ index, result }`                     |
+| `swarm:subtask_error` | Swarm subtask failed             | `{ index, error }`                      |
 
 **Response** — `200 OK` with `Content-Type: text/event-stream`
 

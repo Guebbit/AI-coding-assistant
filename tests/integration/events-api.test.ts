@@ -46,7 +46,7 @@ function parseSseFrames(raw: string): Array<{ event: string; data: unknown }> {
             const dataMatch = block.match(/^data:\s*(.+)$/m);
             return {
                 event: eventMatch?.[1] ?? '',
-                data: dataMatch ? JSON.parse(dataMatch[1]) : null,
+                data: dataMatch ? JSON.parse(dataMatch[1]) : null
             };
         });
 }
@@ -70,7 +70,7 @@ describe('GET /events/stream', () => {
         const controller = new AbortController();
 
         const response = await fetch(`${baseUrl}/events/stream`, {
-            signal: controller.signal,
+            signal: controller.signal
         });
 
         expect(response.status).toBe(200);
@@ -95,7 +95,7 @@ describe('GET /events/stream', () => {
         const controller = new AbortController();
 
         const response = await fetch(`${baseUrl}/events/stream`, {
-            signal: controller.signal,
+            signal: controller.signal
         });
 
         const reader = response.body!.getReader();
@@ -105,7 +105,10 @@ describe('GET /events/stream', () => {
         await reader.read();
 
         /* Emit a bus event and read it from the stream. */
-        emit({ type: 'agent:step', payload: { step: 0, parsed: { thought: 'test', action: 'read_file' } } });
+        emit({
+            type: 'agent:step',
+            payload: { step: 0, parsed: { thought: 'test', action: 'read_file' } }
+        });
 
         /* Small delay for the event to propagate through the stream. */
         await new Promise((resolve) => setTimeout(resolve, 50));
