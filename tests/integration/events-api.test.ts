@@ -1,8 +1,8 @@
 /**
  * Integration tests for apps/api/events-endpoints.ts
  *
- * Verifies GET /events/stream opens an SSE connection, sends a `connected`
- * event immediately, and forwards bus events to the client.
+ * Verifies GET /events/stream opens an SSE connection, sends a normalized
+ * `stream.connected` event immediately, and forwards normalized bus events.
  */
 
 import type { AddressInfo } from 'node:net';
@@ -85,8 +85,12 @@ describe('GET /events/stream', () => {
         const frames = parseSseFrames(text);
 
         expect(frames.length).toBeGreaterThanOrEqual(1);
-        expect(frames[0].event).toBe('connected');
-        expect((frames[0].data as Record<string, unknown>).message).toBe('Event stream active');
+        expect(frames[0].event).toBe('stream.connected');
+        expect((frames[0].data as Record<string, unknown>).category).toBe('stream');
+        expect((frames[0].data as Record<string, unknown>).type).toBe('connected');
+        expect(
+            ((frames[0].data as Record<string, unknown>).data as Record<string, unknown>).message
+        ).toBe('Event stream active');
 
         controller.abort();
     });
@@ -117,9 +121,13 @@ describe('GET /events/stream', () => {
         const text = decoder.decode(value);
         const frames = parseSseFrames(text);
 
-        const stepFrame = frames.find((f) => f.event === 'agent:step');
+        const stepFrame = frames.find((f) => f.event === 'run.step');
         expect(stepFrame).toBeDefined();
-        expect((stepFrame!.data as Record<string, unknown>).step).toBe(0);
+        expect((stepFrame!.data as Record<string, unknown>).category).toBe('run');
+        expect((stepFrame!.data as Record<string, unknown>).type).toBe('step');
+        expect(
+            ((stepFrame!.data as Record<string, unknown>).data as Record<string, unknown>).step
+        ).toBe(0);
 
         controller.abort();
     });

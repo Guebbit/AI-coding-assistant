@@ -988,46 +988,64 @@ curl "http://localhost:3001/logs/errors?limit=50&component=api.run.endpoints"
 
 ## Events endpoint
 
-Live SSE stream of all internal bus events. No LLM calls. Designed for monitoring dashboards and dev tools.
+Live SSE observability stream. No LLM calls. Designed for monitoring dashboards and dev tools.
 
 File: `apps/api/events-endpoints.ts`
 Registered via `registerEventsRoutes(app)` in `apps/api/index.ts`.
 
 ### `GET /events/stream`
 
-Opens a persistent Server-Sent Events connection that broadcasts **every** event emitted by the Manna event bus in real time. The stream stays open until the client disconnects.
+Opens a persistent Server-Sent Events connection that broadcasts normalized public events in real time. The stream stays open until the client disconnects.
 
-**SSE event types** (mirror internal bus event types):
+**SSE event types** (stable/public):
 
-| SSE event type        | When emitted                     | Payload shape                           |
-| --------------------- | -------------------------------- | --------------------------------------- |
-| `connected`           | Immediately on connect           | `{ message, timestamp }`                |
-| `heartbeat`           | Every ~30 s (keep-alive)         | `{ timestamp }`                         |
-| `agent:start`         | Agent run started                | `{ task }`                              |
-| `agent:step`          | Agent completed a reasoning step | `{ step, parsed: { thought, action } }` |
-| `agent:done`          | Agent run finished               | `{ answer, citations, meta }`           |
-| `agent:error`         | Agent run failed                 | `{ error }`                             |
-| `agent:max_steps`     | Step limit exhausted             | `{ task, summary, diagnosticFile? }`    |
-| `agent:hard_stop`     | Policy hard stop triggered       | `{ step, code, reason }`                |
-| `agent:model_routed`  | Model profile selected           | `{ profile, model, reason }`            |
-| `tool:result`         | Tool executed successfully       | `{ tool, result }`                      |
-| `tool:error`          | Tool execution failed            | `{ tool, error }`                       |
-| `swarm:decomposed`    | Swarm task decomposed            | `{ subtasks }`                          |
-| `swarm:subtask_start` | Swarm subtask started            | `{ index, task }`                       |
-| `swarm:subtask_done`  | Swarm subtask completed          | `{ index, result }`                     |
-| `swarm:subtask_error` | Swarm subtask failed             | `{ index, error }`                      |
+| SSE event type             | Meaning                              |
+| -------------------------- | ------------------------------------ |
+| `stream.connected`         | Initial stream handshake             |
+| `stream.heartbeat`         | Keep-alive pulse (~30s)              |
+| `run.started`              | Agent run started                    |
+| `run.step`                 | Agent completed a reasoning step     |
+| `run.model_routed`         | Model/profile routing decision       |
+| `run.completed`            | Agent run finished                   |
+| `run.failed`               | Agent run failed                     |
+| `run.max_steps`            | Agent reached max steps              |
+| `run.hard_stop`            | Policy hard stop                     |
+| `tool.succeeded`           | Tool call succeeded                  |
+| `tool.failed`              | Tool call failed                     |
+| `tool.verification_failed` | Tool verification processor rejected |
+| `swarm.started`            | Swarm run started                    |
+| `swarm.decomposed`         | Swarm decomposition ready            |
+| `swarm.subtask_started`    | Swarm subtask started                |
+| `swarm.subtask_completed`  | Swarm subtask completed              |
+| `swarm.subtask_failed`     | Swarm subtask failed                 |
+| `swarm.completed`          | Swarm run finished                   |
+| `system.event`             | Fallback for unknown internal events |
+
+**Envelope shape** (all event data payloads):
+
+```json
+{
+    "timestamp": "2026-05-24T12:00:00.000Z",
+    "requestId": "req_abc",
+    "runId": "run_123",
+    "category": "run",
+    "type": "step",
+    "data": {},
+    "metrics": {}
+}
+```
 
 **Response** — `200 OK` with `Content-Type: text/event-stream`
 
 ```
-event: connected
-data: {"message":"Event stream active","timestamp":"2026-05-24T12:00:00.000Z"}
+event: stream.connected
+data: {"timestamp":"2026-05-24T12:00:00.000Z","requestId":"req_abc","category":"stream","type":"connected","data":{"message":"Event stream active"}}
 
-event: agent:step
-data: {"step":0,"parsed":{"thought":"Reading the file...","action":"read_file"}}
+event: run.step
+data: {"timestamp":"2026-05-24T12:00:01.000Z","requestId":"req_abc","runId":"run_123","category":"run","type":"step","data":{"step":0,"action":"read_file","thought":"Reading the file..."},"metrics":{"step":0,"stepDurationMs":42,"contextLength":1024}}
 
-event: heartbeat
-data: {"timestamp":"2026-05-24T12:00:30.000Z"}
+event: stream.heartbeat
+data: {"timestamp":"2026-05-24T12:00:30.000Z","requestId":"req_abc","category":"stream","type":"heartbeat","data":{}}
 ```
 
 **curl example**

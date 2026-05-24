@@ -53,6 +53,7 @@ import { ToolCitationBuffer, toolCitationSchema, type IToolCitation } from '../t
 import { ToolCallDeduplicator } from '../tools/tool-call-deduplicator';
 import { isMultimodalModel } from './vision-capability';
 import { getVisionDescription } from './vision-description';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Directory where diagnostic Markdown files are written.
@@ -188,13 +189,13 @@ export class Agent {
      * @param step  - Current agent step index.
      * @throws Always re-throws the original error.
      */
-    private static handleLlmError(error: unknown, step: number): never {
+    private static handleLlmError(error: unknown, step: number, runId?: string): never {
         logger.error('agent_llm_call_failed', {
             component: 'agent',
             step,
             error: String(error)
         });
-        emit({ type: 'agent:error', payload: { step, error: String(error) } });
+        emit({ type: 'agent:error', payload: { runId, step, error: String(error) } });
         throw error;
     }
 
@@ -400,6 +401,7 @@ export class Agent {
         task: string,
         options?: { profile?: ModelProfile; maxSteps?: number }
     ): Promise<IAgentRunResult> {
+        const runId = randomUUID();
         const runStartedAt = Date.now();
         const startTime = new Date();
         let context = '';
@@ -441,7 +443,15 @@ export class Agent {
             durationMs: Date.now() - memoryStartedAt
         });
 
-        emit({ type: 'agent:start', payload: { task } });
+        emit({
+            type: 'agent:start',
+            payload: {
+                runId,
+                task,
+                startedAt: startTime.toISOString(),
+                memoryCount: memory.length
+            }
+        });
 
         const buildRunMeta = (
             citations: IToolCitation[] = citationBuffer.peek()
@@ -512,7 +522,13 @@ export class Agent {
             });
             emit({
                 type: 'agent:hard_stop',
-                payload: { step: violation.step, code: violation.code, reason: violation.message }
+                payload: {
+                    runId,
+                    step: violation.step,
+                    code: violation.code,
+                    reason: violation.message,
+                    meta: buildRunMeta()
+                }
             });
             await Agent.writeDiagnostics(diagnosticEntries, task);
             await Agent.persistRun(persistInput(answer, 'hard_stopped'));
@@ -548,17 +564,19 @@ export class Agent {
                 forcedProfile: options?.profile,
                 contextLength: inputArgs.context.length,
                 cumulativeDurationMs: Date.now() - runStartedAt
-            }).catch((error: unknown) => Agent.handleLlmError(error, step));
+            }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
             const availableTools = this.tools.filter((tool) => inputArgs.tools.includes(tool.name));
 
             profilesUsed.add(route.profile);
             emit({
                 type: 'agent:model_routed',
                 payload: {
+                    runId,
                     step,
                     profile: route.profile,
                     model: route.model,
-                    reason: route.reason
+                    reason: route.reason,
+                    contextLength: inputArgs.context.length
                 }
             });
 
@@ -579,7 +597,7 @@ export class Agent {
                     model: route.model,
                     images: pendingImages.length > 0 ? pendingImages : undefined,
                     options: route.options
-                }).catch((error: unknown) => Agent.handleLlmError(error, step));
+                }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
                 pendingImages = [];
 
                 llmSteps += 1;
@@ -588,9 +606,18 @@ export class Agent {
 
                 const answer = directResult.response.trim();
                 await addMemory(`Task: ${task} → ${answer}`);
-                emit({ type: 'agent:done', payload: { thought: answer } });
-                await Agent.persistRun(persistInput(answer, 'completed'));
                 const citations = citationBuffer.flush();
+                emit({
+                    type: 'agent:done',
+                    payload: {
+                        runId,
+                        thought: answer,
+                        citations,
+                        citationsCount: citations.length,
+                        meta: buildRunMeta(citations)
+                    }
+                });
+                await Agent.persistRun(persistInput(answer, 'completed'));
                 return { answer, meta: buildRunMeta(citations), citations };
             }
 
@@ -600,8 +627,10 @@ export class Agent {
             while (toolCallsThisStep < effectiveMaxToolCalls) {
                 let parsed: IParsedToolCall;
                 let rawResponseText = '';
+                let llmDurationMs: number | undefined;
 
                 if (nativeToolCalling) {
+                    const llmCallStartedAt = Date.now();
                     const systemPrompt =
                         'You are an AI agent. Use tools when needed. ' +
                         'If no tools are needed, provide the final answer directly.';
@@ -625,7 +654,8 @@ export class Agent {
                             { role: 'user', content: userPrompt }
                         ],
                         { model: route.model, options: route.options, tools: nativeTools }
-                    ).catch((error: unknown) => Agent.handleLlmError(error, step));
+                    ).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
+                    llmDurationMs = Date.now() - llmCallStartedAt;
 
                     llmSteps += 1;
                     modelsUsed.add(chatResult.model ?? route.model);
@@ -665,6 +695,7 @@ export class Agent {
                         inputArgs.memory,
                         availableTools
                     );
+                    const llmCallStartedAt = Date.now();
                     logger.info('agent_step_started', {
                         component: 'agent',
                         step,
@@ -677,7 +708,8 @@ export class Agent {
                         model: route.model,
                         images: pendingImages.length > 0 ? pendingImages : undefined,
                         options: route.options
-                    }).catch((error: unknown) => Agent.handleLlmError(error, step));
+                    }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
+                    llmDurationMs = Date.now() - llmCallStartedAt;
                     pendingImages = [];
 
                     llmSteps += 1;
@@ -735,7 +767,20 @@ export class Agent {
                     action: parsed.action,
                     thoughtLength: parsed.thought.length
                 });
-                emit({ type: 'agent:step', payload: { step, parsed } });
+                emit({
+                    type: 'agent:step',
+                    payload: {
+                        runId,
+                        step,
+                        parsed,
+                        metrics: {
+                            step,
+                            contextLength: inputArgs.context.length,
+                            stepDurationMs: Date.now() - stepStartedAt,
+                            durationMs: llmDurationMs
+                        }
+                    }
+                });
 
                 let outputArgs: IProcessOutputStepArgs;
                 try {
@@ -778,10 +823,19 @@ export class Agent {
                         durationMs: Date.now() - runStartedAt,
                         finalThoughtLength: parsed.thought.length
                     });
-                    emit({ type: 'agent:done', payload: { thought: parsed.thought } });
+                    const citations = citationBuffer.flush();
+                    emit({
+                        type: 'agent:done',
+                        payload: {
+                            runId,
+                            thought: parsed.thought,
+                            citations,
+                            citationsCount: citations.length,
+                            meta: buildRunMeta(citations)
+                        }
+                    });
                     await Agent.writeDiagnostics(diagnosticEntries, task);
                     await Agent.persistRun(persistInput(parsed.thought, 'completed'));
-                    const citations = citationBuffer.flush();
                     return { answer: parsed.thought, meta: buildRunMeta(citations), citations };
                 }
 
@@ -904,7 +958,14 @@ export class Agent {
                         });
                         emit({
                             type: 'tool:error',
-                            payload: { tool: parsed.action, error: String(error), errorCode }
+                            payload: {
+                                runId,
+                                step,
+                                tool: parsed.action,
+                                error: String(error),
+                                errorCode,
+                                durationMs
+                            }
                         });
                         diagnosticEntries.push({
                             timestamp: new Date().toISOString(),
@@ -941,7 +1002,13 @@ export class Agent {
                 Agent.collectCitationsFromToolResult(toolResult.result, citationBuffer);
                 emit({
                     type: 'tool:result',
-                    payload: { tool: parsed.action, result: toolResult.result }
+                    payload: {
+                        runId,
+                        step,
+                        tool: parsed.action,
+                        result: toolResult.result,
+                        durationMs: Date.now() - toolStartedAt
+                    }
                 });
 
                 if (tool.directOutput) {
@@ -950,9 +1017,18 @@ export class Agent {
                             ? toolResult.result
                             : JSON.stringify(toolResult.result);
                     await addMemory(`Task: ${task} → ${directAnswer}`);
-                    emit({ type: 'agent:done', payload: { thought: directAnswer } });
-                    await Agent.persistRun(persistInput(directAnswer, 'completed'));
                     const citations = citationBuffer.flush();
+                    emit({
+                        type: 'agent:done',
+                        payload: {
+                            runId,
+                            thought: directAnswer,
+                            citations,
+                            citationsCount: citations.length,
+                            meta: buildRunMeta(citations)
+                        }
+                    });
+                    await Agent.persistRun(persistInput(directAnswer, 'completed'));
                     return { answer: directAnswer, meta: buildRunMeta(citations), citations };
                 }
 
@@ -1041,12 +1117,19 @@ export class Agent {
 
         const diagnosticFile = await Agent.writeDiagnostics(diagnosticEntries, task, summary);
         await Agent.persistRun(persistInput(summary, 'max_steps'));
+        const citations = citationBuffer.flush();
 
         emit({
             type: 'agent:max_steps',
-            payload: { task, summary, diagnosticFile }
+            payload: {
+                runId,
+                task,
+                summary,
+                diagnosticFile,
+                meta: buildRunMeta(citations),
+                citationsCount: citations.length
+            }
         });
-        const citations = citationBuffer.flush();
         return { answer: summary, meta: buildRunMeta(citations), citations };
     }
 }

@@ -47,7 +47,7 @@ Capabilities:
 - **Library**: multi-library PDF ingestion + semantic article search (`/library/...`).
 - **Instance metadata**: `/info/modes`, `/info/models`, `/help`, `/health`.
 - **Error logs**: `/logs/errors` — read-only access to structured Winston error entries.
-- **Live events**: `/events/stream` — SSE firehose of all internal bus events for dashboards.
+- **Live events**: `/events/stream` — SSE observability stream with a stable public envelope (`timestamp`, `requestId?`, `runId?`, `category`, `type`, `data`, `metrics?`).
 - **MCP integration**: external Model Context Protocol servers loaded at startup.
 
 The REST contract is owned by **[`openapi.yaml`](../openapi.yaml)** (Spectral-linted).
@@ -280,7 +280,7 @@ RAG sits on top via `semantic_search`, `document_ingest` (chunked through
 - **Fail-open infrastructure** — every external dep (Qdrant, Postgres, Neo4j, MCP, non-critical Ollama) logs a warning and degrades gracefully.
 - **Single response envelope** — `successResponse` / `rejectResponse` always return the same JSON shape with `meta` enrichment (`startedAt`, `durationMs`, `requestId`).
 - **Zod-validated boundaries** — LLM outputs, tool inputs, MCP configs, API payloads.
-- **Event-driven observability** — in-process event bus (`packages/events/bus.ts`) emits `agent:start | step | done | error | max_steps | hard_stop | model_routed | tool:result | tool:error | tool:verification_failed`. The API forwards everything to Winston.
+- **Event-driven observability** — in-process event bus (`packages/events/bus.ts`) emits `agent:start | step | done | error | max_steps | hard_stop | model_routed | tool:result | tool:error | tool:verification_failed`. `GET /events/stream` normalizes these into stable public SSE event names + envelope fields.
 - **SSE streaming bridge** — `apps/api/sse-event-bridge.ts` + `shared/sse.ts` translate bus events into typed SSE events (including `hard_stop`).
 - **Per-run diagnostics** — Markdown trace per run in `packages/diagnostics`, with cleanup of old logs.
 - **Operating modes** — `AGENT_OPERATING_MODE = low-spec | standard | high-trust` (default `standard`) resolves `{ maxSteps, maxToolCalls, consecutiveErrorLimit, selfDebugEnabled }`; individual env vars override any field.
