@@ -923,13 +923,13 @@ Also includes a short list of recent per-run diagnostic Markdown file names from
 
 **Query parameters**
 
-| Param       | Type     | Default | Description                                                         |
-| ----------- | -------- | ------- | ------------------------------------------------------------------- |
-| `limit`     | integer  | `100`   | Max entries to return (max 500)                                     |
-| `component` | string   | —       | Filter entries by the `component` field                             |
-| `requestId` | string   | —       | Filter entries by the `requestId` field                             |
-| `code`      | string   | —       | Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`)    |
-| `since`     | ISO 8601 | —       | Return only entries with a `timestamp` after this value             |
+| Param       | Type     | Default | Description                                                      |
+| ----------- | -------- | ------- | ---------------------------------------------------------------- |
+| `limit`     | integer  | `100`   | Max entries to return (max 500)                                  |
+| `component` | string   | —       | Filter entries by the `component` field                          |
+| `requestId` | string   | —       | Filter entries by the `requestId` field                          |
+| `code`      | string   | —       | Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`) |
+| `since`     | ISO 8601 | —       | Return only entries with a `timestamp` after this value          |
 
 **Response** `200 OK`
 
@@ -964,17 +964,17 @@ Also includes a short list of recent per-run diagnostic Markdown file names from
 
 **Error responses**
 
-| Status | When                                            |
-| ------ | ----------------------------------------------- |
-| `400`  | `since` is not a valid ISO 8601 timestamp       |
-| `500`  | Unexpected error reading the log file           |
+| Status | When                                      |
+| ------ | ----------------------------------------- |
+| `400`  | `since` is not a valid ISO 8601 timestamp |
+| `500`  | Unexpected error reading the log file     |
 
 **Environment variables**
 
-| Variable            | Default            | Purpose                                          |
-| ------------------- | ------------------ | ------------------------------------------------ |
-| `LOG_ERROR_FILE`    | `error.log`        | Path to the Winston error-only log file          |
-| `DIAGNOSTIC_LOG_DIR`| `data/diagnostics` | Directory for per-run diagnostic Markdown files  |
+| Variable             | Default            | Purpose                                         |
+| -------------------- | ------------------ | ----------------------------------------------- |
+| `LOG_ERROR_FILE`     | `error.log`        | Path to the Winston error-only log file         |
+| `DIAGNOSTIC_LOG_DIR` | `data/diagnostics` | Directory for per-run diagnostic Markdown files |
 
 **curl example**
 

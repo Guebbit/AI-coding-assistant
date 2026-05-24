@@ -10,6 +10,12 @@ Core principles
 - Keep modules/functions focused, low nesting
 - Prefer pure functions + shared abstractions
 
+Async / error-handling style
+
+- **Prefer promise chaining** (`.then`/`.catch`/`.finally`) over `async/await` when there are only 1–2 awaits in a function.
+- Use `async/await` only when multiple sequential awaits make chaining unreadable.
+- **Avoid `try/catch`** unless absolutely necessary (e.g. synchronous throws that cannot be expressed as `.catch`, or complex multi-step transactions where partial rollback is needed).
+
 Comments/JSDoc requirements
 
 - Exported function: JSDoc required (`@param`, `@returns`, `@throws` as needed)
