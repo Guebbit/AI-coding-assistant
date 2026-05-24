@@ -3,7 +3,7 @@
  * Server-Sent Events so clients receive live step-by-step updates.
  *
  * New endpoint: `POST /run/stream`
- * Same request body as `POST /run` (`{ task, allowWrite?, profile? }`).
+ * Same request body as `POST /run` (`{ task, allowWrite?, profile?, toolPolicy? }`).
  *
  * SSE event types emitted:
  * - `step`      — on `agent:step`          — `{ step, action, thought }`
@@ -26,6 +26,7 @@ import {
   rejectResponse,
   validateTask,
   validateProfile,
+  validateToolPolicy,
   createSseWriter,
   setupSSEHeaders,
   onSSEClose,
@@ -45,13 +46,13 @@ export function registerStreamRoutes(app: Express): void {
   /**
    * POST /run/stream — run the agent and stream events as SSE.
    *
-   * Request body: `{ task: string, allowWrite?: boolean, profile?: string }`
+   * Request body: `{ task: string, allowWrite?: boolean, profile?: string, toolPolicy?: object }`
    *
    * The response keeps the connection open until the agent completes.
    * Each significant lifecycle event is forwarded as a typed SSE event.
    */
   app.post("/run/stream", (req: Request, res: Response) => {
-    const { task: rawTask, allowWrite, profile } = req.body as Partial<RunRequest>;
+    const { task: rawTask, allowWrite, profile, toolPolicy } = req.body as Partial<RunRequest>;
 
     const taskResult = validateTask(rawTask);
     if ('error' in taskResult) {
@@ -63,6 +64,12 @@ export function registerStreamRoutes(app: Express): void {
     const profileError = validateProfile(profile, VALID_PROFILES);
     if (profileError) {
       rejectResponse(res, 400, "Bad Request", [profileError]);
+      return;
+    }
+
+    const toolPolicyResult = validateToolPolicy(toolPolicy);
+    if (toolPolicyResult.error) {
+      rejectResponse(res, 400, "Bad Request", [toolPolicyResult.error]);
       return;
     }
 
@@ -91,6 +98,7 @@ export function registerStreamRoutes(app: Express): void {
       task,
       writeEnabled,
       profile: profile ?? null,
+      toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
     });
 
     agent

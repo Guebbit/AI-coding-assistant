@@ -63,9 +63,9 @@ flowchart LR
 
 ## Fast links
 
-| Area               | Links                                                                                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Learn**          | [Quickstart](./quickstart.md) · [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                              |
-| **Theory**         | [Agent Loop](/theory/agent-loop) · [Operating Modes](/theory/operating-modes) · [Error Taxonomy](/theory/error-taxonomy) · [RAG](/theory/RAG) · [MCP](/theory/MCP)                                     |
-| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph) |
-| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                  |
+| Area               | Links                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn**          | [Quickstart](./quickstart.md) · [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                                                        |
+| **Theory**         | [Agent Loop](/theory/agent-loop) · [Tool Selection Plan](/theory/tool-selection-strategy-plan) · [Operating Modes](/theory/operating-modes) · [Error Taxonomy](/theory/error-taxonomy) · [RAG](/theory/RAG) · [MCP](/theory/MCP) |
+| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph)                           |
+| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                                            |

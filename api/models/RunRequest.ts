@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ToolPolicy } from './ToolPolicy';
 export type RunRequest = {
     /**
      * Natural-language description of what the agent should do.
@@ -19,6 +20,7 @@ export type RunRequest = {
      *
      */
     profile?: RunRequest.profile;
+    toolPolicy?: ToolPolicy;
 };
 export namespace RunRequest {
     /**
@@ -30,7 +32,6 @@ export namespace RunRequest {
         FAST = 'fast',
         REASONING = 'reasoning',
         CODE = 'code',
-        DEFAULT = 'default',
     }
 }
 
