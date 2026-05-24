@@ -12,6 +12,8 @@
  * - `GET  /info/modes`             — list Manna agent routing profiles.
  * - `GET  /info/models`            — list models available in Ollama.
  * - `GET  /help`                   — structured overview of all API endpoints.
+ * - `GET  /logs/errors`            — recent error-level log entries.
+ * - `GET  /events/stream`          — live SSE stream of all internal events.
  *
  * IDE-specific routes (`/autocomplete`, `/lint-conventions`,
  * `/page-review`) are registered from `ide-endpoints.ts`.
@@ -49,6 +51,7 @@ import { registerLibraryRoutes } from "./library-endpoints";
 import { initializeAgents } from "./agents";
 import { registerRunRoutes } from "./run-endpoints";
 import { registerLogsRoutes } from "./logs-endpoints";
+import { registerEventsRoutes } from "./events-endpoints";
 import { runMigrations } from "@/packages/persistence/migrate";
 import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
 import type { HealthResponse } from "@/api";
@@ -96,6 +99,9 @@ registerRunRoutes(app);
 
 /* Register logs endpoint (GET /logs/errors). */
 registerLogsRoutes(app);
+
+/* Register live events SSE stream (GET /events/stream). */
+registerEventsRoutes(app);
 
 /**
  * GET /health — simple liveness check.

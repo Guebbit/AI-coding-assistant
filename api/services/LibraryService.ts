@@ -74,7 +74,7 @@ export class LibraryService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request body or parameters`,
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 500: `Internal server error (LLM failure, Qdrant unavailable, etc.)`,
             },
         });
@@ -117,7 +117,7 @@ export class LibraryService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request body or parameters`,
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 500: `Internal server error (LLM failure, Qdrant unavailable, etc.)`,
             },
         });
@@ -151,7 +151,7 @@ export class LibraryService {
                 'libraryId': libraryId,
             },
             errors: {
-                404: `The requested library or resource was not found`,
+                404: `The requested resource was not found`,
                 500: `Internal server error (LLM failure, Qdrant unavailable, etc.)`,
             },
         });

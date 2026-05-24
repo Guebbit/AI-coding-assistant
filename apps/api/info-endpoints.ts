@@ -269,6 +269,14 @@ const HELP_CATALOGUE: IHelpEndpoint[] = [
       { name: "since", type: "ISO 8601 string", required: false, description: "Return only entries after this timestamp." },
     ],
   },
+
+  /* ── Events ─────────────────────────────────────────────────────────── */
+  {
+    method: "GET",
+    path: "/events/stream",
+    summary: "Live SSE stream of all internal events (agent, tool, swarm, system). For dashboards and monitoring UIs.",
+    params: [],
+  },
 ];
 
 /* ── Route registration ──────────────────────────────────────────────── */
