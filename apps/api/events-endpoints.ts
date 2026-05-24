@@ -1,16 +1,21 @@
 /**
- * Events endpoint — live SSE stream of ALL internal bus events.
+ * Events endpoint — live SSE stream of normalized public observability events.
  *
  * Endpoint:
- * - `GET /events/stream` — opens an SSE connection that forwards every
- *   event emitted on the in-process event bus in real time.
+ * - `GET /events/stream` — opens an SSE connection that emits normalized
+ *   public events derived from the in-process event bus in real time.
  *
  * Designed for monitoring dashboards, dev tools, and external UIs that
  * want a unified firehose of what Manna is doing.
  *
- * Emitted SSE event types mirror the bus event type verbatim
- * (e.g. `agent:step`, `tool:result`, `agent:hard_stop`, etc.).
- * The `data` payload is the raw event payload JSON-serialised.
+ * Each emitted frame uses a stable public envelope with:
+ * - `timestamp`
+ * - `requestId?`
+ * - `runId?`
+ * - `category`
+ * - `type`
+ * - `data`
+ * - `metrics?`
  *
  * An initial `connected` event is sent immediately so clients know
  * the stream is alive.  A periodic `heartbeat` event (every 30 s)
@@ -24,6 +29,11 @@ import { on, off } from '@/packages/events/bus';
 import type { IAgentEvent } from '@/packages/events/bus';
 import { logger } from '@/packages/logger/logger';
 import { setupSSEHeaders, createSseWriter, onSSEClose } from '@/packages/shared';
+import {
+    createEventsStreamConnectedEvent,
+    createEventsStreamHeartbeatEvent,
+    normalizeEventsStreamEvent
+} from './events-stream-contract';
 
 /* ── Configuration ───────────────────────────────────────────────────── */
 
@@ -35,9 +45,9 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 /**
  * Register the `GET /events/stream` endpoint on the given Express app.
  *
- * Opens a persistent SSE connection that forwards every event from the
- * in-process event bus.  Clients receive a live firehose of all agent,
- * tool, swarm, and system events — suitable for dashboards and dev UIs.
+ * Opens a persistent SSE connection that publishes normalized public events
+ * derived from internal bus activity. Clients receive a stable event contract
+ * suitable for dashboards and observability pipelines.
  *
  * @param app - Express application instance.
  */
@@ -53,20 +63,20 @@ export function registerEventsRoutes(app: Express): void {
         const writeEvent = createSseWriter(res);
 
         /* Notify the client the stream is alive. */
-        writeEvent('connected', {
-            message: 'Event stream active',
-            timestamp: new Date().toISOString(),
-        });
+        const connected = createEventsStreamConnectedEvent(req.requestId);
+        writeEvent(connected.eventType, connected.envelope);
 
         /* ── Event bus subscription (wildcard = everything) ──────────── */
         const handler = (event: IAgentEvent): void => {
-            writeEvent(event.type, event.payload);
+            const normalized = normalizeEventsStreamEvent(event, req.requestId);
+            writeEvent(normalized.eventType, normalized.envelope);
         };
         on('*', handler);
 
         /* ── Heartbeat to keep connection alive ─────────────────────── */
         const heartbeat = setInterval(() => {
-            writeEvent('heartbeat', { timestamp: new Date().toISOString() });
+            const pulse = createEventsStreamHeartbeatEvent(req.requestId);
+            writeEvent(pulse.eventType, pulse.envelope);
         }, HEARTBEAT_INTERVAL_MS);
 
         /* ── Cleanup on client disconnect ────────────────────────────── */

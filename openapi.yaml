@@ -1515,30 +1515,43 @@ paths:
     /events/stream:
         get:
             tags: [events]
-            summary: Live SSE stream of all internal events
+            summary: Live normalized SSE observability stream
             description: |
                 Opens a persistent Server-Sent Events connection that forwards
-                **every** event emitted on the Manna in-process event bus.
+                normalized public events derived from the Manna in-process event bus.
 
                 Designed for monitoring dashboards, developer tools, and external
-                UIs that want a unified live feed of everything Manna is doing.
+                UIs that want a unified live feed of what Manna is doing.
 
-                **SSE event types** (mirror the internal bus types):
-                - `connected`         — sent immediately on connect: `{ message, timestamp }`
-                - `heartbeat`         — sent every ~30 s to keep the connection alive: `{ timestamp }`
-                - `agent:start`       — agent run started: `{ task }`
-                - `agent:step`        — agent completed a reasoning step: `{ step, parsed: { thought, action } }`
-                - `agent:done`        — agent run finished: `{ answer, citations, meta }`
-                - `agent:error`       — agent run failed: `{ error }`
-                - `agent:max_steps`   — step limit reached: `{ task, summary, diagnosticFile? }`
-                - `agent:hard_stop`   — policy hard stop: `{ step, code, reason }`
-                - `agent:model_routed`— model profile selected: `{ profile, model, reason }`
-                - `tool:result`       — tool executed successfully: `{ tool, result }`
-                - `tool:error`        — tool execution failed: `{ tool, error }`
-                - `swarm:decomposed`  — swarm task decomposed: `{ subtasks }`
-                - `swarm:subtask_start` — swarm subtask started: `{ index, task }`
-                - `swarm:subtask_done`  — swarm subtask completed: `{ index, result }`
-                - `swarm:subtask_error` — swarm subtask failed: `{ index, error }`
+                **Public SSE event types** (stable contract):
+                - `stream.connected`
+                - `stream.heartbeat`
+                - `run.started`
+                - `run.step`
+                - `run.model_routed`
+                - `run.completed`
+                - `run.failed`
+                - `run.max_steps`
+                - `run.hard_stop`
+                - `tool.succeeded`
+                - `tool.failed`
+                - `tool.verification_failed`
+                - `swarm.started`
+                - `swarm.decomposed`
+                - `swarm.subtask_started`
+                - `swarm.subtask_completed`
+                - `swarm.subtask_failed`
+                - `swarm.completed`
+                - `system.event` (fallback for unknown internal event types)
+
+                **Envelope shape (all events):**
+                - `timestamp` (ISO date-time)
+                - `requestId?` (stream request correlation id)
+                - `runId?` (agent run correlation id when available)
+                - `category` (`stream | run | tool | swarm | system`)
+                - `type` (public subtype, e.g. `step`, `completed`, `failed`)
+                - `data` (normalized event payload)
+                - `metrics?` (timing, tokens, context, step/tool counters, citations)
 
                 The connection stays open indefinitely until the client disconnects.
             operationId: getEventsStream
@@ -1554,6 +1567,14 @@ paths:
                                     ```
                                     event: <type>
                                     data: <json payload>
+                                    ```
+                                    Example:
+                                    ```
+                                    event: stream.connected
+                                    data: {"timestamp":"2026-05-24T12:00:00.000Z","requestId":"req_abc","category":"stream","type":"connected","data":{"message":"Event stream active"}}
+
+                                    event: run.step
+                                    data: {"timestamp":"2026-05-24T12:00:01.000Z","requestId":"req_abc","runId":"run_123","category":"run","type":"step","data":{"step":0,"action":"read_file","thought":"Reading the file..."},"metrics":{"step":0,"stepDurationMs":42,"contextLength":1024}}
                                     ```
 
 # ─────────────────────────────────────────────────────────────────────────────
