@@ -1,7 +1,7 @@
 /**
- * Shared agent wiring — constructs and exports the pre-built `Agent`
- * instances, the `createAgent` selector, and the swarm orchestrator
- * factory used by all API route modules.
+ * Shared agent wiring — constructs and exports the `createAgent`
+ * selector and the swarm orchestrator factory used by all API route
+ * modules.
  *
  * Extracting agent setup into this module avoids duplication between
  * route modules while keeping each one focused on its own HTTP concerns.
@@ -139,7 +139,7 @@ function attachProcessors(agent: Agent, allowWrite: boolean): Agent {
 }
 
 /**
- * Rebuild both shared agent instances using the current runtime tool sets.
+ * Refresh derived tool metadata using the current runtime tool sets.
  *
  * @returns Nothing.
  */
@@ -147,24 +147,10 @@ function rebuildAgents(): void {
   allToolDescriptionMap = new Map<string, string>(
     [...readOnlyTools, ...writeTools].map((tool) => [tool.name, tool.description]),
   );
-
-  readOnlyAgent = attachProcessors(new Agent(readOnlyTools), false);
-  writeEnabledAgent = attachProcessors(new Agent([...readOnlyTools, ...writeTools]), true);
 }
 
-/* ── Agent instances (shared across requests) ────────────────────────── */
-
-/** Agent with read-only tool access (default). */
-export let readOnlyAgent = attachProcessors(new Agent(readOnlyTools), false);
-
-/** Agent with both read and write tool access. */
-export let writeEnabledAgent = attachProcessors(
-  new Agent([...readOnlyTools, ...writeTools]),
-  true,
-);
-
 /**
- * Load MCP tools (fail-open) and rebuild shared agent singletons.
+ * Load MCP tools (fail-open) and refresh runtime tool metadata.
  *
  * This must be called during API startup, before `app.listen()`, so MCP
  * tools are available for the first request.

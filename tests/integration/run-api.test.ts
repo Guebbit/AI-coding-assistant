@@ -111,6 +111,50 @@ describe('run API', () => {
         }
     });
 
+    it('creates a fresh agent per request so run state does not leak between calls', async () => {
+        mockRun.mockRejectedValueOnce(new Error('E_CONSECUTIVE_ERRORS')).mockResolvedValueOnce({
+            answer: 'second request works',
+            citations: [],
+            meta: {
+                startedAt: '2026-01-01T00:00:01.000Z',
+                durationMs: 8,
+                profile: 'fast',
+                model: 'fast-model'
+            }
+        });
+
+        const { server, baseUrl } = await startServer();
+
+        try {
+            const first = await fetch(`${baseUrl}/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: 'first request' })
+            });
+            expect(first.status).toBe(500);
+
+            const second = await fetch(`${baseUrl}/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: 'second request' })
+            });
+            const secondBody = (await second.json()) as {
+                success: boolean;
+                data: { result: string };
+            };
+
+            expect(second.status).toBe(200);
+            expect(secondBody.success).toBe(true);
+            expect(secondBody.data.result).toBe('second request works');
+            expect(mockCreateAgent).toHaveBeenCalledTimes(2);
+            expect(mockRun).toHaveBeenCalledTimes(2);
+        } finally {
+            await new Promise<void>((resolve, reject) => {
+                server.close((error) => (error ? reject(error) : resolve()));
+            });
+        }
+    });
+
     it('returns 400 when toolPolicy is malformed', async () => {
         const { server, baseUrl } = await startServer();
 
