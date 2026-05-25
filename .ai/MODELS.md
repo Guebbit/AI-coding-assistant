@@ -4,6 +4,9 @@ Source of truth for the model layer: [`./README.md`](./README.md) §6 (Agent loo
 and §12 (Cross-cutting patterns → profile-based model routing).
 Long-form docs: `docs/model-selection.md`, `docs/infra/ollama-models.md`.
 
+Capability alignment: model providers and adapters (`llm`) are part of the
+**integrations** capability in the capability-oriented modular monolith map.
+
 AI reminders:
 
 - Supported profiles: `fast | reasoning | code` (there is **no `default` profile**).

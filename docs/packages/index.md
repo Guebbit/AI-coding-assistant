@@ -1,10 +1,24 @@
 # Packages Overview
 
 ::: tip TL;DR
-5 packages: agent (loop), llm (Ollama), memory ([Qdrant](/glossary#qdrant) + buffer), events ([pub/sub](/glossary#pub-sub)), tools (actions). API wires them together.
+Manna is moving to a **capability-oriented modular monolith**. Current `packages/*` modules are grouped by capabilities (runtime, knowledge, documents, integrations, observability, platform, shared), while staying one deployable service.
 :::
 
 The API app wires small focused packages. Each package has a single responsibility.
+
+See the capability map: [Capability-Oriented Modular Monolith](/theory/capability-modular-monolith).
+
+## Capability grouping (direction)
+
+| Capability      | Current package map                              |
+| --------------- | ------------------------------------------------ |
+| `runtime`       | `agent`, `orchestrator`, `swarm`, `processors`   |
+| `knowledge`     | `memory`, `graph` (+ retrieval tooling)          |
+| `documents`     | `library` (+ ingestion/parsing/indexing tooling) |
+| `integrations`  | `tools`, `mcp`, `llm` (+ browser/DB connectors)  |
+| `observability` | `events`, `logger`, `diagnostics`, `evals`       |
+| `platform`      | `persistence`, API startup/config support        |
+| `shared`        | `shared` (minimal generic helpers only)          |
 
 ---
 

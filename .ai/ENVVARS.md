@@ -3,6 +3,9 @@
 Source of truth: [`./README.md`](./README.md) §13 + the canonical catalogue in
 [`../.env.example`](../.env.example). Long-form per-feature docs in `docs/`.
 
+Capability alignment: env vars configure capabilities within a single modular
+monolith runtime (runtime/knowledge/documents/integrations/observability/platform/shared).
+
 AI quick reminders only:
 
 - LLM runtime: `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_EMBED_MODEL`

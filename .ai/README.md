@@ -113,6 +113,24 @@ NPM scripts (defined in [`package.json`](../package.json)):
 
 ## 5. Repository layout
 
+Architecture direction (current and target):
+
+- Manna remains a **single deployable modular monolith** (not microservices).
+- Capability-oriented grouping is the preferred direction for internal boundaries:
+
+```
+runtime/        # agent, workflows, swarm, policies
+knowledge/      # memory, graph, retrieval
+documents/      # library, ingestion, parsing, indexing
+integrations/   # tools, mcp, llm, browser, db connectors
+observability/  # events, logger, diagnostics, evals
+platform/       # persistence, config, startup, api support
+shared/         # very small, truly generic helpers only
+```
+
+Today these capabilities are implemented under `packages/*`; this is a
+documentation and refactoring direction, not a service split.
+
 ```
 apps/api/           Express HTTP layer (routes, middlewares, SSE bridge)
 packages/
@@ -144,6 +162,8 @@ data/               Runtime data (e.g. mcp-servers.json)
 ```
 
 A briefer repo map for AI navigation lives in [`STRUCTURE.md`](./STRUCTURE.md).
+Human-facing capability map and links live in
+[`docs/theory/capability-modular-monolith.md`](../docs/theory/capability-modular-monolith.md).
 
 ---
 
@@ -336,6 +356,7 @@ flowchart LR
 | [`ENVVARS.md`](./ENVVARS.md)                  | Most-used env var pointers                           |
 | [`STRUCTURE.md`](./STRUCTURE.md)              | Brief repo map / edit targets                        |
 | [`STYLE.md`](./STYLE.md)                      | Code/style/comment/JSDoc/naming contract             |
+| `docs/theory/capability-modular-monolith.md`  | Capability-oriented modular-monolith architecture    |
 | `docs/theory/tool-selection-strategy-plan.md` | Phased roadmap for next-gen tool selection           |
 
 Long-form human documentation lives in `docs/` (VitePress) — start at

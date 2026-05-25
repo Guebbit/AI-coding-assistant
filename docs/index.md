@@ -12,23 +12,25 @@ Local-first AI agent platform for multi-step reasoning, tool execution, orchestr
 
 ## Documentation tracks
 
-| Track                     | What you'll find                                                            | Start here                                           |
-| ------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------- |
-| **Identity Card**         | One-page "what is Manna?" overview — stack, tools, patterns, strategies     | [README.md](https://github.com/Guebbit/manna#readme) |
-| **Getting Started**       | First run, setup, use cases                                                 | [Quickstart](./quickstart.md)                        |
-| **Full Setup**            | All use cases, IDE integration, write mode, knowledge base                  | [Use the Application](/use-the-application)          |
-| **Practical Examples**    | Request → under-the-hood → response walkthroughs                            | [Examples](/examples/)                               |
-| **Scenarios**             | Hands-on drills (10 min each)                                               | [Scenarios](/scenarios/)                             |
-| **Architecture & Theory** | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered)         |
-| **API Surface**           | All HTTP endpoints                                                          | [Endpoint Map](/endpoint-map)                        |
-| **Package Reference**     | Code contracts per package                                                  | [Packages](/packages/)                               |
-| **Glossary**              | Every technical term explained                                              | [Glossary](/glossary)                                |
+| Track                       | What you'll find                                                            | Start here                                            |
+| --------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Identity Card**           | One-page "what is Manna?" overview — stack, tools, patterns, strategies     | [README.md](https://github.com/Guebbit/manna#readme)  |
+| **Getting Started**         | First run, setup, use cases                                                 | [Quickstart](./quickstart.md)                         |
+| **Full Setup**              | All use cases, IDE integration, write mode, knowledge base                  | [Use the Application](/use-the-application)           |
+| **Practical Examples**      | Request → under-the-hood → response walkthroughs                            | [Examples](/examples/)                                |
+| **Scenarios**               | Hands-on drills (10 min each)                                               | [Scenarios](/scenarios/)                              |
+| **Architecture & Theory**   | How the system works, [RAG](/glossary#rag), [LoRA](/glossary#lora), vectors | [How It Works](/theory/how-it-works-layered)          |
+| **Capability Architecture** | Capability-oriented modular monolith map and boundaries                     | [Capability Map](/theory/capability-modular-monolith) |
+| **API Surface**             | All HTTP endpoints                                                          | [Endpoint Map](/endpoint-map)                         |
+| **Package Reference**       | Code contracts per package                                                  | [Packages](/packages/)                                |
+| **Glossary**                | Every technical term explained                                              | [Glossary](/glossary)                                 |
 
 ---
 
 ## What this project is
 
 - Local-first TypeScript agent API (`POST /run`)
+- Capability-oriented **modular monolith** (single runtime; not microservices at this stage)
 - [Agent loop](/glossary#agent-loop) with tool execution and [memory](/glossary#ring-buffer)
 - [Ollama](/glossary#ollama) backend with per-step [model routing](/glossary#model-router)
 - [Swarm orchestrator](/packages/orchestrator) — LangGraph state machine that decomposes tasks across multiple specialised agents
@@ -63,9 +65,9 @@ flowchart LR
 
 ## Fast links
 
-| Area               | Links                                                                                                                                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Learn**          | [Quickstart](./quickstart.md) · [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                                                        |
-| **Theory**         | [Agent Loop](/theory/agent-loop) · [Tool Selection Plan](/theory/tool-selection-strategy-plan) · [Operating Modes](/theory/operating-modes) · [Error Taxonomy](/theory/error-taxonomy) · [RAG](/theory/RAG) · [MCP](/theory/MCP) |
-| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph)                           |
-| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                                            |
+| Area               | Links                                                                                                                                                                                                                                                                                    |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Learn**          | [Quickstart](./quickstart.md) · [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                                                                                                                |
+| **Theory**         | [Capability Map](/theory/capability-modular-monolith) · [Agent Loop](/theory/agent-loop) · [Tool Selection Plan](/theory/tool-selection-strategy-plan) · [Operating Modes](/theory/operating-modes) · [Error Taxonomy](/theory/error-taxonomy) · [RAG](/theory/RAG) · [MCP](/theory/MCP) |
+| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph)                                                                                   |
+| **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                                                                                                    |
