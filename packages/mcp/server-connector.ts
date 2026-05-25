@@ -28,11 +28,7 @@ const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 5000;
  *
  * @throws {Error} Throws when the operation exceeds `timeoutMs`.
  */
-function withTimeout<T>(
-    operation: Promise<T>,
-    timeoutMs: number,
-    message: string
-): Promise<T> {
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
     return Promise.race([
         operation,
         new Promise<T>((_, reject) => {
@@ -125,10 +121,7 @@ export async function connectAndDiscoverTools(
     const isWrite = server.writeTools === true;
 
     const transport = createTransport(server);
-    const client = new Client(
-        { name: 'manna-mcp-bridge', version: '1.0.0' },
-        { capabilities: {} }
-    );
+    const client = new Client({ name: 'manna-mcp-bridge', version: '1.0.0' }, { capabilities: {} });
 
     // Connect with timeout
     await withTimeout(

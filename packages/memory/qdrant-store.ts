@@ -111,9 +111,7 @@ export async function storeInQdrant(entry: string): Promise<boolean> {
  *
  * @returns `true` on success, `false` if Qdrant is disabled or failed.
  */
-export async function storeStructuredInQdrant(
-    entry: IMemoryEntry
-): Promise<boolean> {
+export async function storeStructuredInQdrant(entry: IMemoryEntry): Promise<boolean> {
     if (!qdrantEnabled) return false;
 
     return getEmbedding(entry.content)
