@@ -1,137 +1,44 @@
 /**
  * Minimal wrapper around the Ollama local LLM API.
  *
- * Deliberately simple — one module, one responsibility: talk to Ollama.
- * Every other package that needs LLM generation imports from here so the
- * HTTP details are encapsulated in a single place.
+ * ROLE: Single module for talking to Ollama. Every other package that
+ * needs LLM generation imports from here so HTTP details are encapsulated.
+ *
+ * Architecture:
+ *  - Types live in `./types.ts` (importable without runtime deps)
+ *  - Config lives in `./config.ts` (env var resolution)
+ *  - This file: pure implementation (generate, chat, capabilities)
  *
  * @see https://github.com/ollama/ollama/blob/main/docs/api.md
  * @module llm/ollama
  */
 
 import { OLLAMA_BASE_URL, OLLAMA_MODEL } from './config';
+import type {
+    IGenerateOptions,
+    IGenerateResult,
+    IChatOptions,
+    IChatResult,
+    IOllamaChatMessage
+} from './types';
 
-/**
- * Options accepted by both `generate` and `generateWithMetadata`.
- *
- * Every field is optional — sensible defaults are applied when omitted.
- */
-export interface IGenerateOptions {
-    /** Ollama model name (default: `OLLAMA_MODEL` env var or `"llama3.1:8b"`). */
-    model?: string;
+// Re-export all types so existing `import { ... } from '../llm/ollama'` still works
+export type {
+    IGenerateOptions,
+    IGenerateResult,
+    IChatOptions,
+    IChatResult,
+    IOllamaChatMessage,
+    IOllamaToolDefinition,
+    IOllamaToolCall
+} from './types';
 
-    /** Whether to stream the response token-by-token (default: `false`). */
-    stream?: boolean;
-
-    /** Optional text suffix for fill-in-the-middle / infill completion. */
-    suffix?: string;
-
-    /** Optional system prompt that overrides the model's built-in system message. */
-    system?: string;
-
-    /**
-     * Response format hint forwarded to Ollama.
-     * Pass `"json"` to request JSON output, or a JSON schema object for
-     * structured generation.
-     */
-    format?: 'json' | Record<string, unknown>;
-
-    /** Base64-encoded images for multimodal (vision) models. */
-    images?: string[];
-
-    /**
-     * Provider-specific generation options forwarded verbatim to
-     * Ollama's `options` field (temperature, top_p, num_ctx, etc.).
-     */
-    options?: Record<string, unknown>;
-}
-
-export interface IOllamaToolDefinition {
-    type: 'function';
-    function: {
-        name: string;
-        description: string;
-        parameters?: Record<string, unknown>;
-    };
-}
-
-export interface IOllamaToolCall {
-    function: {
-        name: string;
-        arguments?: Record<string, unknown> | string;
-    };
-}
-
-export interface IOllamaChatMessage {
-    role: 'system' | 'user' | 'assistant' | 'tool';
-    content: string;
-    /* eslint-disable-next-line @typescript-eslint/naming-convention -- Ollama API uses snake_case */
-    tool_calls?: IOllamaToolCall[];
-    name?: string;
-}
-
-export interface IChatOptions {
-    model?: string;
-    stream?: boolean;
-    tools?: IOllamaToolDefinition[];
-    options?: Record<string, unknown>;
-}
-
-export interface IChatResult {
-    message: IOllamaChatMessage;
-    model: string;
-    done: boolean;
-    doneReason?: string;
-    totalDurationNs?: number;
-    loadDurationNs?: number;
-    promptEvalCount?: number;
-    promptEvalDurationNs?: number;
-    evalCount?: number;
-    evalDurationNs?: number;
-}
-
-/**
- * Rich result object returned by `generateWithMetadata`.
- *
- * Contains both the generated text and Ollama-specific telemetry
- * (timing, token counts, done reason, etc.).
- */
-export interface IGenerateResult {
-    /** The generated text content. */
-    response: string;
-
-    /** The model name that actually served the request. */
-    model: string;
-
-    /** Whether generation is complete (always `true` for non-streaming). */
-    done: boolean;
-
-    /** Reason generation ended (e.g. `"stop"`, `"length"`). */
-    doneReason?: string;
-
-    /** Total wall-clock duration of the request in nanoseconds. */
-    totalDurationNs?: number;
-
-    /** Time spent loading the model into memory in nanoseconds. */
-    loadDurationNs?: number;
-
-    /** Number of tokens in the evaluated prompt. */
-    promptEvalCount?: number;
-
-    /** Time spent evaluating the prompt in nanoseconds. */
-    promptEvalDurationNs?: number;
-
-    /** Number of tokens generated in the response. */
-    evalCount?: number;
-
-    /** Time spent generating the response in nanoseconds. */
-    evalDurationNs?: number;
-}
+/* ── generate ────────────────────────────────────────────────────────── */
 
 /**
  * Send a prompt to Ollama and return **only** the generated text.
  *
- * This is a convenience wrapper around `generateWithMetadata` for callers
+ * Convenience wrapper around `generateWithMetadata` for callers
  * that do not need telemetry data.
  *
  * @param prompt  - The full prompt string to send to the model.
@@ -147,8 +54,6 @@ export async function generate(prompt: string, options: IGenerateOptions = {}): 
  * Send a prompt to Ollama and return a rich result including telemetry.
  *
  * Performs a single `POST /api/generate` call to the Ollama REST API.
- * The response body's snake_case fields are mapped to camelCase in the
- * returned `GenerateResult`.
  *
  * @param prompt  - The full prompt string to send to the model.
  * @param options - Optional overrides for model selection, streaming, etc.
@@ -229,49 +134,18 @@ export async function generateWithMetadata(
     };
 }
 
-const modelCapabilitiesCache = new Map<string, boolean>();
+/* ── chat ────────────────────────────────────────────────────────────── */
 
-export function clearModelCapabilitiesCache(): void {
-    modelCapabilitiesCache.clear();
-}
-
-export async function modelSupportsNativeToolCalling(model?: string): Promise<boolean> {
-    const effectiveModel = model?.trim() || OLLAMA_MODEL;
-    if (!effectiveModel) return false;
-    if (modelCapabilitiesCache.has(effectiveModel)) {
-        return modelCapabilitiesCache.get(effectiveModel)!;
-    }
-
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/show`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: effectiveModel })
-    });
-
-    if (!response.ok) {
-        modelCapabilitiesCache.set(effectiveModel, false);
-        return false;
-    }
-
-    const data = (await response.json()) as {
-        capabilities?: string[] | { tools?: boolean };
-        details?: { capabilities?: string[] | { tools?: boolean } };
-        /* eslint-disable-next-line @typescript-eslint/naming-convention -- Ollama API uses snake_case */
-        model_info?: { capabilities?: string[] | { tools?: boolean } };
-    };
-
-    const sources = [data.capabilities, data.details?.capabilities, data.model_info?.capabilities];
-    const supportsTools = sources.some((capability) => {
-        if (!capability) return false;
-        if (Array.isArray(capability)) return capability.includes('tools');
-        if (typeof capability === 'object') return capability.tools === true;
-        return false;
-    });
-
-    modelCapabilitiesCache.set(effectiveModel, supportsTools);
-    return supportsTools;
-}
-
+/**
+ * Multi-turn chat with optional native tool calling.
+ *
+ * Performs a single `POST /api/chat` call.
+ *
+ * @param messages - Conversation messages array.
+ * @param options  - Model, tools, streaming options.
+ * @returns Chat result with the assistant's message and telemetry.
+ * @throws {Error} When the Ollama API returns a non-2xx status code.
+ */
 export async function chatWithMetadata(
     messages: IOllamaChatMessage[],
     options: IChatOptions = {}
@@ -331,4 +205,58 @@ export async function chatWithMetadata(
         evalCount: data.eval_count,
         evalDurationNs: data.eval_duration
     };
+}
+
+/* ── Model capabilities ──────────────────────────────────────────────── */
+
+const modelCapabilitiesCache = new Map<string, boolean>();
+
+/** Clear the capabilities cache (useful in tests). */
+export function clearModelCapabilitiesCache(): void {
+    modelCapabilitiesCache.clear();
+}
+
+/**
+ * Check if a model supports native tool calling via Ollama's /api/show.
+ *
+ * Results are cached per model name to avoid repeated API calls.
+ *
+ * @param model - Model name to check (defaults to OLLAMA_MODEL).
+ * @returns `true` if the model advertises tool-calling capability.
+ */
+export async function modelSupportsNativeToolCalling(model?: string): Promise<boolean> {
+    const effectiveModel = model?.trim() || OLLAMA_MODEL;
+    if (!effectiveModel) return false;
+    if (modelCapabilitiesCache.has(effectiveModel)) {
+        return modelCapabilitiesCache.get(effectiveModel)!;
+    }
+
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/show`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: effectiveModel })
+    });
+
+    if (!response.ok) {
+        modelCapabilitiesCache.set(effectiveModel, false);
+        return false;
+    }
+
+    const data = (await response.json()) as {
+        capabilities?: string[] | { tools?: boolean };
+        details?: { capabilities?: string[] | { tools?: boolean } };
+        /* eslint-disable-next-line @typescript-eslint/naming-convention -- Ollama API uses snake_case */
+        model_info?: { capabilities?: string[] | { tools?: boolean } };
+    };
+
+    const sources = [data.capabilities, data.details?.capabilities, data.model_info?.capabilities];
+    const supportsTools = sources.some((capability) => {
+        if (!capability) return false;
+        if (Array.isArray(capability)) return capability.includes('tools');
+        if (typeof capability === 'object') return capability.tools === true;
+        return false;
+    });
+
+    modelCapabilitiesCache.set(effectiveModel, supportsTools);
+    return supportsTools;
 }
