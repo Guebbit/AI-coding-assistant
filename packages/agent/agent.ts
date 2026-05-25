@@ -1,127 +1,59 @@
 /**
- * Core agent module — implements the reason → act → observe loop.
+ * Core agent module — the reason → act → observe loop.
  *
- * The `Agent` class orchestrates the entire agentic workflow:
- *  1. Load relevant memory for the task.
- *  2. For each step (up to `MAX_STEPS`):
- *     a. Run `processInputStep` hooks (middleware before LLM call).
- *     b. Build a prompt with the task, accumulated context, and memory.
- *     c. Route to the best model via `routeModel`.
- *     d. Call the LLM and parse the JSON response with Zod.
- *     e. Run `processOutputStep` hooks (middleware after LLM call).
- *     f. Execute the chosen tool, or return if `action === "none"`.
- *     g. Append the tool result to context and repeat.
+ * ROLE: Orchestrates one "run" by composing focused sub-modules:
+ *  - `run-context.ts`   — mutable run state (SRP: state management)
+ *  - `llm-caller.ts`    — LLM invocation strategies (SRP: LLM communication)
+ *  - `tool-executor.ts` — tool dispatch + result handling (SRP: tool lifecycle)
+ *  - `run-finalizer.ts` — persistence + events + cleanup (SRP: run completion)
  *
- * Design principles:
- *  - **No magic** — every decision is traceable via structured logs and events.
- *  - **Resilient** — bad JSON and unknown tools are recovered, not crashed.
- *  - **Observable** — every significant state change emits a typed event.
- *  - **Extensible** — processors can intercept input/output at each step.
+ * This file only handles the high-level LOOP LOGIC:
+ *  1. Load memory → 2. For each step: processors → LLM → tool → repeat → 3. Finalize.
  *
  * @module agent/agent
  */
 
-import {
-    generateWithMetadata,
-    generate,
-    chatWithMetadata,
-    modelSupportsNativeToolCalling
-} from '../llm/ollama';
-import { addMemory, getMemory } from '../memory/memory';
+import { generateWithMetadata } from '../llm/ollama';
+import { getMemory } from '../memory/memory';
 import { emit } from '../events/bus';
 import type { ITool } from '../tools/types';
 import { logger } from '../logger/logger';
-import { resolveModel, stripCodeFences, resolveOperatingModeConfig } from '../shared';
-import { PathSafetyError } from '../shared/path-safety';
+import { resolveOperatingModeConfig } from '../shared';
 import { routeModel } from './model-router';
 import type { ModelProfile } from './model-router';
-import { agentStepSchema } from './schemas';
 import type {
     IProcessor,
     IProcessInputStepArgs,
-    IProcessOutputStepArgs,
-    IProcessToolResultArgs
+    IProcessOutputStepArgs
 } from '../processors/types';
 import { PolicyViolationError } from '../processors/policy';
-import { writeDiagnosticLog, cleanupOldLogs } from '../diagnostics';
-import type { IDiagnosticEntry } from '../diagnostics';
-import { saveAgentRun } from '../persistence/db';
-import type { IToolCall } from '../persistence/types';
-import type { IGenerateResult, IChatResult } from '../llm/ollama';
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import { ToolCitationBuffer, toolCitationSchema, type IToolCitation } from '../tools/citations';
-import { ToolCallDeduplicator } from '../tools/tool-call-deduplicator';
-import { isMultimodalModel } from './vision-capability';
-import { getVisionDescription } from './vision-description';
-import { randomUUID } from 'node:crypto';
 
-/**
- * Directory where diagnostic Markdown files are written.
- * Kept in sync with the writer's own default.
- */
-const DIAGNOSTIC_LOG_DIR = process.env.DIAGNOSTIC_LOG_DIR ?? 'data/diagnostics';
+// Sub-modules (SOLID decomposition)
+import { RunContext } from './run-context';
+import type { IAgentRunMeta, IAgentRunResult } from './run-context';
+import {
+    callWithNativeTools,
+    callWithoutNativeTools,
+    modelSupportsNativeToolCalling,
+    handleLlmError,
+    accumulateTokens
+} from './llm-caller';
+import type { IParsedToolCall } from './llm-caller';
+import {
+    executeTool,
+    handleDuplicateCheck,
+    handleUnknownTool,
+    runToolResultProcessors
+} from './tool-executor';
+import {
+    finalizeCompleted,
+    finalizeDirectOutput,
+    finalizeHardStop,
+    finalizeMaxSteps
+} from './run-finalizer';
 
-/**
- * Auto-prune threshold for diagnostic log files.
- */
-const DIAGNOSTIC_LOG_MAX_FILES = Number.parseInt(process.env.DIAGNOSTIC_LOG_MAX_FILES ?? '100', 10);
-
-/**
- * Structured metadata produced by one `Agent.run()` execution.
- */
-export interface IAgentRunMeta {
-    /** ISO timestamp indicating when this run started. */
-    startedAt: string;
-    /** Wall-clock duration in milliseconds for the full run. */
-    durationMs: number;
-    /** Number of LLM reasoning steps executed. */
-    steps: number;
-    /** Number of tool calls executed (success + failure). */
-    toolCalls: number;
-    /** Models used by this run (deduplicated, execution order preserved). */
-    models: string[];
-    /** Effective profile when a single profile is identifiable. */
-    profile?: ModelProfile;
-    /** Aggregated prompt tokens when reported by the provider. */
-    promptTokens?: number;
-    /** Aggregated completion tokens when reported by the provider. */
-    completionTokens?: number;
-    /** Aggregated total tokens when both prompt/completion totals are known. */
-    totalTokens?: number;
-    /** Final context length in characters. */
-    contextLength: number;
-    /** Whether semantic memory retrieval returned entries. */
-    memoryUsed: boolean;
-    /** Citations collected from tool outputs during this run. */
-    citations: IToolCitation[];
-}
-
-/**
- * Full result returned by `Agent.run()`.
- */
-export interface IAgentRunResult {
-    /** Final answer generated by the agent loop. */
-    answer: string;
-    /** Operational metadata captured during the run. */
-    meta: IAgentRunMeta;
-    /** Citations collected from tool outputs during this run. */
-    citations: IToolCitation[];
-}
-
-/**
- * Mutable token counters accumulated across LLM steps.
- * Extracted to avoid scattering nullable arithmetic throughout `run()`.
- */
-interface ITokenAccumulator {
-    promptTokens: number | undefined;
-    completionTokens: number | undefined;
-}
-
-interface IParsedToolCall {
-    thought: string;
-    action: string;
-    input: Record<string, unknown>;
-}
+// Re-export public types so consumers don't need to change imports
+export type { IAgentRunMeta, IAgentRunResult } from './run-context';
 
 /**
  * The core agent — wraps tools, processors, memory, and an LLM into a
@@ -142,16 +74,12 @@ export class Agent {
      * Create a new Agent.
      *
      * @param tools - The set of tools the agent is allowed to use.
-     *                The agent loop discovers tools from this array.
      */
     constructor(private readonly tools: ITool[]) {}
 
     /**
      * Register a processor whose hooks will be called at each agent step.
-     *
-     * Processors are invoked in registration order.  A processor may
-     * return a modified argument object to influence the agent, or
-     * return `void` / `undefined` to leave the arguments unchanged.
+     * Processors are invoked in registration order.
      *
      * @param processor - The processor to register.
      * @returns `this` for fluent chaining.
@@ -161,93 +89,9 @@ export class Agent {
         return this;
     }
 
-    /* ── Private helpers (DRY + SRP extractions) ─────────────────────── */
+    /* ── Processor runners ───────────────────────────────────────────────── */
 
-    /**
-     * Accumulate token counts from an LLM result into a mutable accumulator.
-     *
-     * @param accumulator - The token accumulator to mutate.
-     * @param llmResult   - The LLM response containing optional token counts.
-     */
-    private static accumulateTokens(
-        accumulator: ITokenAccumulator,
-        llmResult: Pick<IGenerateResult | IChatResult, 'promptEvalCount' | 'evalCount'>
-    ): void {
-        if (typeof llmResult.promptEvalCount === 'number') {
-            accumulator.promptTokens = (accumulator.promptTokens ?? 0) + llmResult.promptEvalCount;
-        }
-        if (typeof llmResult.evalCount === 'number') {
-            accumulator.completionTokens =
-                (accumulator.completionTokens ?? 0) + llmResult.evalCount;
-        }
-    }
-
-    /**
-     * Log and emit an LLM error, then re-throw.
-     *
-     * @param error - The caught error.
-     * @param step  - Current agent step index.
-     * @throws Always re-throws the original error.
-     */
-    private static handleLlmError(error: unknown, step: number, runId?: string): never {
-        logger.error('agent_llm_call_failed', {
-            component: 'agent',
-            step,
-            error: String(error)
-        });
-        emit({ type: 'agent:error', payload: { runId, step, error: String(error) } });
-        throw error;
-    }
-
-    /**
-     * Persist an agent run to PostgreSQL (fail-open — never throws).
-     *
-     * @param input - The full run input for `saveAgentRun`.
-     */
-    private static async persistRun(input: Parameters<typeof saveAgentRun>[0]): Promise<void> {
-        await saveAgentRun(input).catch((error: unknown) =>
-            logger.warn('agent_persist_failed', {
-                component: 'agent',
-                error: String(error)
-            })
-        );
-    }
-
-    /**
-     * Write diagnostics to disk and prune old logs if entries were collected.
-     *
-     * @param entries - Diagnostic entries from this run.
-     * @param task    - The user's task description (used in the log filename).
-     * @param summary - Optional AI commentary appended to the log.
-     * @returns The path to the written diagnostic file, or empty string if none was written.
-     */
-    private static async writeDiagnostics(
-        entries: IDiagnosticEntry[],
-        task: string,
-        summary?: string
-    ): Promise<string> {
-        if (entries.length === 0 && !summary) return '';
-        return writeDiagnosticLog(entries, task, summary)
-            .then(async (logPath) => {
-                await cleanupOldLogs(DIAGNOSTIC_LOG_DIR, DIAGNOSTIC_LOG_MAX_FILES);
-                logger.info('agent_diagnostic_log_written', { component: 'agent', logPath });
-                return logPath;
-            })
-            .catch((error: unknown) => {
-                logger.warn('agent_diagnostic_log_failed', {
-                    component: 'agent',
-                    error: String(error)
-                });
-                return '';
-            });
-    }
-
-    /**
-     * Run all registered input processors in order.
-     *
-     * @param args - The initial input step arguments.
-     * @returns The (possibly modified) input step arguments.
-     */
+    /** Run all input processors in order (may inject context, filter tools). */
     private async runInputProcessors(args: IProcessInputStepArgs): Promise<IProcessInputStepArgs> {
         let result = args;
         for (const proc of this.processors) {
@@ -259,12 +103,7 @@ export class Agent {
         return result;
     }
 
-    /**
-     * Run all registered output processors in order.
-     *
-     * @param args - The initial output step arguments.
-     * @returns The (possibly modified) output step arguments.
-     */
+    /** Run all output processors in order (may rewrite action/thought). */
     private async runOutputProcessors(
         args: IProcessOutputStepArgs
     ): Promise<IProcessOutputStepArgs> {
@@ -278,147 +117,32 @@ export class Agent {
         return result;
     }
 
-    /**
-     * Notify all registered processors of a tool execution result.
-     *
-     * Errors thrown by processors are caught and logged so that one
-     * faulty processor cannot prevent the remaining ones from observing
-     * the result.
-     *
-     * @param args - Tool result metadata.
-     */
-    private async runToolResultProcessors(args: IProcessToolResultArgs): Promise<void> {
-        for (const proc of this.processors) {
-            if (proc.processToolResult) {
-                await Promise.resolve(proc.processToolResult(args)).catch((error: unknown) => {
-                    logger.warn('agent_processor_tool_result_failed', {
-                        component: 'agent',
-                        error: String(error)
-                    });
-                });
-            }
-        }
-    }
-
-    private buildUntooledPrompt(
-        task: string,
-        context: string,
-        memory: string[],
-        tools: ITool[]
-    ): string {
-        const memoryBlock = memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : '';
-        const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
-        const toolBlocks = tools
-            .map((tool) => {
-                const schema = tool.inputSchema
-                    ? zodToJsonSchema(tool.inputSchema)
-                    : { type: 'object' };
-                return (
-                    `Tool: ${tool.name}\n` +
-                    `Description: ${tool.description}\n` +
-                    `Input schema (JSON Schema): ${JSON.stringify(schema)}\n` +
-                    `Example:\n` +
-                    `{"name":"${tool.name}","arguments":{}}\n`
-                );
-            })
-            .join('\n---\n');
-
-        return (
-            `You are an AI agent with access to tools.\n\n` +
-            `Task:\n${task}\n\n` +
-            memoryBlock +
-            contextBlock +
-            `When a tool is needed, respond ONLY in JSON with this exact format:\n` +
-            `{"name":"tool_name","arguments":{}}\n` +
-            `When no tool is needed and the task is complete, respond with plain text only.\n` +
-            `Never include keys other than "name" and "arguments" for tool calls.\n` +
-            `Never invent tool names or argument fields.\n\n` +
-            `Available tools:\n${toolBlocks}\n`
-        );
-    }
-
-    private static getToolInputSchema(tool: ITool): {
-        required: string[];
-        properties: Set<string> | null;
-    } {
-        if (!tool.inputSchema) return { required: [], properties: null };
-        const schema = zodToJsonSchema(tool.inputSchema) as {
-            required?: string[];
-            properties?: Record<string, unknown>;
-        };
-        const properties = schema.properties ? new Set(Object.keys(schema.properties)) : null;
-        return { required: schema.required ?? [], properties };
-    }
-
-    private static validateUntooledCall(
-        tools: ITool[],
-        candidate: { name?: unknown; arguments?: unknown }
-    ): IParsedToolCall | null {
-        if (typeof candidate.name !== 'string') return null;
-        const tool = tools.find((entry) => entry.name === candidate.name);
-        if (!tool) return null;
-        if (typeof candidate.arguments !== 'object' || candidate.arguments === null) return null;
-        if (Array.isArray(candidate.arguments)) return null;
-
-        const input = candidate.arguments as Record<string, unknown>;
-        const { required, properties } = Agent.getToolInputSchema(tool);
-
-        for (const requiredKey of required) {
-            if (!(requiredKey in input)) return null;
-        }
-        if (properties) {
-            for (const key of Object.keys(input)) {
-                if (!properties.has(key)) return null;
-            }
-        }
-        return { thought: `Using tool ${tool.name}`, action: tool.name, input };
-    }
-
-    private static collectCitationsFromToolResult(
-        result: unknown,
-        buffer: ToolCitationBuffer
-    ): void {
-        if (!result || typeof result !== 'object') return;
-        const maybeCitations = (result as { citations?: unknown }).citations;
-        if (!Array.isArray(maybeCitations)) return;
-        const parsed = maybeCitations
-            .map((entry) => toolCitationSchema.safeParse(entry))
-            .filter((entry) => entry.success)
-            .map((entry) => entry.data);
-        buffer.addMany(parsed);
-    }
-
-    /* ── Public API ──────────────────────────────────────────────────── */
+    /* ── Main loop ───────────────────────────────────────────────────────── */
 
     /**
      * Execute the full agentic loop for a given task.
      *
-     * @param task    - The user's natural-language task description.
-     * @param options - Optional configuration (e.g. `{ profile: "code", maxSteps: 10 }`).
-     * @returns The agent's final answer and operational metadata.
+     * HIGH-LEVEL FLOW:
+     *  1. Load memory relevant to the task.
+     *  2. Loop up to maxSteps:
+     *     a. Input processors (may hard-stop).
+     *     b. Route to best model profile.
+     *     c. Call LLM (native tools or untooled fallback).
+     *     d. Output processors (may modify action).
+     *     e. If action = "none" → done.
+     *     f. Execute tool → append result to context.
+     *  3. If loop exhausted → self-debug summary.
+     *
+     * @param task    - The user's natural-language task.
+     * @param options - Optional forced profile or step limit.
      */
     async run(
         task: string,
         options?: { profile?: ModelProfile; maxSteps?: number }
     ): Promise<IAgentRunResult> {
-        const runId = randomUUID();
-        const runStartedAt = Date.now();
-        const startTime = new Date();
-        let context = '';
-        let pendingImages: string[] = [];
-        const diagnosticEntries: IDiagnosticEntry[] = [];
-        const toolCalls: IToolCall[] = [];
-        const toolDeduplicator = new ToolCallDeduplicator();
-        const citationBuffer = new ToolCitationBuffer();
-        const modelsUsed = new Set<string>();
-        const profilesUsed = new Set<ModelProfile>();
-        const tokens: ITokenAccumulator = {
-            promptTokens: undefined,
-            completionTokens: undefined
-        };
-        let llmSteps = 0;
+        const context = new RunContext();
 
-        /* Resolve operating mode and apply mode-specific defaults. */
+        // Resolve operating mode (determines step/tool limits)
         const modeConfig = resolveOperatingModeConfig();
         const effectiveMaxSteps =
             typeof options?.maxSteps === 'number' && options.maxSteps > 0
@@ -434,7 +158,7 @@ export class Agent {
             toolCount: this.tools.length
         });
 
-        /* Load semantic + recent memory relevant to this task. */
+        // ── Step 1: Load memory ────────────────────────────────────────────
         const memoryStartedAt = Date.now();
         const memory = await getMemory(task);
         logger.info('agent_memory_loaded', {
@@ -446,132 +170,50 @@ export class Agent {
         emit({
             type: 'agent:start',
             payload: {
-                runId,
+                runId: context.runId,
                 task,
-                startedAt: startTime.toISOString(),
+                startedAt: context.startTime.toISOString(),
                 memoryCount: memory.length
             }
         });
 
-        const buildRunMeta = (
-            citations: IToolCitation[] = citationBuffer.peek()
-        ): IAgentRunMeta => {
-            const totalTokens =
-                typeof tokens.promptTokens === 'number' &&
-                typeof tokens.completionTokens === 'number'
-                    ? tokens.promptTokens + tokens.completionTokens
-                    : undefined;
-            const profile =
-                options?.profile ?? (profilesUsed.size === 1 ? [...profilesUsed][0] : undefined);
-            return {
-                startedAt: startTime.toISOString(),
-                durationMs: Date.now() - runStartedAt,
-                steps: llmSteps,
-                toolCalls: toolCalls.length,
-                models: [...modelsUsed],
-                profile,
-                promptTokens: tokens.promptTokens,
-                completionTokens: tokens.completionTokens,
-                totalTokens,
-                contextLength: context.length,
-                memoryUsed: memory.length > 0,
-                citations
-            };
-        };
-
-        const persistInput = (
-            output: string,
-            status: 'completed' | 'max_steps' | 'hard_stopped'
-        ) => ({
-            task,
-            agentProfile: options?.profile ?? null,
-            output,
-            context,
-            memory,
-            startTime,
-            endTime: new Date(),
-            durationMs: Date.now() - runStartedAt,
-            toolCalls,
-            diagnosticEntries,
-            status
-        });
-
-        /**
-         * Execute the hard-stop sequence: log, emit event, persist, return.
-         *
-         * @param violation - The `PolicyViolationError` that triggered the stop.
-         * @returns The `IAgentRunResult` to return from `run()`.
-         */
-        const handleHardStop = async (
-            violation: PolicyViolationError
-        ): Promise<IAgentRunResult> => {
-            const answer = violation.message;
-            logger.warn('agent_hard_stop', {
-                component: 'agent',
-                step: violation.step,
-                code: violation.code,
-                durationMs: Date.now() - runStartedAt
-            });
-            diagnosticEntries.push({
-                timestamp: new Date().toISOString(),
-                step: violation.step,
-                severity: 'error',
-                category: 'policy',
-                code: violation.code,
-                message: `Hard stop: ${violation.message}`
-            });
-            emit({
-                type: 'agent:hard_stop',
-                payload: {
-                    runId,
-                    step: violation.step,
-                    code: violation.code,
-                    reason: violation.message,
-                    meta: buildRunMeta()
-                }
-            });
-            await Agent.writeDiagnostics(diagnosticEntries, task);
-            await Agent.persistRun(persistInput(answer, 'hard_stopped'));
-            const citations = citationBuffer.flush();
-            return { answer, meta: buildRunMeta(citations), citations };
-        };
-
+        // ── Step 2: Reasoning loop ─────────────────────────────────────────
         for (let step = 0; step < effectiveMaxSteps; step++) {
             const stepStartedAt = Date.now();
 
-            // ── Run input processors ─────────────────────────────────────────
+            // 2a. Input processors (may throw PolicyViolationError → hard stop)
             let inputArgs: IProcessInputStepArgs;
             try {
                 inputArgs = await this.runInputProcessors({
                     task,
-                    context,
+                    context: context.context,
                     memory,
                     stepNumber: step,
                     tools: this.tools.map((t) => t.name)
                 });
             } catch (error: unknown) {
                 if (error instanceof PolicyViolationError) {
-                    return handleHardStop(error);
+                    return finalizeHardStop(context, task, error, memory, options?.profile);
                 }
                 throw error;
             }
 
-            // ── Route model ──────────────────────────────────────────────────
+            // 2b. Route to best model
             const route = await routeModel({
                 task: inputArgs.task,
                 context: inputArgs.context,
                 step,
                 forcedProfile: options?.profile,
                 contextLength: inputArgs.context.length,
-                cumulativeDurationMs: Date.now() - runStartedAt
-            }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
+                cumulativeDurationMs: context.elapsedMs
+            }).catch((error: unknown) => handleLlmError(error, step, context.runId));
             const availableTools = this.tools.filter((tool) => inputArgs.tools.includes(tool.name));
 
-            profilesUsed.add(route.profile);
+            context.profilesUsed.add(route.profile);
             emit({
                 type: 'agent:model_routed',
                 payload: {
-                    runId,
+                    runId: context.runId,
                     step,
                     profile: route.profile,
                     model: route.model,
@@ -580,187 +222,73 @@ export class Agent {
                 }
             });
 
-            // ── Direct-answer shortcut: no tools available ───────────────────
+            // 2c. Direct-answer shortcut (no tools, no context, step 0)
             if (step === 0 && !inputArgs.context && availableTools.length === 0) {
-                const memoryBlock =
-                    inputArgs.memory.length > 0
-                        ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`
-                        : '';
-                const directPrompt = `${memoryBlock}Task:\n${inputArgs.task}\n\nAnswer concisely and directly.`;
-                logger.info('agent_direct_answer', {
-                    component: 'agent',
+                const answer = await this.handleDirectAnswer(
+                    context,
+                    inputArgs,
+                    route,
+                    memory,
+                    task,
                     step,
-                    reason: route.reason
-                });
-
-                const directResult = await generateWithMetadata(directPrompt, {
-                    model: route.model,
-                    images: pendingImages.length > 0 ? pendingImages : undefined,
-                    options: route.options
-                }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
-                pendingImages = [];
-
-                llmSteps += 1;
-                modelsUsed.add(directResult.model ?? route.model);
-                Agent.accumulateTokens(tokens, directResult);
-
-                const answer = directResult.response.trim();
-                await addMemory(`Task: ${task} → ${answer}`);
-                const citations = citationBuffer.flush();
-                emit({
-                    type: 'agent:done',
-                    payload: {
-                        runId,
-                        thought: answer,
-                        citations,
-                        citationsCount: citations.length,
-                        meta: buildRunMeta(citations)
-                    }
-                });
-                await Agent.persistRun(persistInput(answer, 'completed'));
-                return { answer, meta: buildRunMeta(citations), citations };
+                    options?.profile
+                );
+                if (answer) return answer;
             }
 
+            // 2d. LLM call loop (may call multiple tools per step)
             const nativeToolCalling = await modelSupportsNativeToolCalling(route.model);
             let toolCallsThisStep = 0;
 
             while (toolCallsThisStep < effectiveMaxToolCalls) {
+                // Call LLM using appropriate strategy
                 let parsed: IParsedToolCall;
                 let rawResponseText = '';
                 let llmDurationMs: number | undefined;
 
                 if (nativeToolCalling) {
-                    const llmCallStartedAt = Date.now();
-                    const systemPrompt =
-                        'You are an AI agent. Use tools when needed. ' +
-                        'If no tools are needed, provide the final answer directly.';
-                    const userPrompt =
-                        `Task:\n${inputArgs.task}\n\n` +
-                        `${inputArgs.memory.length > 0 ? `Recent memory:\n${inputArgs.memory.join('\n')}\n\n` : ''}` +
-                        `${context ? `Context so far:\n${context}\n\n` : ''}`;
-                    const nativeTools = availableTools.map((tool) => ({
-                        type: 'function' as const,
-                        function: {
-                            name: tool.name,
-                            description: tool.description,
-                            parameters: (tool.inputSchema
-                                ? (zodToJsonSchema(tool.inputSchema) as Record<string, unknown>)
-                                : { type: 'object', properties: {} }) as Record<string, unknown>
-                        }
-                    }));
-                    const chatResult = await chatWithMetadata(
-                        [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        { model: route.model, options: route.options, tools: nativeTools }
-                    ).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
-                    llmDurationMs = Date.now() - llmCallStartedAt;
-
-                    llmSteps += 1;
-                    modelsUsed.add(chatResult.model ?? route.model);
-                    Agent.accumulateTokens(tokens, chatResult);
-                    rawResponseText = chatResult.message.content ?? '';
-                    const toolCall = chatResult.message.tool_calls?.[0];
-                    if (toolCall?.function?.name) {
-                        const parsedArguments = (() => {
-                            if (typeof toolCall.function.arguments !== 'string') {
-                                return toolCall.function.arguments ?? {};
-                            }
-                            try {
-                                return JSON.parse(toolCall.function.arguments) as unknown;
-                            } catch {
-                                return {};
-                            }
-                        })();
-                        parsed = {
-                            thought: rawResponseText || `Using tool ${toolCall.function.name}`,
-                            action: toolCall.function.name,
-                            input:
-                                typeof parsedArguments === 'object' && parsedArguments
-                                    ? (parsedArguments as Record<string, unknown>)
-                                    : {}
-                        };
-                    } else {
-                        parsed = {
-                            thought: rawResponseText.trim() || 'Task completed.',
-                            action: 'none',
-                            input: {}
-                        };
-                    }
-                } else {
-                    const prompt = this.buildUntooledPrompt(
-                        inputArgs.task,
+                    const result = await callWithNativeTools(
                         context,
+                        inputArgs.task,
                         inputArgs.memory,
-                        availableTools
+                        availableTools,
+                        route,
+                        step
                     );
-                    const llmCallStartedAt = Date.now();
-                    logger.info('agent_step_started', {
-                        component: 'agent',
+                    parsed = result.parsed;
+                    rawResponseText = result.rawResponseText;
+                    llmDurationMs = result.llmDurationMs;
+                } else {
+                    const result = await callWithoutNativeTools(
+                        context,
+                        inputArgs.task,
+                        inputArgs.memory,
+                        availableTools,
+                        route,
                         step,
-                        contextLength: inputArgs.context.length,
-                        promptLength: prompt.length,
-                        promptPreview: prompt.length > 300 ? prompt.slice(0, 300) + '…' : prompt
-                    });
-
-                    const llmResult = await generateWithMetadata(prompt, {
-                        model: route.model,
-                        images: pendingImages.length > 0 ? pendingImages : undefined,
-                        options: route.options
-                    }).catch((error: unknown) => Agent.handleLlmError(error, step, runId));
-                    llmDurationMs = Date.now() - llmCallStartedAt;
-                    pendingImages = [];
-
-                    llmSteps += 1;
-                    modelsUsed.add(llmResult.model ?? route.model);
-                    Agent.accumulateTokens(tokens, llmResult);
-                    rawResponseText = llmResult.response;
-                    logger.info('agent_llm_response_received', {
-                        component: 'agent',
-                        step,
-                        responseLength: llmResult.response.length,
-                        durationMs: Date.now() - runStartedAt,
-                        routedProfile: route.profile,
-                        routedReason: route.reason,
-                        model: llmResult.model
-                    });
-
-                    const cleaned = stripCodeFences(rawResponseText).trim();
-                    try {
-                        const parsedJson = JSON.parse(cleaned) as unknown;
-                        const asAgentStep = agentStepSchema.safeParse(parsedJson);
-                        if (asAgentStep.success) {
-                            parsed = asAgentStep.data;
-                        } else if (parsedJson && typeof parsedJson === 'object') {
-                            const asUntooled = Agent.validateUntooledCall(
-                                availableTools,
-                                parsedJson as { name?: unknown; arguments?: unknown }
-                            );
-                            parsed = asUntooled ?? {
-                                thought: cleaned,
-                                action: 'none',
-                                input: {}
-                            };
-                        } else {
-                            parsed = { thought: cleaned, action: 'none', input: {} };
-                        }
-                    } catch {
-                        context +=
+                        inputArgs.context
+                    );
+                    if (!result) {
+                        // JSON parse failed — append error feedback and break
+                        context.context +=
                             '\nYour previous response was not valid JSON. ' +
                             'Return plain text for final answers or JSON tool calls only.';
-                        diagnosticEntries.push({
+                        context.diagnosticEntries.push({
                             timestamp: new Date().toISOString(),
                             step,
                             severity: 'warn',
                             category: 'json',
                             message: 'Invalid JSON response from untooled fallback model.',
-                            metadata: { responseLength: rawResponseText.length }
+                            metadata: { responseLength: 0 }
                         });
                         break;
                     }
+                    parsed = result.parsed;
+                    rawResponseText = result.rawResponseText;
+                    llmDurationMs = result.llmDurationMs;
                 }
 
+                // Emit step event
                 logger.info('agent_step_parsed', {
                     component: 'agent',
                     step,
@@ -770,7 +298,7 @@ export class Agent {
                 emit({
                     type: 'agent:step',
                     payload: {
-                        runId,
+                        runId: context.runId,
                         step,
                         parsed,
                         metrics: {
@@ -782,6 +310,7 @@ export class Agent {
                     }
                 });
 
+                // 2e. Output processors (may modify action or hard-stop)
                 let outputArgs: IProcessOutputStepArgs;
                 try {
                     outputArgs = await this.runOutputProcessors({
@@ -794,8 +323,7 @@ export class Agent {
                     });
                 } catch (error: unknown) {
                     if (error instanceof PolicyViolationError) {
-                        /* Policy violation from processOutputStep — notify processors then hard stop. */
-                        await this.runToolResultProcessors({
+                        await runToolResultProcessors(this.processors, {
                             task,
                             stepNumber: step,
                             tool: parsed.action,
@@ -805,7 +333,7 @@ export class Agent {
                             errorCode: error.code,
                             durationMs: 0
                         });
-                        return handleHardStop(error);
+                        return finalizeHardStop(context, task, error, memory, options?.profile);
                     }
                     throw error;
                 }
@@ -815,251 +343,72 @@ export class Agent {
                     input: outputArgs.toolInput
                 };
 
+                // 2f. If no action needed → run is complete
                 if (parsed.action === 'none') {
-                    await addMemory(`Task: ${task} → ${parsed.thought}`);
-                    logger.info('agent_run_completed', {
-                        component: 'agent',
-                        step,
-                        durationMs: Date.now() - runStartedAt,
-                        finalThoughtLength: parsed.thought.length
-                    });
-                    const citations = citationBuffer.flush();
-                    emit({
-                        type: 'agent:done',
-                        payload: {
-                            runId,
-                            thought: parsed.thought,
-                            citations,
-                            citationsCount: citations.length,
-                            meta: buildRunMeta(citations)
-                        }
-                    });
-                    await Agent.writeDiagnostics(diagnosticEntries, task);
-                    await Agent.persistRun(persistInput(parsed.thought, 'completed'));
-                    return { answer: parsed.thought, meta: buildRunMeta(citations), citations };
+                    return finalizeCompleted(
+                        context,
+                        task,
+                        parsed.thought,
+                        memory,
+                        options?.profile
+                    );
                 }
 
+                // 2g. Find and execute the tool
                 const tool = availableTools.find((entry) => entry.name === parsed.action);
                 if (!tool) {
-                    logger.warn('agent_unknown_tool', {
-                        component: 'agent',
+                    await handleUnknownTool(
+                        context,
+                        parsed,
+                        availableTools,
                         step,
-                        action: parsed.action,
-                        availableTools: availableTools.map((entry) => entry.name)
-                    });
-                    context +=
-                        `\nTool "${parsed.action}" does not exist. ` +
-                        `Available tools: ${availableTools.map((entry) => entry.name).join(', ')}.`;
-                    diagnosticEntries.push({
-                        timestamp: new Date().toISOString(),
-                        step,
-                        severity: 'warn',
-                        category: 'tool',
-                        code: 'E_TOOL_UNKNOWN',
-                        message: `Unknown tool requested: "${parsed.action}".`,
-                        metadata: { availableTools: availableTools.map((entry) => entry.name) }
-                    });
-                    await this.runToolResultProcessors({
                         task,
-                        stepNumber: step,
-                        tool: parsed.action,
-                        input: parsed.input,
-                        success: false,
-                        error: `Unknown tool "${parsed.action}"`,
-                        errorCode: 'E_TOOL_UNKNOWN',
-                        durationMs: 0
-                    });
+                        this.processors
+                    );
                     break;
                 }
 
-                if (toolDeduplicator.isDuplicate(parsed.action, parsed.input)) {
-                    context +=
-                        `\nTool "${parsed.action}" with the same arguments was already called recently. ` +
-                        'Try a different tool or different arguments.';
-                    diagnosticEntries.push({
-                        timestamp: new Date().toISOString(),
-                        step,
-                        severity: 'warn',
-                        category: 'tool',
-                        code: 'E_DUPLICATE_CALL',
-                        message: `Duplicate tool call prevented for "${parsed.action}".`
-                    });
-                    await this.runToolResultProcessors({
-                        task,
-                        stepNumber: step,
-                        tool: parsed.action,
-                        input: parsed.input,
-                        success: false,
-                        error: 'Duplicate tool call',
-                        errorCode: 'E_DUPLICATE_CALL',
-                        durationMs: 0
-                    });
+                // Check for duplicate calls
+                const isDuplicate = await handleDuplicateCheck(
+                    context,
+                    parsed,
+                    step,
+                    task,
+                    this.processors
+                );
+                if (isDuplicate) {
                     toolCallsThisStep += 1;
                     continue;
                 }
 
-                const toolStartedAt = Date.now();
-                const toolResult = await tool
-                    .execute(parsed.input)
-                    .then(async (result) => {
-                        const durationMs = Date.now() - toolStartedAt;
-                        logger.info('agent_tool_executed', {
-                            component: 'agent',
-                            step,
-                            tool: parsed.action,
-                            durationMs
-                        });
-                        toolCalls.push({
-                            tool: parsed.action,
-                            step,
-                            input: parsed.input,
-                            result,
-                            success: true,
-                            durationMs
-                        });
-                        await this.runToolResultProcessors({
-                            task,
-                            stepNumber: step,
-                            tool: parsed.action,
-                            input: parsed.input,
-                            success: true,
-                            result,
-                            durationMs
-                        });
-                        return { success: true as const, result };
-                    })
-                    .catch(async (error: unknown) => {
-                        const durationMs = Date.now() - toolStartedAt;
-                        /* Extract typed error code from structured error types. */
-                        const errorCode =
-                            error instanceof PathSafetyError
-                                ? error.code
-                                : error instanceof PolicyViolationError
-                                  ? error.code
-                                  : undefined;
+                // Execute the tool
+                const outcome = await executeTool(
+                    context,
+                    tool,
+                    parsed,
+                    step,
+                    task,
+                    this.processors,
+                    route.model
+                );
 
-                        /* Build actionable context feedback for path violations. */
-                        if (error instanceof PathSafetyError) {
-                            context +=
-                                `\nTool "${parsed.action}" failed: Path \`${error.attemptedPath}\` ` +
-                                `is outside the project root (\`${error.root}\`). ` +
-                                `I cannot access files outside the project. ` +
-                                `Please only request files within the project directory.`;
-                        } else {
-                            context += `\nTool "${parsed.action}" failed: ${String(error)}`;
-                        }
-
-                        logger.warn('agent_tool_failed', {
-                            component: 'agent',
-                            step,
-                            tool: parsed.action,
-                            errorCode,
-                            error: String(error)
-                        });
-                        emit({
-                            type: 'tool:error',
-                            payload: {
-                                runId,
-                                step,
-                                tool: parsed.action,
-                                error: String(error),
-                                errorCode,
-                                durationMs
-                            }
-                        });
-                        diagnosticEntries.push({
-                            timestamp: new Date().toISOString(),
-                            step,
-                            severity: 'error',
-                            category: 'tool',
-                            code: errorCode,
-                            message: `Tool "${parsed.action}" failed: ${String(error)}`,
-                            metadata: { tool: parsed.action, errorCode }
-                        });
-                        toolCalls.push({
-                            tool: parsed.action,
-                            step,
-                            input: parsed.input,
-                            result: null,
-                            success: false,
-                            error: String(error),
-                            durationMs
-                        });
-                        await this.runToolResultProcessors({
-                            task,
-                            stepNumber: step,
-                            tool: parsed.action,
-                            input: parsed.input,
-                            success: false,
-                            error: String(error),
-                            errorCode,
-                            durationMs
-                        });
-                        return { success: false as const };
-                    });
-                if (!toolResult.success) break;
-
-                Agent.collectCitationsFromToolResult(toolResult.result, citationBuffer);
-                emit({
-                    type: 'tool:result',
-                    payload: {
-                        runId,
-                        step,
-                        tool: parsed.action,
-                        result: toolResult.result,
-                        durationMs: Date.now() - toolStartedAt
-                    }
-                });
-
-                if (tool.directOutput) {
-                    const directAnswer =
-                        typeof toolResult.result === 'string'
-                            ? toolResult.result
-                            : JSON.stringify(toolResult.result);
-                    await addMemory(`Task: ${task} → ${directAnswer}`);
-                    const citations = citationBuffer.flush();
-                    emit({
-                        type: 'agent:done',
-                        payload: {
-                            runId,
-                            thought: directAnswer,
-                            citations,
-                            citationsCount: citations.length,
-                            meta: buildRunMeta(citations)
-                        }
-                    });
-                    await Agent.persistRun(persistInput(directAnswer, 'completed'));
-                    return { answer: directAnswer, meta: buildRunMeta(citations), citations };
+                if (outcome.directAnswer) {
+                    return finalizeDirectOutput(
+                        context,
+                        task,
+                        outcome.directAnswer,
+                        memory,
+                        options?.profile
+                    );
                 }
-
-                const rawResult = toolResult.result as Record<string, unknown> | null | undefined;
-                const imageData =
-                    rawResult &&
-                    typeof rawResult === 'object' &&
-                    typeof rawResult.imageData === 'string'
-                        ? rawResult.imageData
-                        : undefined;
-
-                if (imageData) {
-                    const description = await getVisionDescription(imageData);
-                    if (description) {
-                        context += `\nStep ${step} — image description: ${description}`;
-                    } else {
-                        const sanitized = { ...rawResult, imageData: '[base64 omitted]' };
-                        context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(sanitized)}`;
-                    }
-                    if (isMultimodalModel(route.model)) {
-                        pendingImages.push(imageData);
-                    }
-                } else {
-                    context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(toolResult.result)}`;
-                }
+                if (outcome.shouldBreak) break;
                 toolCallsThisStep += 1;
             }
 
+            // Tool-call budget exhausted for this step
             if (toolCallsThisStep >= effectiveMaxToolCalls) {
-                context += `\nReached AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}) for step ${step}.`;
-                diagnosticEntries.push({
+                context.context += `\nReached AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}) for step ${step}.`;
+                context.diagnosticEntries.push({
                     timestamp: new Date().toISOString(),
                     step,
                     severity: 'warn',
@@ -1072,64 +421,64 @@ export class Agent {
                 component: 'agent',
                 step,
                 durationMs: Date.now() - stepStartedAt,
-                contextLength: context.length
+                contextLength: context.context.length
             });
         }
 
-        /* Loop exhausted without the model returning action "none". */
-        logger.warn('agent_max_steps_reached', {
-            component: 'agent',
-            durationMs: Date.now() - runStartedAt,
-            task
-        });
-
-        /* Self-debugging summary using the fast model (skipped in low-spec mode). */
-        const summary = modeConfig.selfDebugEnabled
-            ? await generate(
-                  `You are a debugging assistant.\n` +
-                      `The agent loop exhausted its steps without completing the task.\n\n` +
-                      `Task:\n${task}\n\n` +
-                      `Context (what happened):\n${context}\n\n` +
-                      `Summarise concisely:\n` +
-                      `1. What was tried.\n` +
-                      `2. Where it got stuck.\n` +
-                      `3. Suggestions for what to try next.`,
-                  { model: resolveModel('fast'), stream: false }
-              )
-                  .then(
-                      (result) => result.trim() || 'Max steps reached without a conclusive answer.'
-                  )
-                  .catch((error: unknown) => {
-                      logger.warn('agent_self_debug_failed', {
-                          component: 'agent',
-                          error: String(error)
-                      });
-                      return 'Max steps reached without a conclusive answer.';
-                  })
-            : 'Max steps reached without a conclusive answer.';
-
-        await addMemory(`Task: ${task} → [MAX_STEPS] ${summary}`).catch((error: unknown) =>
-            logger.warn('agent_memory_add_failed', {
-                component: 'agent',
-                error: String(error)
-            })
+        // ── Step 3: Loop exhausted → finalize with self-debug ──────────────
+        return finalizeMaxSteps(
+            context,
+            task,
+            memory,
+            modeConfig.selfDebugEnabled,
+            options?.profile
         );
+    }
 
-        const diagnosticFile = await Agent.writeDiagnostics(diagnosticEntries, task, summary);
-        await Agent.persistRun(persistInput(summary, 'max_steps'));
-        const citations = citationBuffer.flush();
+    /* ── Direct-answer shortcut ──────────────────────────────────────────── */
 
-        emit({
-            type: 'agent:max_steps',
-            payload: {
-                runId,
-                task,
-                summary,
-                diagnosticFile,
-                meta: buildRunMeta(citations),
-                citationsCount: citations.length
-            }
+    /**
+     * Handle the special case: step 0, no context, no tools available.
+     * Just ask the LLM directly without tool scaffolding.
+     */
+    private async handleDirectAnswer(
+        context: RunContext,
+        inputArgs: IProcessInputStepArgs,
+        route: {
+            model: string;
+            profile: ModelProfile;
+            reason: string;
+            options?: Record<string, unknown>;
+        },
+        memory: string[],
+        task: string,
+        step: number,
+        forcedProfile?: ModelProfile
+    ): Promise<IAgentRunResult | null> {
+        const memoryBlock =
+            inputArgs.memory.length > 0
+                ? `Relevant context:\n${inputArgs.memory.join('\n')}\n\n`
+                : '';
+        const directPrompt = `${memoryBlock}Task:\n${inputArgs.task}\n\nAnswer concisely and directly.`;
+
+        logger.info('agent_direct_answer', {
+            component: 'agent',
+            step,
+            reason: route.reason
         });
-        return { answer: summary, meta: buildRunMeta(citations), citations };
+
+        const directResult = await generateWithMetadata(directPrompt, {
+            model: route.model,
+            images: context.pendingImages.length > 0 ? context.pendingImages : undefined,
+            options: route.options
+        }).catch((error: unknown) => handleLlmError(error, step, context.runId));
+        context.pendingImages = [];
+
+        context.llmSteps += 1;
+        context.modelsUsed.add(directResult.model ?? route.model);
+        accumulateTokens(context.tokens, directResult);
+
+        const answer = directResult.response.trim();
+        return finalizeCompleted(context, task, answer, memory, forcedProfile);
     }
 }
