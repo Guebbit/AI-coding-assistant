@@ -45,14 +45,10 @@ tags:
           Multi-library PDF ingestion and semantic search.
           Each library is an independent collection of PDFs (e.g. a magazine back-issue archive).
           Articles are indexed by LLM-generated summaries and embeddings for instant semantic retrieval.
-    - name: logs
+    - name: history
       description: |
-          Read-only access to the structured error log written by Winston.
-          Useful for inspecting recent errors without tailing log files manually.
-    - name: events
-      description: |
-          Live Server-Sent Events stream of all internal bus events.
-          Provides a unified firehose for monitoring dashboards and dev tools.
+          Persistent MongoDB-backed activity history.
+          Supports incremental fetch, export/download, clear/reset, and optional long-poll sync.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PATHS
@@ -1439,63 +1435,51 @@ paths:
                 '503':
                     $ref: '#/components/responses/ServiceUnavailable'
 
-    # ── Logs ──────────────────────────────────────────────────────────────────
+    # ── History ────────────────────────────────────────────────────────────────
 
-    /logs/errors:
+    /history:
         get:
-            tags: [logs]
-            summary: List recent error-level log entries
+            tags: [history]
+            summary: Incrementally list persistent activity history
             description: |
-                Returns JSON-line entries from `LOG_ERROR_FILE` (default `error.log`) in
-                reverse-chronological order.  Entries are the raw Winston structured log
-                objects; non-parseable lines are silently skipped.
-
-                Also includes a short list of recent per-run diagnostic Markdown file
-                names from `DIAGNOSTIC_LOG_DIR` for cross-reference.
-            operationId: getLogsErrors
+                Cursor-based incremental history fetch over the append-only MongoDB `activity_log`.
+                Returns entries sorted by `_id` ascending for straightforward frontend synchronization.
+            operationId: getHistory
             parameters:
+                - name: since
+                  in: query
+                  required: false
+                  description: Mongo ObjectId cursor. Returns records with `_id` greater than this cursor.
+                  schema:
+                      type: string
+                      example: 66527a31a75749a4866be446
                 - name: limit
                   in: query
                   required: false
-                  description: Maximum number of entries to return (default 100, max 500).
+                  description: Maximum number of records to return (default 100, max 500).
                   schema:
                       type: integer
                       minimum: 1
                       maximum: 500
                       default: 100
-                      example: 50
-                - name: component
+                - name: runId
                   in: query
                   required: false
-                  description: Filter entries by the `component` field.
                   schema:
                       type: string
-                      example: api.run.endpoints
                 - name: requestId
                   in: query
                   required: false
-                  description: Filter entries by the `requestId` field.
                   schema:
                       type: string
-                      example: cc5ee276-2849-470e-9802-5a00f94b7013
-                - name: code
+                - name: conversationId
                   in: query
                   required: false
-                  description: 'Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`).'
                   schema:
                       type: string
-                      example: E_CONSECUTIVE_ERRORS
-                - name: since
-                  in: query
-                  required: false
-                  description: Return only entries with a `timestamp` after this ISO 8601 value.
-                  schema:
-                      type: string
-                      format: date-time
-                      example: '2026-05-23T15:00:00.000Z'
             responses:
                 '200':
-                    description: Log entries returned successfully
+                    description: History page returned successfully.
                     content:
                         application/json:
                             schema:
@@ -1504,78 +1488,132 @@ paths:
                                     - type: object
                                       properties:
                                           data:
-                                              $ref: '#/components/schemas/LogsErrorsResponse'
+                                              $ref: '#/components/schemas/ActivityLogListResponse'
                 '400':
                     $ref: '#/components/responses/BadRequest'
-                '500':
-                    $ref: '#/components/responses/InternalError'
-
-    # ── Events ─────────────────────────────────────────────────────────────────
-
-    /events/stream:
-        get:
-            tags: [events]
-            summary: Live normalized SSE observability stream
+                '503':
+                    $ref: '#/components/responses/ServiceUnavailable'
+        delete:
+            tags: [history]
+            summary: Clear all history (or a scoped subset)
             description: |
-                Opens a persistent Server-Sent Events connection that forwards
-                normalized public events derived from the Manna in-process event bus.
-
-                Designed for monitoring dashboards, developer tools, and external
-                UIs that want a unified live feed of what Manna is doing.
-
-                **Public SSE event types** (stable contract):
-                - `stream.connected`
-                - `stream.heartbeat`
-                - `run.started`
-                - `run.step`
-                - `run.model_routed`
-                - `run.completed`
-                - `run.failed`
-                - `run.max_steps`
-                - `run.hard_stop`
-                - `tool.succeeded`
-                - `tool.failed`
-                - `tool.verification_failed`
-                - `swarm.started`
-                - `swarm.decomposed`
-                - `swarm.subtask_started`
-                - `swarm.subtask_completed`
-                - `swarm.subtask_failed`
-                - `swarm.completed`
-                - `system.event` (fallback for unknown internal event types)
-
-                **Envelope shape (all events):**
-                - `timestamp` (ISO date-time)
-                - `requestId?` (stream request correlation id)
-                - `runId?` (agent run correlation id when available)
-                - `category` (`stream | run | tool | swarm | system`)
-                - `type` (public subtype, e.g. `step`, `completed`, `failed`)
-                - `data` (normalized event payload)
-                - `metrics?` (timing, tokens, context, step/tool counters, citations)
-
-                The connection stays open indefinitely until the client disconnects.
-            operationId: getEventsStream
+                Deletes all activity-log records, or only records matching optional query filters
+                such as `runId`, `requestId`, or `conversationId`.
+            operationId: deleteHistory
+            parameters:
+                - name: runId
+                  in: query
+                  required: false
+                  schema:
+                      type: string
+                - name: requestId
+                  in: query
+                  required: false
+                  schema:
+                      type: string
+                - name: conversationId
+                  in: query
+                  required: false
+                  schema:
+                      type: string
             responses:
                 '200':
-                    description: SSE stream opened — events arrive continuously.
+                    description: History clear operation completed.
                     content:
-                        text/event-stream:
+                        application/json:
                             schema:
-                                type: string
-                                description: |
-                                    Each SSE frame has the format:
-                                    ```
-                                    event: <type>
-                                    data: <json payload>
-                                    ```
-                                    Example:
-                                    ```
-                                    event: stream.connected
-                                    data: {"timestamp":"2026-05-24T12:00:00.000Z","requestId":"req_abc","category":"stream","type":"connected","data":{"message":"Event stream active"}}
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ActivityLogDeleteResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '503':
+                    $ref: '#/components/responses/ServiceUnavailable'
 
-                                    event: run.step
-                                    data: {"timestamp":"2026-05-24T12:00:01.000Z","requestId":"req_abc","runId":"run_123","category":"run","type":"step","data":{"step":0,"action":"read_file","thought":"Reading the file..."},"metrics":{"step":0,"stepDurationMs":42,"contextLength":1024}}
-                                    ```
+    /history/export:
+        get:
+            tags: [history]
+            summary: Export persistent activity history
+            description: |
+                Returns a download-friendly JSON envelope containing exported history records.
+                Supports optional cursor filtering with `since`.
+            operationId: getHistoryExport
+            parameters:
+                - name: since
+                  in: query
+                  required: false
+                  description: Optional Mongo ObjectId cursor.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: History export returned successfully.
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ActivityLogExportResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '503':
+                    $ref: '#/components/responses/ServiceUnavailable'
+
+    /history/poll:
+        get:
+            tags: [history]
+            summary: Optional long-poll incremental history endpoint
+            description: |
+                Performs immediate Mongo query for new records after `since`.
+                If empty, loops with sleep/retry until timeout.
+                Enabled only when `HISTORY_LONG_POLL_ENABLED=true`.
+            operationId: getHistoryPoll
+            parameters:
+                - name: since
+                  in: query
+                  required: false
+                  schema:
+                      type: string
+                - name: limit
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 500
+                      default: 100
+                - name: timeoutMs
+                  in: query
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      maximum: 120000
+                      default: 30000
+            responses:
+                '200':
+                    description: Poll response returned (with records or timeout indicator).
+                    content:
+                        application/json:
+                            schema:
+                                allOf:
+                                    - $ref: '#/components/schemas/SuccessEnvelope'
+                                    - type: object
+                                      properties:
+                                          data:
+                                              $ref: '#/components/schemas/ActivityLogPollResponse'
+                '400':
+                    $ref: '#/components/responses/BadRequest'
+                '404':
+                    $ref: '#/components/responses/NotFound'
+                '503':
+                    $ref: '#/components/responses/ServiceUnavailable'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # COMPONENTS
@@ -1914,75 +1952,104 @@ components:
                     description: Human-readable error message.
                     example: "Library 'scientific-american' not found"
 
-        # ── Logs schemas ──────────────────────────────────────────────────────
+        # ── History schemas ───────────────────────────────────────────────────
 
-        LogEntry:
+        ActivityLogEntry:
             type: object
-            description: |
-                A single parsed Winston JSON log line from the error log file.
-                Fields beyond the documented ones may be present depending on the
-                logging context (e.g. `tool`, `step`, `taskLength`).
+            required: [id, timestamp, kind, category, type, data]
             properties:
+                id:
+                    type: string
+                    description: Mongo ObjectId string.
+                    example: 66527a31a75749a4866be446
                 timestamp:
                     type: string
                     format: date-time
-                    description: ISO 8601 timestamp set by Winston.
-                level:
+                kind:
                     type: string
-                    description: Log severity (always `"error"` in this endpoint).
-                    example: error
-                message:
+                    description: Full internal event kind (e.g. `agent:step`, `workflow:done`).
+                category:
                     type: string
-                    description: Human-readable log message.
-                    example: run_request_failed
-                component:
+                type:
                     type: string
-                    description: Subsystem that emitted the log line.
-                    example: api.run.endpoints
+                conversationId:
+                    type: string
+                messageId:
+                    type: string
                 requestId:
                     type: string
-                    description: Request correlation ID when available.
-                    example: cc5ee276-2849-470e-9802-5a00f94b7013
-                code:
+                runId:
                     type: string
-                    description: Typed error code when the entry records a classified failure.
-                    example: E_CONSECUTIVE_ERRORS
-                service:
+                workflowId:
                     type: string
-                    description: Service name set in Winston defaultMeta.
-                    example: manna
+                subtaskId:
+                    type: string
+                parentId:
+                    type: string
+                profile:
+                    type: string
+                toolName:
+                    type: string
+                status:
+                    type: string
+                data:
+                    type: object
+                    additionalProperties: true
+                meta:
+                    type: object
+                    additionalProperties: true
 
-        LogsErrorsResponse:
+        ActivityLogListResponse:
             type: object
-            required: [entries, total, logFile, diagnostics]
+            required: [entries, count, hasMore]
             properties:
                 entries:
                     type: array
-                    description: Filtered error log entries, newest first.
                     items:
-                        $ref: '#/components/schemas/LogEntry'
-                total:
+                        $ref: '#/components/schemas/ActivityLogEntry'
+                count:
                     type: integer
-                    description: Total number of entries that matched the applied filters.
-                    example: 7
-                logFile:
+                nextCursor:
                     type: string
-                    description: Path of the error log file that was read.
-                    example: error.log
-                diagnostics:
-                    type: object
-                    required: [recentFiles]
-                    properties:
-                        recentFiles:
-                            type: array
-                            description: |
-                                Basenames of the most recent per-run diagnostic Markdown
-                                files from `DIAGNOSTIC_LOG_DIR` (up to 10, newest first).
-                                Empty when no diagnostic files exist.
-                            items:
-                                type: string
-                            example:
-                                - '2026-05-23T15-06-11-310Z_read-me-the-index.md'
+                    nullable: true
+                hasMore:
+                    type: boolean
+
+        ActivityLogExportResponse:
+            type: object
+            required: [exportedAt, count, entries]
+            properties:
+                exportedAt:
+                    type: string
+                    format: date-time
+                count:
+                    type: integer
+                entries:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ActivityLogEntry'
+
+        ActivityLogPollResponse:
+            allOf:
+                - $ref: '#/components/schemas/ActivityLogListResponse'
+                - type: object
+                  required: [timedOut, pollDurationMs, pollTimeoutMs]
+                  properties:
+                      timedOut:
+                          type: boolean
+                      pollDurationMs:
+                          type: number
+                      pollTimeoutMs:
+                          type: number
+
+        ActivityLogDeleteResponse:
+            type: object
+            required: [deletedCount, scoped]
+            properties:
+                deletedCount:
+                    type: integer
+                scoped:
+                    type: boolean
 
         ResponseMeta:
             type: object

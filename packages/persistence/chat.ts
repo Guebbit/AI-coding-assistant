@@ -11,6 +11,7 @@
  */
 
 import { logger } from '../logger/logger';
+import { emit } from '../events/bus';
 import { withClient } from './pool';
 import type {
     IConversation,
@@ -69,6 +70,10 @@ export async function createConversation(
         logger.info('persistence_conversation_created', {
             component: 'persistence.db',
             id: row.id
+        });
+        emit({
+            type: 'chat:conversation_created',
+            payload: { conversationId: row.id, title: row.title, profile: row.profile }
         });
         return row;
     });
@@ -132,6 +137,16 @@ export async function updateConversation(
              RETURNING ${CONVERSATION_COLS}`,
             parameters
         );
+        if (rows[0]) {
+            emit({
+                type: 'chat:conversation_updated',
+                payload: {
+                    conversationId: rows[0].id,
+                    title: rows[0].title,
+                    profile: rows[0].profile
+                }
+            });
+        }
         return rows[0] ?? undefined;
     });
 }
@@ -143,6 +158,9 @@ export async function updateConversation(
 export async function deleteConversation(id: string): Promise<boolean | null> {
     return withClient(async (client) => {
         const { rowCount } = await client.query('DELETE FROM conversations WHERE id = $1', [id]);
+        if ((rowCount ?? 0) > 0) {
+            emit({ type: 'chat:conversation_deleted', payload: { conversationId: id } });
+        }
         return (rowCount ?? 0) > 0;
     });
 }
@@ -182,6 +200,14 @@ export async function createMessage(
             conversationId,
             id: rows[0].id
         });
+        emit({
+            type: 'chat:message_created',
+            payload: {
+                conversationId,
+                messageId: rows[0].id,
+                role: rows[0].role
+            }
+        });
         return rows[0];
     });
 }
@@ -207,6 +233,14 @@ export async function updateMessage(
         await client.query('UPDATE conversations SET updated_at = NOW() WHERE id = $1', [
             conversationId
         ]);
+        emit({
+            type: 'chat:message_updated',
+            payload: {
+                conversationId,
+                messageId: rows[0].id,
+                role: rows[0].role
+            }
+        });
         return rows[0];
     });
 }
@@ -224,6 +258,12 @@ export async function deleteMessage(
             'DELETE FROM chat_messages WHERE id = $1 AND conversation_id = $2',
             [messageId, conversationId]
         );
+        if ((rowCount ?? 0) > 0) {
+            emit({
+                type: 'chat:message_deleted',
+                payload: { conversationId, messageId }
+            });
+        }
         return (rowCount ?? 0) > 0;
     });
 }

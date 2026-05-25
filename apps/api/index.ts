@@ -12,8 +12,10 @@
  * - `GET  /info/modes`             — list Manna agent routing profiles.
  * - `GET  /info/models`            — list models available in Ollama.
  * - `GET  /help`                   — structured overview of all API endpoints.
- * - `GET  /logs/errors`            — recent error-level log entries.
- * - `GET  /events/stream`          — live SSE stream of all internal events.
+ * - `GET  /history`                — persistent activity-log incremental history.
+ * - `GET  /history/export`         — export activity history for frontend sync.
+ * - `GET  /history/poll`           — optional long-poll incremental history.
+ * - `DELETE /history`              — clear activity history.
  *
  * IDE-specific routes (`/autocomplete`, `/lint-conventions`,
  * `/page-review`) are registered from `ide-endpoints.ts`.
@@ -50,16 +52,23 @@ import { registerChatRoutes } from "./chat-endpoints";
 import { registerLibraryRoutes } from "./library-endpoints";
 import { initializeAgents } from "./agents";
 import { registerRunRoutes } from "./run-endpoints";
-import { registerLogsRoutes } from "./logs-endpoints";
-import { registerEventsRoutes } from "./events-endpoints";
+import { registerHistoryRoutes } from "./history-endpoints";
 import { runMigrations } from "@/packages/persistence/migrate";
 import { rateLimiter, requestIdMiddleware } from "./middlewares/security";
 import type { HealthResponse } from "@/api";
 import enTranslation from "@/packages/shared/locales/en.json";
+import { recordBusActivityEvent } from "./activity-log-recorder";
 
 /* ── Observability: log every agent/tool event to stdout ─────────────── */
 on("*", (event) => {
   logger.info("event_emitted", { component: "api.events", eventType: event.type, payload: event.payload });
+  recordBusActivityEvent(event).catch((error: unknown) => {
+    logger.warn("activity_log_event_record_failed", {
+      component: "api.events",
+      eventType: event.type,
+      error: String(error),
+    });
+  });
 });
 
 /* ── HTTP server ─────────────────────────────────────────────────────── */
@@ -97,11 +106,8 @@ registerLibraryRoutes(app);
 /* Register run endpoint (POST /run). */
 registerRunRoutes(app);
 
-/* Register logs endpoint (GET /logs/errors). */
-registerLogsRoutes(app);
-
-/* Register live events SSE stream (GET /events/stream). */
-registerEventsRoutes(app);
+/* Register history endpoints (/history, /history/export, /history/poll). */
+registerHistoryRoutes(app);
 
 /**
  * GET /health — simple liveness check.

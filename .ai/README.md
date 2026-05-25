@@ -46,8 +46,7 @@ Capabilities:
 - **Knowledge**: Qdrant vector memory + Neo4j knowledge graph (GraphRAG).
 - **Library**: multi-library PDF ingestion + semantic article search (`/library/...`).
 - **Instance metadata**: `/info/modes`, `/info/models`, `/help`, `/health`.
-- **Error logs**: `/logs/errors` — read-only access to structured Winston error entries.
-- **Live events**: `/events/stream` — SSE observability stream with a stable public envelope (`timestamp`, `requestId?`, `runId?`, `category`, `type`, `data`, `metrics?`).
+- **Persistent history**: `/history`, `/history/export`, `/history/poll` — MongoDB-backed append-only `activity_log` for incremental sync, export/download, and optional long-poll.
 - **MCP integration**: external Model Context Protocol servers loaded at startup.
 
 The REST contract is owned by **[`openapi.yaml`](../openapi.yaml)** (Spectral-linted).
@@ -61,7 +60,7 @@ The REST contract is owned by **[`openapi.yaml`](../openapi.yaml)** (Spectral-li
 - **Embeddings** via Ollama (`packages/llm/embeddings.ts`).
 - **LangChain Core** message types + **LangGraph** `StateGraph` (swarm).
 - **Qdrant** (vector memory), **Neo4j** (knowledge graph), **PostgreSQL** (primary persistence).
-- **MySQL** and **MongoDB** are supported only as _tool targets_ (the agent can query them).
+- **MySQL** is supported as a tool target; **MongoDB** is used by the persistent `activity_log` history store and can also be queried by tools.
 - **Zod** + `zod-to-json-schema` for every LLM-facing schema, tool input, MCP config, API payload.
 - **Winston** structured logging (`packages/logger/logger.ts`), **i18next** for user-facing strings.
 - **MCP SDK** (stdio + SSE servers).
@@ -300,7 +299,7 @@ RAG sits on top via `semantic_search`, `document_ingest` (chunked through
 - **Fail-open infrastructure** — every external dep (Qdrant, Postgres, Neo4j, MCP, non-critical Ollama) logs a warning and degrades gracefully.
 - **Single response envelope** — `successResponse` / `rejectResponse` always return the same JSON shape with `meta` enrichment (`startedAt`, `durationMs`, `requestId`).
 - **Zod-validated boundaries** — LLM outputs, tool inputs, MCP configs, API payloads.
-- **Event-driven observability** — in-process event bus (`packages/events/bus.ts`) emits `agent:start | step | done | error | max_steps | hard_stop | model_routed | tool:result | tool:error | tool:verification_failed`. `GET /events/stream` normalizes these into stable public SSE event names + envelope fields.
+- **Event-driven observability + durable history** — in-process event bus (`packages/events/bus.ts`) emits `agent:start | step | done | error | max_steps | hard_stop | model_routed | tool:result | tool:error | tool:verification_failed` plus swarm/workflow/chat events; these are normalized and persisted to MongoDB `activity_log`, exposed through `/history*`.
 - **SSE streaming bridge** — `apps/api/sse-event-bridge.ts` + `shared/sse.ts` translate bus events into typed SSE events (including `hard_stop`).
 - **Per-run diagnostics** — Markdown trace per run in `packages/diagnostics`, with cleanup of old logs.
 - **Operating modes** — `AGENT_OPERATING_MODE = low-spec | standard | high-trust` (default `standard`) resolves `{ maxSteps, maxToolCalls, consecutiveErrorLimit, selfDebugEnabled }`; individual env vars override any field.
@@ -342,7 +341,8 @@ flowchart LR
     Agent --> Bus[(Event bus)]
     Agent --> Persistence[(PostgreSQL)]
     Bus --> Logger[Winston]
-    Bus --> SSE[SSE bridge → client]
+    Bus --> ActivityLog[(Mongo activity_log)]
+    ActivityLog --> HistoryAPI[/history*]
 ```
 
 ---

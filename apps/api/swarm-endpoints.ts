@@ -30,6 +30,7 @@ import type { ModelProfile } from "@/packages/agent/model-router";
 import type { ISwarmConfig } from "@/packages/swarm/types";
 import type { SwarmRequest, SwarmResponse } from "@/api";
 import { writeSwarmEventToSse } from "./sse-event-bridge";
+import { recordApiActivity } from "./activity-log-recorder";
 
 /** Discriminated-union return types for {@link parseSwarmBody}. */
 type SwarmBodyOk = { ok: true; task: string; config: ISwarmConfig };
@@ -109,6 +110,16 @@ export function registerSwarmRoutes(app: Express): void {
       profile: config.profileOverride ?? null,
       requestId: req.requestId,
     });
+    recordApiActivity({
+      kind: "api:swarm_requested",
+      requestId: req.requestId,
+      profile: config.profileOverride,
+      data: {
+        task,
+        maxSubtasks: config.maxSubtasks,
+        allowWrite: config.allowWrite,
+      },
+    }).catch(() => undefined);
 
     const orchestrator = createSwarmOrchestrator(config.allowWrite ?? false);
     orchestrator
@@ -139,6 +150,17 @@ export function registerSwarmRoutes(app: Express): void {
           },
           totalDurationMs: result.totalDurationMs,
         };
+        recordApiActivity({
+          kind: "api:swarm_completed",
+          requestId: req.requestId,
+          status: "completed",
+          profile: config.profileOverride,
+          data: {
+            totalDurationMs: result.totalDurationMs,
+            subtaskCount: result.subtaskResults.length,
+          },
+          meta: result.meta as unknown as Record<string, unknown>,
+        }).catch(() => undefined);
 
         successResponse(res, response, 200, "", {
           ...result.meta,
@@ -155,6 +177,13 @@ export function registerSwarmRoutes(app: Express): void {
           requestId: req.requestId
         });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(reason)]);
+        recordApiActivity({
+          kind: "api:swarm_failed",
+          requestId: req.requestId,
+          status: "failed",
+          profile: config.profileOverride,
+          data: { error: String(reason) },
+        }).catch(() => undefined);
       });
   });
 
@@ -209,6 +238,16 @@ export function registerSwarmRoutes(app: Express): void {
       allowWrite: config.allowWrite,
       profile: config.profileOverride ?? null,
     });
+    recordApiActivity({
+      kind: "api:swarm_stream_started",
+      requestId: req.requestId,
+      profile: config.profileOverride,
+      data: {
+        task,
+        maxSubtasks: config.maxSubtasks,
+        allowWrite: config.allowWrite,
+      },
+    }).catch(() => undefined);
 
     const orchestrator = createSwarmOrchestrator(config.allowWrite ?? false);
 
@@ -228,10 +267,28 @@ export function registerSwarmRoutes(app: Express): void {
           },
         });
         logger.info("swarm_stream_completed", { component: "api.swarm.endpoints", taskLength: task.length });
+        recordApiActivity({
+          kind: "api:swarm_stream_completed",
+          requestId: req.requestId,
+          status: "completed",
+          profile: config.profileOverride,
+          data: {
+            totalDurationMs: result.totalDurationMs,
+            subtaskCount: result.subtaskResults.length,
+          },
+          meta: result.meta as unknown as Record<string, unknown>,
+        }).catch(() => undefined);
       })
       .catch((error: unknown) => {
         writeEvent("error", { error: String(error) });
         logger.error("swarm_stream_failed", { component: "api.swarm.endpoints", error: String(error) });
+        recordApiActivity({
+          kind: "api:swarm_stream_failed",
+          requestId: req.requestId,
+          status: "failed",
+          profile: config.profileOverride,
+          data: { error: String(error) },
+        }).catch(() => undefined);
       })
       .finally(() => {
         off("*", handler);

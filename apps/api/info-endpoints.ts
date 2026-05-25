@@ -256,26 +256,43 @@ const HELP_CATALOGUE: IHelpEndpoint[] = [
     params: [],
   },
 
-  /* ── Logs ────────────────────────────────────────────────────────────── */
+  /* ── History ─────────────────────────────────────────────────────────── */
   {
     method: "GET",
-    path: "/logs/errors",
-    summary: "Return recent error-level log entries from LOG_ERROR_FILE in the standard response envelope.",
+    path: "/history",
+    summary: "List persistent activity-log entries with incremental cursor-based fetch.",
     params: [
+      { name: "since", type: "string", required: false, description: "Mongo ObjectId cursor for incremental fetch." },
       { name: "limit", type: "number", required: false, description: "Max entries to return (default 100, max 500)." },
-      { name: "component", type: "string", required: false, description: "Filter by log component field." },
-      { name: "requestId", type: "string", required: false, description: "Filter by requestId field." },
-      { name: "code", type: "string", required: false, description: "Filter by error code field (e.g. E_CONSECUTIVE_ERRORS)." },
-      { name: "since", type: "ISO 8601 string", required: false, description: "Return only entries after this timestamp." },
+      { name: "runId", type: "string", required: false, description: "Filter by run identifier." },
+      { name: "requestId", type: "string", required: false, description: "Filter by request correlation ID." },
     ],
   },
-
-  /* ── Events ─────────────────────────────────────────────────────────── */
   {
     method: "GET",
-    path: "/events/stream",
-    summary: "Live SSE stream of all internal events (agent, tool, swarm, system). For dashboards and monitoring UIs.",
-    params: [],
+    path: "/history/export",
+    summary: "Export activity-log history in one download-friendly response.",
+    params: [{ name: "since", type: "string", required: false, description: "Optional Mongo ObjectId cursor." }],
+  },
+  {
+    method: "GET",
+    path: "/history/poll",
+    summary: "Optional long-poll incremental history endpoint (config-gated).",
+    params: [
+      { name: "since", type: "string", required: false, description: "Mongo ObjectId cursor for incremental polling." },
+      { name: "limit", type: "number", required: false, description: "Max entries to return (default 100, max 500)." },
+      { name: "timeoutMs", type: "number", required: false, description: "Long-poll timeout override in milliseconds." },
+    ],
+  },
+  {
+    method: "DELETE",
+    path: "/history",
+    summary: "Clear all activity history (or scoped history when filters are provided).",
+    params: [
+      { name: "runId", type: "string", required: false, description: "Optional scoped clear by run ID." },
+      { name: "requestId", type: "string", required: false, description: "Optional scoped clear by request ID." },
+      { name: "conversationId", type: "string", required: false, description: "Optional scoped clear by conversation ID." },
+    ],
   },
 ];
 

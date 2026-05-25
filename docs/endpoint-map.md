@@ -71,9 +71,10 @@ Manna API  (default port :3001)
 ├── POST /library/:libraryId/search                       — Library: semantic article search
 ├── GET  /library/:libraryId/export                       — Library: export article metadata as JSON
 │
-├── GET  /logs/errors                — Logs: recent error-level log entries (no LLM)
-│
-├── GET  /events/stream              — Events: live SSE stream of ALL internal events (no LLM)
+├── GET    /history                  — History: incremental activity-log fetch
+├── GET    /history/export           — History: full export/download of activity-log
+├── GET    /history/poll             — History: optional long-poll incremental fetch
+├── DELETE /history                  — History: clear/reset all (or scoped) activity-log entries
 │
 ├── GET  /info/modes                 — Info: list agent routing profiles (modes)
 ├── GET  /info/models                — Info: list models available in Ollama
@@ -910,149 +911,49 @@ Benefits:
 
 ---
 
-## Logs endpoints
+## History endpoints
 
-Read-only access to the structured error log. No LLM calls.
+Persistent MongoDB-backed activity history. No SSE required for dashboard sync.
 
-File: `apps/api/logs-endpoints.ts`
-Registered via `registerLogsRoutes(app)` in `apps/api/index.ts`.
+File: `apps/api/history-endpoints.ts`  
+Registered via `registerHistoryRoutes(app)` in `apps/api/index.ts`.
 
-### `GET /logs/errors`
+### `GET /history`
 
-Returns recent error-level log entries from `LOG_ERROR_FILE` (default `error.log`) in reverse-chronological order. Each line in the log file is expected to be a Winston JSON object; non-parseable lines are silently skipped.
+Incremental cursor-based fetch from the append-only `activity_log` collection.
 
-Also includes a short list of recent per-run diagnostic Markdown file names from `DIAGNOSTIC_LOG_DIR` for cross-reference.
+| Param     | Type    | Default | Description                                                |
+| --------- | ------- | ------- | ---------------------------------------------------------- |
+| since     | string  | —       | Mongo ObjectId cursor (returns entries with `_id` > since) |
+| limit     | integer | 100     | Max entries to return (max 500)                            |
+| runId     | string  | —       | Optional filter by run ID                                  |
+| requestId | string  | —       | Optional filter by request ID                              |
 
-**Query parameters**
+### `GET /history/export`
 
-| Param       | Type     | Default | Description                                                      |
-| ----------- | -------- | ------- | ---------------------------------------------------------------- |
-| `limit`     | integer  | `100`   | Max entries to return (max 500)                                  |
-| `component` | string   | —       | Filter entries by the `component` field                          |
-| `requestId` | string   | —       | Filter entries by the `requestId` field                          |
-| `code`      | string   | —       | Filter entries by the `code` field (e.g. `E_CONSECUTIVE_ERRORS`) |
-| `since`     | ISO 8601 | —       | Return only entries with a `timestamp` after this value          |
+Download-friendly full export response (`entries[]` + `exportedAt` + `count`).
 
-**Response** `200 OK`
+### `GET /history/poll`
 
-```json
-{
-    "success": true,
-    "status": 200,
-    "message": "",
-    "data": {
-        "entries": [
-            {
-                "timestamp": "2026-05-23T15:30:00.000Z",
-                "level": "error",
-                "message": "run_request_failed",
-                "component": "api.run.endpoints",
-                "requestId": "cc5ee276-2849-470e-9802-5a00f94b7013",
-                "code": "E_CONSECUTIVE_ERRORS"
-            }
-        ],
-        "total": 1,
-        "logFile": "error.log",
-        "diagnostics": {
-            "recentFiles": ["2026-05-23T15-30-run-abc123.md"]
-        }
-    },
-    "meta": {
-        "startedAt": "2026-05-23T15:31:00.000Z",
-        "durationMs": 12
-    }
-}
-```
+Optional long-poll incremental fetch (config-gated via `HISTORY_LONG_POLL_ENABLED=true`):
 
-**Error responses**
+1. query Mongo immediately
+2. if empty, sleep/retry loop
+3. return entries when available or `timedOut: true` on timeout
 
-| Status | When                                      |
-| ------ | ----------------------------------------- |
-| `400`  | `since` is not a valid ISO 8601 timestamp |
-| `500`  | Unexpected error reading the log file     |
+### `DELETE /history`
+
+Clear all history quickly (or scoped clear when filters are provided).
 
 **Environment variables**
 
-| Variable             | Default            | Purpose                                         |
-| -------------------- | ------------------ | ----------------------------------------------- |
-| `LOG_ERROR_FILE`     | `error.log`        | Path to the Winston error-only log file         |
-| `DIAGNOSTIC_LOG_DIR` | `data/diagnostics` | Directory for per-run diagnostic Markdown files |
-
-**curl example**
-
-```bash
-curl "http://localhost:3001/logs/errors?limit=50&component=api.run.endpoints"
-```
-
----
-
-## Events endpoint
-
-Live SSE observability stream. No LLM calls. Designed for monitoring dashboards and dev tools.
-
-File: `apps/api/events-endpoints.ts`
-Registered via `registerEventsRoutes(app)` in `apps/api/index.ts`.
-
-### `GET /events/stream`
-
-Opens a persistent Server-Sent Events connection that broadcasts normalized public events in real time. The stream stays open until the client disconnects.
-
-**SSE event types** (stable/public):
-
-| SSE event type             | Meaning                              |
-| -------------------------- | ------------------------------------ |
-| `stream.connected`         | Initial stream handshake             |
-| `stream.heartbeat`         | Keep-alive pulse (~30s)              |
-| `run.started`              | Agent run started                    |
-| `run.step`                 | Agent completed a reasoning step     |
-| `run.model_routed`         | Model/profile routing decision       |
-| `run.completed`            | Agent run finished                   |
-| `run.failed`               | Agent run failed                     |
-| `run.max_steps`            | Agent reached max steps              |
-| `run.hard_stop`            | Policy hard stop                     |
-| `tool.succeeded`           | Tool call succeeded                  |
-| `tool.failed`              | Tool call failed                     |
-| `tool.verification_failed` | Tool verification processor rejected |
-| `swarm.started`            | Swarm run started                    |
-| `swarm.decomposed`         | Swarm decomposition ready            |
-| `swarm.subtask_started`    | Swarm subtask started                |
-| `swarm.subtask_completed`  | Swarm subtask completed              |
-| `swarm.subtask_failed`     | Swarm subtask failed                 |
-| `swarm.completed`          | Swarm run finished                   |
-| `system.event`             | Fallback for unknown internal events |
-
-**Envelope shape** (all event data payloads):
-
-```json
-{
-    "timestamp": "2026-05-24T12:00:00.000Z",
-    "requestId": "req_abc",
-    "runId": "run_123",
-    "category": "run",
-    "type": "step",
-    "data": {},
-    "metrics": {}
-}
-```
-
-**Response** — `200 OK` with `Content-Type: text/event-stream`
-
-```
-event: stream.connected
-data: {"timestamp":"2026-05-24T12:00:00.000Z","requestId":"req_abc","category":"stream","type":"connected","data":{"message":"Event stream active"}}
-
-event: run.step
-data: {"timestamp":"2026-05-24T12:00:01.000Z","requestId":"req_abc","runId":"run_123","category":"run","type":"step","data":{"step":0,"action":"read_file","thought":"Reading the file..."},"metrics":{"step":0,"stepDurationMs":42,"contextLength":1024}}
-
-event: stream.heartbeat
-data: {"timestamp":"2026-05-24T12:00:30.000Z","requestId":"req_abc","category":"stream","type":"heartbeat","data":{}}
-```
-
-**curl example**
-
-```bash
-curl -N "http://localhost:3001/events/stream"
-```
+| Variable                        | Default      | Purpose                                      |
+| ------------------------------- | ------------ | -------------------------------------------- |
+| `ACTIVITY_LOG_ENABLED`          | false        | Enable Mongo-backed activity-log persistence |
+| `ACTIVITY_LOG_COLLECTION`       | activity_log | Override collection name                     |
+| `HISTORY_LONG_POLL_ENABLED`     | false        | Enable/disable `/history/poll`               |
+| `HISTORY_LONG_POLL_TIMEOUT_MS`  | 30000        | Long-poll timeout                            |
+| `HISTORY_LONG_POLL_INTERVAL_MS` | 750          | Poll loop sleep interval                     |
 
 ---
 

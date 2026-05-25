@@ -20,6 +20,7 @@ import {
 } from "@/packages/shared";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { RunRequest, RunResponse } from "@/api";
+import { recordApiActivity } from "./activity-log-recorder";
 
 /**
  * Register the core `POST /run` endpoint on the provided Express app.
@@ -54,6 +55,16 @@ export function registerRunRoutes(app: Express): void {
       toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
       requestId: req.requestId,
     });
+    recordApiActivity({
+      kind: "api:run_requested",
+      requestId: req.requestId,
+      profile: profile ?? undefined,
+      data: {
+        task,
+        allowWrite: allowWrite === true,
+        toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
+      },
+    }).catch(() => undefined);
 
     const writeEnabled = allowWrite === true;
     const agent = createAgent(writeEnabled);
@@ -73,6 +84,17 @@ export function registerRunRoutes(app: Express): void {
           result: runResult.answer,
           citations: runResult.citations,
         };
+        recordApiActivity({
+          kind: "api:run_completed",
+          requestId: req.requestId,
+          status: "completed",
+          profile: profile ?? undefined,
+          data: {
+            answerLength: runResult.answer.length,
+            citationsCount: runResult.citations.length,
+          },
+          meta: runResult.meta as unknown as Record<string, unknown>,
+        }).catch(() => undefined);
 
         successResponse(res, response, 200, "", {
           ...runResult.meta,
@@ -86,6 +108,15 @@ export function registerRunRoutes(app: Express): void {
           requestId: req.requestId,
         });
         rejectResponse(res, 500, t("error.internal_server_error"), [String(error)]);
+        recordApiActivity({
+          kind: "api:run_failed",
+          requestId: req.requestId,
+          status: "failed",
+          profile: profile ?? undefined,
+          data: {
+            error: String(error),
+          },
+        }).catch(() => undefined);
       });
   });
 }
