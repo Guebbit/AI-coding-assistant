@@ -12,6 +12,7 @@ export default withMermaid(
                 { text: 'Home', link: '/' },
                 { text: 'Getting Started', link: '/use-the-application' },
                 { text: 'Packages', link: '/packages/' },
+                { text: 'Capabilities', link: '/theory/capability-modular-monolith' },
                 { text: 'Theory', link: '/theory/how-it-works-layered' },
                 { text: 'Examples', link: '/examples/' },
                 { text: 'Scenarios', link: '/scenarios/' },
@@ -45,6 +46,10 @@ export default withMermaid(
                 {
                     text: 'Architecture & Theory',
                     items: [
+                        {
+                            text: 'Capability-Oriented Modular Monolith',
+                            link: '/theory/capability-modular-monolith'
+                        },
                         { text: 'How It Works (Layered)', link: '/theory/how-it-works-layered' },
                         { text: 'Agent Loop Mental Model', link: '/theory/agent-loop' },
                         {
@@ -61,6 +66,19 @@ export default withMermaid(
                         { text: 'Vector Databases', link: '/theory/VECTOR_DATABASES' },
                         { text: 'LoRA & Fine-Tuning (Theory)', link: '/theory/lora-fine-tuning' },
                         { text: 'LoRA & Fine-Tuning (Practical)', link: '/theory/lora-practical' }
+                    ]
+                },
+                {
+                    text: 'Capabilities',
+                    collapsed: true,
+                    items: [
+                        { text: 'runtime', link: '/capabilities/runtime' },
+                        { text: 'knowledge', link: '/capabilities/knowledge' },
+                        { text: 'documents', link: '/capabilities/documents' },
+                        { text: 'integrations', link: '/capabilities/integrations' },
+                        { text: 'observability', link: '/capabilities/observability' },
+                        { text: 'platform', link: '/capabilities/platform' },
+                        { text: 'shared', link: '/capabilities/shared' }
                     ]
                 },
                 {

@@ -3,6 +3,9 @@
 Source of truth for the tool layer: [`./README.md`](./README.md) §10 (Native tool catalogue).
 Long-form per-tool docs: `docs/packages/tools/`.
 
+Capability alignment: `tools` belongs to the **integrations** capability in the
+capability-oriented modular monolith map (`docs/theory/capability-modular-monolith.md`).
+
 Implementation pointers:
 
 - Tool interface/types: `packages/tools/types.ts`
