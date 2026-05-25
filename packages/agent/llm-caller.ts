@@ -131,7 +131,9 @@ export function buildUntooledPrompt(
     const contextBlock = context ? `Context so far:\n${context}\n\n` : '';
     const toolBlocks = tools
         .map((tool) => {
-            const schema = tool.inputSchema ? zodToJsonSchema(tool.inputSchema) : { type: 'object' };
+            const schema = tool.inputSchema
+                ? zodToJsonSchema(tool.inputSchema)
+                : { type: 'object' };
             return (
                 `Tool: ${tool.name}\n` +
                 `Description: ${tool.description}\n` +
@@ -163,7 +165,7 @@ export function buildUntooledPrompt(
  * The model returns tool_calls in the response when it wants to use a tool.
  */
 export async function callWithNativeTools(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     memory: string[],
     availableTools: ITool[],
@@ -179,7 +181,7 @@ export async function callWithNativeTools(
     const userPrompt =
         `Task:\n${task}\n\n` +
         `${memory.length > 0 ? `Recent memory:\n${memory.join('\n')}\n\n` : ''}` +
-        `${ctx.context ? `Context so far:\n${ctx.context}\n\n` : ''}`;
+        `${context.context ? `Context so far:\n${context.context}\n\n` : ''}`;
 
     // Convert tools to the native format
     const nativeTools = availableTools.map((tool) => ({
@@ -199,14 +201,14 @@ export async function callWithNativeTools(
             { role: 'user', content: userPrompt }
         ],
         { model: route.model, options: route.options, tools: nativeTools }
-    ).catch((error: unknown) => handleLlmError(error, step, ctx.runId));
+    ).catch((error: unknown) => handleLlmError(error, step, context.runId));
 
     const llmDurationMs = Date.now() - llmCallStartedAt;
 
     // Track tokens + model
-    ctx.llmSteps += 1;
-    ctx.modelsUsed.add(chatResult.model ?? route.model);
-    accumulateTokens(ctx.tokens, chatResult);
+    context.llmSteps += 1;
+    context.modelsUsed.add(chatResult.model ?? route.model);
+    accumulateTokens(context.tokens, chatResult);
 
     const rawResponseText = chatResult.message.content ?? '';
     const toolCall = chatResult.message.tool_calls?.[0];
@@ -253,7 +255,7 @@ export async function callWithNativeTools(
  * Returns null when JSON parsing fails (caller should append error to context).
  */
 export async function callWithoutNativeTools(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     memory: string[],
     availableTools: ITool[],
@@ -261,7 +263,7 @@ export async function callWithoutNativeTools(
     step: number,
     inputContext: string
 ): Promise<ILlmCallResult | null> {
-    const prompt = buildUntooledPrompt(task, ctx.context, memory, availableTools);
+    const prompt = buildUntooledPrompt(task, context.context, memory, availableTools);
     const llmCallStartedAt = Date.now();
 
     logger.info('agent_step_started', {
@@ -274,24 +276,24 @@ export async function callWithoutNativeTools(
 
     const llmResult = await generateWithMetadata(prompt, {
         model: route.model,
-        images: ctx.pendingImages.length > 0 ? ctx.pendingImages : undefined,
+        images: context.pendingImages.length > 0 ? context.pendingImages : undefined,
         options: route.options
-    }).catch((error: unknown) => handleLlmError(error, step, ctx.runId));
+    }).catch((error: unknown) => handleLlmError(error, step, context.runId));
 
     const llmDurationMs = Date.now() - llmCallStartedAt;
-    ctx.pendingImages = [];
+    context.pendingImages = [];
 
     // Track tokens + model
-    ctx.llmSteps += 1;
-    ctx.modelsUsed.add(llmResult.model ?? route.model);
-    accumulateTokens(ctx.tokens, llmResult);
+    context.llmSteps += 1;
+    context.modelsUsed.add(llmResult.model ?? route.model);
+    accumulateTokens(context.tokens, llmResult);
 
     const rawResponseText = llmResult.response;
     logger.info('agent_llm_response_received', {
         component: 'agent',
         step,
         responseLength: llmResult.response.length,
-        durationMs: ctx.elapsedMs,
+        durationMs: context.elapsedMs,
         routedProfile: route.model,
         model: llmResult.model
     });

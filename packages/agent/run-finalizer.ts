@@ -74,7 +74,7 @@ export function persistRun(input: Parameters<typeof saveAgentRun>[0]): Promise<v
 
 /** Build the persistence input object from the current run state. */
 export function buildPersistInput(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     output: string,
     status: 'completed' | 'max_steps' | 'hard_stopped',
@@ -85,13 +85,13 @@ export function buildPersistInput(
         task,
         agentProfile: profile ?? null,
         output,
-        context: ctx.context,
+        context: context.context,
         memory,
-        startTime: ctx.startTime,
+        startTime: context.startTime,
         endTime: new Date(),
-        durationMs: ctx.elapsedMs,
-        toolCalls: ctx.toolCalls,
-        diagnosticEntries: ctx.diagnosticEntries,
+        durationMs: context.elapsedMs,
+        toolCalls: context.toolCalls,
+        diagnosticEntries: context.diagnosticEntries,
         status
     };
 }
@@ -102,64 +102,64 @@ export function buildPersistInput(
  * Finalize a successful run (agent returned action = "none").
  */
 export async function finalizeCompleted(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     answer: string,
     memory: string[],
     profile?: ModelProfile
 ): Promise<IAgentRunResult> {
     await addMemory(`Task: ${task} → ${answer}`);
-    const citations = ctx.citationBuffer.flush();
+    const citations = context.citationBuffer.flush();
 
     emit({
         type: 'agent:done',
         payload: {
-            runId: ctx.runId,
+            runId: context.runId,
             thought: answer,
             citations,
             citationsCount: citations.length,
-            meta: ctx.buildRunMeta(profile, citations)
+            meta: context.buildRunMeta(profile, citations)
         }
     });
 
-    await writeDiagnostics(ctx.diagnosticEntries, task);
-    await persistRun(buildPersistInput(ctx, task, answer, 'completed', memory, profile));
-    return { answer, meta: ctx.buildRunMeta(profile, citations), citations };
+    await writeDiagnostics(context.diagnosticEntries, task);
+    await persistRun(buildPersistInput(context, task, answer, 'completed', memory, profile));
+    return { answer, meta: context.buildRunMeta(profile, citations), citations };
 }
 
 /**
  * Finalize a direct-output tool result (tool returned a final answer).
  */
 export async function finalizeDirectOutput(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     directAnswer: string,
     memory: string[],
     profile?: ModelProfile
 ): Promise<IAgentRunResult> {
     await addMemory(`Task: ${task} → ${directAnswer}`);
-    const citations = ctx.citationBuffer.flush();
+    const citations = context.citationBuffer.flush();
 
     emit({
         type: 'agent:done',
         payload: {
-            runId: ctx.runId,
+            runId: context.runId,
             thought: directAnswer,
             citations,
             citationsCount: citations.length,
-            meta: ctx.buildRunMeta(profile, citations)
+            meta: context.buildRunMeta(profile, citations)
         }
     });
 
-    await persistRun(buildPersistInput(ctx, task, directAnswer, 'completed', memory, profile));
-    return { answer: directAnswer, meta: ctx.buildRunMeta(profile, citations), citations };
+    await persistRun(buildPersistInput(context, task, directAnswer, 'completed', memory, profile));
+    return { answer: directAnswer, meta: context.buildRunMeta(profile, citations), citations };
 }
 
 /**
  * Finalize a hard stop (policy violation).
  */
 export async function finalizeHardStop(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     violation: PolicyViolationError,
     memory: string[],
@@ -171,9 +171,9 @@ export async function finalizeHardStop(
         component: 'agent',
         step: violation.step,
         code: violation.code,
-        durationMs: ctx.elapsedMs
+        durationMs: context.elapsedMs
     });
-    ctx.diagnosticEntries.push({
+    context.diagnosticEntries.push({
         timestamp: new Date().toISOString(),
         step: violation.step,
         severity: 'error',
@@ -184,25 +184,25 @@ export async function finalizeHardStop(
     emit({
         type: 'agent:hard_stop',
         payload: {
-            runId: ctx.runId,
+            runId: context.runId,
             step: violation.step,
             code: violation.code,
             reason: violation.message,
-            meta: ctx.buildRunMeta(profile)
+            meta: context.buildRunMeta(profile)
         }
     });
 
-    await writeDiagnostics(ctx.diagnosticEntries, task);
-    await persistRun(buildPersistInput(ctx, task, answer, 'hard_stopped', memory, profile));
-    const citations = ctx.citationBuffer.flush();
-    return { answer, meta: ctx.buildRunMeta(profile, citations), citations };
+    await writeDiagnostics(context.diagnosticEntries, task);
+    await persistRun(buildPersistInput(context, task, answer, 'hard_stopped', memory, profile));
+    const citations = context.citationBuffer.flush();
+    return { answer, meta: context.buildRunMeta(profile, citations), citations };
 }
 
 /**
  * Finalize a max-steps exhaustion (loop ended without the model returning "none").
  */
 export async function finalizeMaxSteps(
-    ctx: RunContext,
+    context: RunContext,
     task: string,
     memory: string[],
     selfDebugEnabled: boolean,
@@ -210,7 +210,7 @@ export async function finalizeMaxSteps(
 ): Promise<IAgentRunResult> {
     logger.warn('agent_max_steps_reached', {
         component: 'agent',
-        durationMs: ctx.elapsedMs,
+        durationMs: context.elapsedMs,
         task
     });
 
@@ -220,7 +220,7 @@ export async function finalizeMaxSteps(
               `You are a debugging assistant.\n` +
                   `The agent loop exhausted its steps without completing the task.\n\n` +
                   `Task:\n${task}\n\n` +
-                  `Context (what happened):\n${ctx.context}\n\n` +
+                  `Context (what happened):\n${context.context}\n\n` +
                   `Summarise concisely:\n` +
                   `1. What was tried.\n` +
                   `2. Where it got stuck.\n` +
@@ -244,20 +244,20 @@ export async function finalizeMaxSteps(
         })
     );
 
-    const diagnosticFile = await writeDiagnostics(ctx.diagnosticEntries, task, summary);
-    await persistRun(buildPersistInput(ctx, task, summary, 'max_steps', memory, profile));
-    const citations = ctx.citationBuffer.flush();
+    const diagnosticFile = await writeDiagnostics(context.diagnosticEntries, task, summary);
+    await persistRun(buildPersistInput(context, task, summary, 'max_steps', memory, profile));
+    const citations = context.citationBuffer.flush();
 
     emit({
         type: 'agent:max_steps',
         payload: {
-            runId: ctx.runId,
+            runId: context.runId,
             task,
             summary,
             diagnosticFile,
-            meta: ctx.buildRunMeta(profile, citations),
+            meta: context.buildRunMeta(profile, citations),
             citationsCount: citations.length
         }
     });
-    return { answer: summary, meta: ctx.buildRunMeta(profile, citations), citations };
+    return { answer: summary, meta: context.buildRunMeta(profile, citations), citations };
 }

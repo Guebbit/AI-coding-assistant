@@ -140,7 +140,7 @@ export class Agent {
         task: string,
         options?: { profile?: ModelProfile; maxSteps?: number }
     ): Promise<IAgentRunResult> {
-        const ctx = new RunContext();
+        const context = new RunContext();
 
         // Resolve operating mode (determines step/tool limits)
         const modeConfig = resolveOperatingModeConfig();
@@ -170,9 +170,9 @@ export class Agent {
         emit({
             type: 'agent:start',
             payload: {
-                runId: ctx.runId,
+                runId: context.runId,
                 task,
-                startedAt: ctx.startTime.toISOString(),
+                startedAt: context.startTime.toISOString(),
                 memoryCount: memory.length
             }
         });
@@ -186,14 +186,14 @@ export class Agent {
             try {
                 inputArgs = await this.runInputProcessors({
                     task,
-                    context: ctx.context,
+                    context: context.context,
                     memory,
                     stepNumber: step,
                     tools: this.tools.map((t) => t.name)
                 });
             } catch (error: unknown) {
                 if (error instanceof PolicyViolationError) {
-                    return finalizeHardStop(ctx, task, error, memory, options?.profile);
+                    return finalizeHardStop(context, task, error, memory, options?.profile);
                 }
                 throw error;
             }
@@ -205,15 +205,15 @@ export class Agent {
                 step,
                 forcedProfile: options?.profile,
                 contextLength: inputArgs.context.length,
-                cumulativeDurationMs: ctx.elapsedMs
-            }).catch((error: unknown) => handleLlmError(error, step, ctx.runId));
+                cumulativeDurationMs: context.elapsedMs
+            }).catch((error: unknown) => handleLlmError(error, step, context.runId));
             const availableTools = this.tools.filter((tool) => inputArgs.tools.includes(tool.name));
 
-            ctx.profilesUsed.add(route.profile);
+            context.profilesUsed.add(route.profile);
             emit({
                 type: 'agent:model_routed',
                 payload: {
-                    runId: ctx.runId,
+                    runId: context.runId,
                     step,
                     profile: route.profile,
                     model: route.model,
@@ -225,7 +225,13 @@ export class Agent {
             // 2c. Direct-answer shortcut (no tools, no context, step 0)
             if (step === 0 && !inputArgs.context && availableTools.length === 0) {
                 const answer = await this.handleDirectAnswer(
-                    ctx, inputArgs, route, memory, task, step, options?.profile
+                    context,
+                    inputArgs,
+                    route,
+                    memory,
+                    task,
+                    step,
+                    options?.profile
                 );
                 if (answer) return answer;
             }
@@ -242,22 +248,32 @@ export class Agent {
 
                 if (nativeToolCalling) {
                     const result = await callWithNativeTools(
-                        ctx, inputArgs.task, inputArgs.memory, availableTools, route, step
+                        context,
+                        inputArgs.task,
+                        inputArgs.memory,
+                        availableTools,
+                        route,
+                        step
                     );
                     parsed = result.parsed;
                     rawResponseText = result.rawResponseText;
                     llmDurationMs = result.llmDurationMs;
                 } else {
                     const result = await callWithoutNativeTools(
-                        ctx, inputArgs.task, inputArgs.memory, availableTools,
-                        route, step, inputArgs.context
+                        context,
+                        inputArgs.task,
+                        inputArgs.memory,
+                        availableTools,
+                        route,
+                        step,
+                        inputArgs.context
                     );
                     if (!result) {
                         // JSON parse failed — append error feedback and break
-                        ctx.context +=
+                        context.context +=
                             '\nYour previous response was not valid JSON. ' +
                             'Return plain text for final answers or JSON tool calls only.';
-                        ctx.diagnosticEntries.push({
+                        context.diagnosticEntries.push({
                             timestamp: new Date().toISOString(),
                             step,
                             severity: 'warn',
@@ -282,7 +298,7 @@ export class Agent {
                 emit({
                     type: 'agent:step',
                     payload: {
-                        runId: ctx.runId,
+                        runId: context.runId,
                         step,
                         parsed,
                         metrics: {
@@ -317,7 +333,7 @@ export class Agent {
                             errorCode: error.code,
                             durationMs: 0
                         });
-                        return finalizeHardStop(ctx, task, error, memory, options?.profile);
+                        return finalizeHardStop(context, task, error, memory, options?.profile);
                     }
                     throw error;
                 }
@@ -329,21 +345,36 @@ export class Agent {
 
                 // 2f. If no action needed → run is complete
                 if (parsed.action === 'none') {
-                    return finalizeCompleted(ctx, task, parsed.thought, memory, options?.profile);
+                    return finalizeCompleted(
+                        context,
+                        task,
+                        parsed.thought,
+                        memory,
+                        options?.profile
+                    );
                 }
 
                 // 2g. Find and execute the tool
                 const tool = availableTools.find((entry) => entry.name === parsed.action);
                 if (!tool) {
                     await handleUnknownTool(
-                        ctx, parsed, availableTools, step, task, this.processors
+                        context,
+                        parsed,
+                        availableTools,
+                        step,
+                        task,
+                        this.processors
                     );
                     break;
                 }
 
                 // Check for duplicate calls
                 const isDuplicate = await handleDuplicateCheck(
-                    ctx, parsed, step, task, this.processors
+                    context,
+                    parsed,
+                    step,
+                    task,
+                    this.processors
                 );
                 if (isDuplicate) {
                     toolCallsThisStep += 1;
@@ -352,12 +383,22 @@ export class Agent {
 
                 // Execute the tool
                 const outcome = await executeTool(
-                    ctx, tool, parsed, step, task, this.processors, route.model
+                    context,
+                    tool,
+                    parsed,
+                    step,
+                    task,
+                    this.processors,
+                    route.model
                 );
 
                 if (outcome.directAnswer) {
                     return finalizeDirectOutput(
-                        ctx, task, outcome.directAnswer, memory, options?.profile
+                        context,
+                        task,
+                        outcome.directAnswer,
+                        memory,
+                        options?.profile
                     );
                 }
                 if (outcome.shouldBreak) break;
@@ -366,8 +407,8 @@ export class Agent {
 
             // Tool-call budget exhausted for this step
             if (toolCallsThisStep >= effectiveMaxToolCalls) {
-                ctx.context += `\nReached AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}) for step ${step}.`;
-                ctx.diagnosticEntries.push({
+                context.context += `\nReached AGENT_MAX_TOOL_CALLS (${effectiveMaxToolCalls}) for step ${step}.`;
+                context.diagnosticEntries.push({
                     timestamp: new Date().toISOString(),
                     step,
                     severity: 'warn',
@@ -380,13 +421,17 @@ export class Agent {
                 component: 'agent',
                 step,
                 durationMs: Date.now() - stepStartedAt,
-                contextLength: ctx.context.length
+                contextLength: context.context.length
             });
         }
 
         // ── Step 3: Loop exhausted → finalize with self-debug ──────────────
         return finalizeMaxSteps(
-            ctx, task, memory, modeConfig.selfDebugEnabled, options?.profile
+            context,
+            task,
+            memory,
+            modeConfig.selfDebugEnabled,
+            options?.profile
         );
     }
 
@@ -397,9 +442,14 @@ export class Agent {
      * Just ask the LLM directly without tool scaffolding.
      */
     private async handleDirectAnswer(
-        ctx: RunContext,
+        context: RunContext,
         inputArgs: IProcessInputStepArgs,
-        route: { model: string; profile: ModelProfile; reason: string; options?: Record<string, unknown> },
+        route: {
+            model: string;
+            profile: ModelProfile;
+            reason: string;
+            options?: Record<string, unknown>;
+        },
         memory: string[],
         task: string,
         step: number,
@@ -419,16 +469,16 @@ export class Agent {
 
         const directResult = await generateWithMetadata(directPrompt, {
             model: route.model,
-            images: ctx.pendingImages.length > 0 ? ctx.pendingImages : undefined,
+            images: context.pendingImages.length > 0 ? context.pendingImages : undefined,
             options: route.options
-        }).catch((error: unknown) => handleLlmError(error, step, ctx.runId));
-        ctx.pendingImages = [];
+        }).catch((error: unknown) => handleLlmError(error, step, context.runId));
+        context.pendingImages = [];
 
-        ctx.llmSteps += 1;
-        ctx.modelsUsed.add(directResult.model ?? route.model);
-        accumulateTokens(ctx.tokens, directResult);
+        context.llmSteps += 1;
+        context.modelsUsed.add(directResult.model ?? route.model);
+        accumulateTokens(context.tokens, directResult);
 
         const answer = directResult.response.trim();
-        return finalizeCompleted(ctx, task, answer, memory, forcedProfile);
+        return finalizeCompleted(context, task, answer, memory, forcedProfile);
     }
 }

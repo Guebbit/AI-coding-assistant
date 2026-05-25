@@ -28,10 +28,7 @@ import { isMultimodalModel } from './vision-capability';
 import { getVisionDescription } from './vision-description';
 import type { RunContext } from './run-context';
 import type { IParsedToolCall } from './llm-caller';
-import type {
-    IProcessor,
-    IProcessToolResultArgs
-} from '../processors/types';
+import type { IProcessor, IProcessToolResultArgs } from '../processors/types';
 
 /** Result of attempting to execute a tool. */
 export interface IToolExecOutcome {
@@ -48,10 +45,7 @@ export interface IToolExecOutcome {
 /**
  * Extract citations from a tool's result and add them to the buffer.
  */
-export function collectCitationsFromToolResult(
-    result: unknown,
-    buffer: ToolCitationBuffer
-): void {
+export function collectCitationsFromToolResult(result: unknown, buffer: ToolCitationBuffer): void {
     if (!result || typeof result !== 'object') return;
     const maybeCitations = (result as { citations?: unknown }).citations;
     if (!Array.isArray(maybeCitations)) return;
@@ -90,19 +84,19 @@ export async function runToolResultProcessors(
  * Returns true if the call was rejected (duplicate).
  */
 export async function handleDuplicateCheck(
-    ctx: RunContext,
+    context: RunContext,
     parsed: IParsedToolCall,
     step: number,
     task: string,
     processors: IProcessor[]
 ): Promise<boolean> {
-    if (!ctx.toolDeduplicator.isDuplicate(parsed.action, parsed.input)) return false;
+    if (!context.toolDeduplicator.isDuplicate(parsed.action, parsed.input)) return false;
 
     // Duplicate detected — append feedback and notify processors
-    ctx.context +=
+    context.context +=
         `\nTool "${parsed.action}" with the same arguments was already called recently. ` +
         'Try a different tool or different arguments.';
-    ctx.diagnosticEntries.push({
+    context.diagnosticEntries.push({
         timestamp: new Date().toISOString(),
         step,
         severity: 'warn',
@@ -130,7 +124,7 @@ export async function handleDuplicateCheck(
  * Appends feedback to context and notifies processors.
  */
 export async function handleUnknownTool(
-    ctx: RunContext,
+    context: RunContext,
     parsed: IParsedToolCall,
     availableTools: ITool[],
     step: number,
@@ -144,10 +138,9 @@ export async function handleUnknownTool(
         action: parsed.action,
         availableTools: toolNames
     });
-    ctx.context +=
-        `\nTool "${parsed.action}" does not exist. ` +
-        `Available tools: ${toolNames.join(', ')}.`;
-    ctx.diagnosticEntries.push({
+    context.context +=
+        `\nTool "${parsed.action}" does not exist. ` + `Available tools: ${toolNames.join(', ')}.`;
+    context.diagnosticEntries.push({
         timestamp: new Date().toISOString(),
         step,
         severity: 'warn',
@@ -176,7 +169,7 @@ export async function handleUnknownTool(
  * @returns Outcome describing what happened (success, direct answer, or failure).
  */
 export async function executeTool(
-    ctx: RunContext,
+    context: RunContext,
     tool: ITool,
     parsed: IParsedToolCall,
     step: number,
@@ -196,7 +189,7 @@ export async function executeTool(
                 tool: parsed.action,
                 durationMs
             });
-            ctx.toolCalls.push({
+            context.toolCalls.push({
                 tool: parsed.action,
                 step,
                 input: parsed.input,
@@ -226,13 +219,13 @@ export async function executeTool(
 
             // Actionable context feedback for path violations
             if (error instanceof PathSafetyError) {
-                ctx.context +=
+                context.context +=
                     `\nTool "${parsed.action}" failed: Path \`${error.attemptedPath}\` ` +
                     `is outside the project root (\`${error.root}\`). ` +
                     `I cannot access files outside the project. ` +
                     `Please only request files within the project directory.`;
             } else {
-                ctx.context += `\nTool "${parsed.action}" failed: ${String(error)}`;
+                context.context += `\nTool "${parsed.action}" failed: ${String(error)}`;
             }
 
             logger.warn('agent_tool_failed', {
@@ -245,7 +238,7 @@ export async function executeTool(
             emit({
                 type: 'tool:error',
                 payload: {
-                    runId: ctx.runId,
+                    runId: context.runId,
                     step,
                     tool: parsed.action,
                     error: String(error),
@@ -253,7 +246,7 @@ export async function executeTool(
                     durationMs
                 }
             });
-            ctx.diagnosticEntries.push({
+            context.diagnosticEntries.push({
                 timestamp: new Date().toISOString(),
                 step,
                 severity: 'error',
@@ -262,7 +255,7 @@ export async function executeTool(
                 message: `Tool "${parsed.action}" failed: ${String(error)}`,
                 metadata: { tool: parsed.action, errorCode }
             });
-            ctx.toolCalls.push({
+            context.toolCalls.push({
                 tool: parsed.action,
                 step,
                 input: parsed.input,
@@ -288,11 +281,11 @@ export async function executeTool(
     if (!toolResult.success) return { success: false, shouldBreak: true };
 
     // Collect any citations the tool returned
-    collectCitationsFromToolResult(toolResult.result, ctx.citationBuffer);
+    collectCitationsFromToolResult(toolResult.result, context.citationBuffer);
     emit({
         type: 'tool:result',
         payload: {
-            runId: ctx.runId,
+            runId: context.runId,
             step,
             tool: parsed.action,
             result: toolResult.result,
@@ -310,7 +303,7 @@ export async function executeTool(
     }
 
     // Append tool result to context (handles images specially)
-    await appendToolResultToContext(ctx, toolResult.result, parsed, step, routeModel);
+    await appendToolResultToContext(context, toolResult.result, parsed, step, routeModel);
     return { success: true, shouldBreak: false };
 }
 
@@ -321,7 +314,7 @@ export async function executeTool(
  * If the result contains image data, attempts vision description first.
  */
 async function appendToolResultToContext(
-    ctx: RunContext,
+    context: RunContext,
     result: unknown,
     parsed: IParsedToolCall,
     step: number,
@@ -329,24 +322,22 @@ async function appendToolResultToContext(
 ): Promise<void> {
     const rawResult = result as Record<string, unknown> | null | undefined;
     const imageData =
-        rawResult &&
-        typeof rawResult === 'object' &&
-        typeof rawResult.imageData === 'string'
+        rawResult && typeof rawResult === 'object' && typeof rawResult.imageData === 'string'
             ? rawResult.imageData
             : undefined;
 
     if (imageData) {
         const description = await getVisionDescription(imageData);
         if (description) {
-            ctx.context += `\nStep ${step} — image description: ${description}`;
+            context.context += `\nStep ${step} — image description: ${description}`;
         } else {
             const sanitized = { ...rawResult, imageData: '[base64 omitted]' };
-            ctx.context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(sanitized)}`;
+            context.context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(sanitized)}`;
         }
         if (isMultimodalModel(model)) {
-            ctx.pendingImages.push(imageData);
+            context.pendingImages.push(imageData);
         }
     } else {
-        ctx.context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
+        context.context += `\nStep ${step} — "${parsed.action}" returned: ${JSON.stringify(result)}`;
     }
 }

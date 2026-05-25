@@ -128,8 +128,7 @@ export class RunContext {
                 ? this.tokens.promptTokens + this.tokens.completionTokens
                 : undefined;
         const profile =
-            forcedProfile ??
-            (this.profilesUsed.size === 1 ? [...this.profilesUsed][0] : undefined);
+            forcedProfile ?? (this.profilesUsed.size === 1 ? [...this.profilesUsed][0] : undefined);
         return {
             startedAt: this.startTime.toISOString(),
             durationMs: this.elapsedMs,
