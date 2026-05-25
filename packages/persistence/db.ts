@@ -8,6 +8,7 @@
  *   - `agent-runs.ts` — Agent/swarm/eval run CRUD
  *   - `chat.ts`       — Conversation + message CRUD
  *   - `library.ts`    — Library + article CRUD
+ *   - `activity-log.ts` — MongoDB-backed append-only activity history
  *
  * This file re-exports everything for backward compat — existing
  * `import { saveAgentRun } from '../persistence/db'` still works.
@@ -42,3 +43,10 @@ export {
     listArticles,
     countArticles
 } from './library';
+export {
+    getActivityLogAvailability,
+    appendActivityLog,
+    listActivityLog,
+    exportActivityLog,
+    clearActivityLog
+} from './activity-log';

@@ -14,6 +14,7 @@
  *  - `agent-runs.ts` — Agent/swarm/eval run persistence
  *  - `chat.ts`       — Conversation + message CRUD
  *  - `library.ts`    — Library + article CRUD
+ *  - `activity-log.ts` — MongoDB-backed append-only activity history
  *  - `db.ts`         — Barrel re-export for backward compat
  *
  * @module persistence

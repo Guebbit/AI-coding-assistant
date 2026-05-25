@@ -221,6 +221,74 @@ export interface ICreateArticleInput {
     qdrantPointId: string;
 }
 
+/* ── Activity log (MongoDB) ─────────────────────────────────────────────── */
+
+/** Append-only activity-log categories emitted by runtime + API lifecycle events. */
+export type ActivityLogCategory =
+    | 'agent'
+    | 'tool'
+    | 'swarm'
+    | 'workflow'
+    | 'chat'
+    | 'api'
+    | 'system';
+
+/** Input payload for creating one append-only activity-log document. */
+export interface IActivityLogInput {
+    timestamp?: Date;
+    kind: string;
+    category: ActivityLogCategory | string;
+    type: string;
+    conversationId?: string;
+    messageId?: string;
+    requestId?: string;
+    runId?: string;
+    workflowId?: string;
+    subtaskId?: string;
+    parentId?: string;
+    profile?: string;
+    toolName?: string;
+    status?: string;
+    data: Record<string, unknown>;
+    meta?: Record<string, unknown>;
+}
+
+/** Public activity-log record returned by the history API. */
+export interface IActivityLogRecord extends IActivityLogInput {
+    id: string;
+    timestamp: Date;
+}
+
+/** Filter options shared by list/export/delete activity-log operations. */
+export interface IActivityLogFilters {
+    kind?: string;
+    category?: string;
+    type?: string;
+    conversationId?: string;
+    messageId?: string;
+    requestId?: string;
+    runId?: string;
+    workflowId?: string;
+    subtaskId?: string;
+    parentId?: string;
+    profile?: string;
+    toolName?: string;
+    status?: string;
+}
+
+/** Query options for incremental activity-log history fetches. */
+export interface IActivityLogQueryOptions extends IActivityLogFilters {
+    since?: string;
+    limit?: number;
+}
+
+/** Result shape for incremental activity-log history fetches. */
+export interface IActivityLogQueryResult {
+    entries: IActivityLogRecord[];
+    nextCursor?: string;
+    hasMore: boolean;
+}
+
 /* ── Shared query options ────────────────────────────────────────────────── */
 
 /** Options for {@link fetchRecentRuns}. */

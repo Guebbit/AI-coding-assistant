@@ -28,7 +28,7 @@
 
 import { z } from 'zod';
 import type { Express, Request, Response } from 'express';
-import { on, off } from '@/packages/events/bus';
+import { emit, on, off } from '@/packages/events/bus';
 import type { IAgentEvent } from '@/packages/events/bus';
 import { logger } from '@/packages/logger/logger';
 import {
@@ -354,6 +354,15 @@ export function registerWorkflowRoutes(app: Express): void {
             profile: parsed.profile ?? null,
             maxStepsPerStep: parsed.maxStepsPerStep ?? DEFAULT_MAX_STEPS_PER_STEP,
         });
+        emit({
+            type: 'workflow:start',
+            payload: {
+                requestId: req.requestId,
+                stepCount: parsed.steps.length,
+                carry: parsed.carry,
+                profile: parsed.profile ?? null
+            }
+        });
 
         runWorkflow(parsed)
             .then((workflowResponse) => {
@@ -362,6 +371,15 @@ export function registerWorkflowRoutes(app: Express): void {
                     stepCount: workflowResponse.steps.length,
                     allSucceeded: workflowResponse.allSucceeded,
                     totalDurationMs: workflowResponse.totalDurationMs,
+                });
+                emit({
+                    type: 'workflow:done',
+                    payload: {
+                        requestId: req.requestId,
+                        stepCount: workflowResponse.steps.length,
+                        allSucceeded: workflowResponse.allSucceeded,
+                        totalDurationMs: workflowResponse.totalDurationMs
+                    }
                 });
 
                 const typedResponse: OpenApiWorkflowResponse = workflowResponse;
@@ -372,6 +390,10 @@ export function registerWorkflowRoutes(app: Express): void {
             })
             .catch((error: unknown) => {
                 logger.error('workflow_request_failed', { component: 'api.workflow.endpoints', error: String(error) });
+                emit({
+                    type: 'workflow:error',
+                    payload: { requestId: req.requestId, error: String(error) }
+                });
                 rejectResponse(res, 500, t('error.internal_server_error'), [String(error)]);
             });
     });
@@ -441,6 +463,16 @@ export function registerWorkflowRoutes(app: Express): void {
             profile: parsed.profile ?? null,
             maxStepsPerStep: parsed.maxStepsPerStep ?? DEFAULT_MAX_STEPS_PER_STEP,
         });
+        emit({
+            type: 'workflow:start',
+            payload: {
+                requestId: req.requestId,
+                stepCount: parsed.steps.length,
+                carry: parsed.carry,
+                profile: parsed.profile ?? null,
+                streamed: true
+            }
+        });
 
         writeEvent('workflow_start', { stepCount: parsed.steps.length });
 
@@ -448,9 +480,17 @@ export function registerWorkflowRoutes(app: Express): void {
             onStepStart: (index, task) => {
                 currentWorkflowIndex = index;
                 writeEvent('step_start', { index, task });
+                emit({
+                    type: 'workflow:step_start',
+                    payload: { requestId: req.requestId, workflowIndex: index, task }
+                });
             },
             onStepComplete: (stepResult) => {
                 writeEvent('step_done', stepResult);
+                emit({
+                    type: 'workflow:step_done',
+                    payload: { requestId: req.requestId, ...stepResult }
+                });
             },
         })
             .then((workflowResponse) => {
@@ -468,10 +508,24 @@ export function registerWorkflowRoutes(app: Express): void {
                     allSucceeded: workflowResponse.allSucceeded,
                     totalDurationMs: workflowResponse.totalDurationMs,
                 });
+                emit({
+                    type: 'workflow:done',
+                    payload: {
+                        requestId: req.requestId,
+                        stepCount: workflowResponse.steps.length,
+                        allSucceeded: workflowResponse.allSucceeded,
+                        totalDurationMs: workflowResponse.totalDurationMs,
+                        streamed: true
+                    }
+                });
             })
             .catch((error: unknown) => {
                 writeEvent('error', { error: String(error) });
                 logger.error('workflow_stream_failed', { component: 'api.workflow.endpoints', error: String(error) });
+                emit({
+                    type: 'workflow:error',
+                    payload: { requestId: req.requestId, error: String(error), streamed: true }
+                });
             })
             .finally(() => {
                 off('*', handler);
