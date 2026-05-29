@@ -1,7 +1,7 @@
 # Tool: `scaffold_project`
 
 ::: tip TL;DR
-Copies a boilerplate template into generated-projects. Requires `allowWrite: true`.
+Copies a boilerplate template into `AGENT_WORKSPACE_ROOT`. Requires `allowWrite: true`.
 :::
 
 ## Purpose
@@ -12,7 +12,7 @@ Create a new project by copying one boilerplate template.
 
 > "Copy this template folder into a new project folder and give me the metadata about it."
 
-Instead of generating files from scratch, you pre-build **boilerplates** (template folders) and this tool copies one into your generated-projects area. Think of it like `create-react-app` but for your own custom templates.
+Instead of generating files from scratch, you pre-build **boilerplates** (template folders) and this tool copies one into your workspace root. Think of it like `create-react-app` but for your own custom templates.
 
 ## ⚠️ Write mode is opt-in
 
@@ -32,7 +32,7 @@ Like `write_file`, this tool only becomes available when the request includes `"
 | Field          | Required | Default           | Notes                                                      |
 | -------------- | -------- | ----------------- | ---------------------------------------------------------- |
 | `template`     | ✅       | —                 | Name of the template folder inside `BOILERPLATE_ROOT`      |
-| `projectName`  | ✅       | —                 | Target folder name inside `PROJECT_OUTPUT_ROOT`            |
+| `projectName`  | ✅       | —                 | Target folder name inside `AGENT_WORKSPACE_ROOT`           |
 | `overwrite`    | ❌       | `false`           | If `true`, replaces an existing project with the same name |
 | `metadataFile` | ❌       | `"template.json"` | Optional metadata file to read from the template folder    |
 
@@ -41,8 +41,8 @@ Like `write_file`, this tool only becomes available when the request includes `"
 ```json
 {
     "template": "react-ts",
-    "projectPath": "data/generated-projects/my-react-app",
-    "outputRoot": "data/generated-projects",
+    "projectPath": "my-react-app",
+    "outputRoot": ".",
     "boilerplateRoot": "data/boilerplates",
     "metadata": {
         "stack": "react",
@@ -58,7 +58,9 @@ If `metadataFile` exists in the template folder, it is parsed as JSON (or return
 ## Safety
 
 - Reads only from `BOILERPLATE_ROOT` (default `data/boilerplates`)
-- Writes only into `PROJECT_OUTPUT_ROOT` (default `data/generated-projects`)
+- Writes only into `AGENT_WORKSPACE_ROOT` (default current working directory)
+- Blocks writes to paths matched by `.gitignore`
+- Blocks writes to paths matched by `AGENT_WRITE_DENYLIST`
 - Rejects any traversal attempt in either direction
 - Available only when `/run` body includes `"allowWrite": true`
 
@@ -67,7 +69,8 @@ If `metadataFile` exists in the template folder, it is parsed as JSON (or return
 | Variable              | Default                   |
 | --------------------- | ------------------------- |
 | `BOILERPLATE_ROOT`    | `data/boilerplates`       |
-| `PROJECT_OUTPUT_ROOT` | `data/generated-projects` |
+| `AGENT_WORKSPACE_ROOT` | Current working directory |
+| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*` |
 
 ## How the folder structure works
 
@@ -87,7 +90,7 @@ data/
       package.json
       template.json
 
-  generated-projects/     <-- output (PROJECT_OUTPUT_ROOT)
+  my-project/             <-- output (AGENT_WORKSPACE_ROOT)
     my-react-app/         <-- scaffold_project copies react-ts here
       src/
         App.tsx

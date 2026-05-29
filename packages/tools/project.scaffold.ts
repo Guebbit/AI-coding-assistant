@@ -1,9 +1,9 @@
 /**
  * Project scaffolding tool — copy a boilerplate template into the
- * generated-projects output directory.
+ * workspace root output directory.
  *
  * Reads templates from `BOILERPLATE_ROOT` and writes them to
- * `PROJECT_OUTPUT_ROOT`.  Optionally reads a metadata JSON file
+ * `AGENT_WORKSPACE_ROOT`. Optionally reads a metadata JSON file
  * from the template directory for downstream consumers.
  *
  * Uses the shared `resolveInsideRoot` helper for path safety.
@@ -14,19 +14,13 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
-import { resolveInsideRoot } from '../shared';
+import { assertWritePathAllowed, getWorkspaceRoot, resolveInsideRoot } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Root directory where boilerplate templates are stored. */
 const BOILERPLATE_ROOT = path.resolve(
     process.cwd(),
     process.env.BOILERPLATE_ROOT ?? 'data/boilerplates'
-);
-
-/** Root directory where generated projects are written. */
-const PROJECT_OUTPUT_ROOT = path.resolve(
-    process.cwd(),
-    process.env.PROJECT_OUTPUT_ROOT ?? 'data/generated-projects'
 );
 
 /**
@@ -60,7 +54,7 @@ async function exists(targetPath: string): Promise<boolean> {
 export const scaffoldProjectTool = createTool({
     id: 'scaffold_project',
     description:
-        'Scaffold a project by copying a boilerplate template into generated-projects root. ' +
+        'Scaffold a project by copying a boilerplate template into AGENT_WORKSPACE_ROOT. ' +
         'Input: { template: string, projectName: string, overwrite?: boolean, metadataFile?: string }',
     inputSchema: z.object({
         template: z.string().trim().min(1, '"template" must be a non-empty string'),
@@ -81,15 +75,17 @@ export const scaffoldProjectTool = createTool({
      *
      * @param input              - Tool input object.
      * @param input.template     - Relative path under `BOILERPLATE_ROOT` identifying the template.
-     * @param input.projectName  - Relative path under `PROJECT_OUTPUT_ROOT` for the new project.
+     * @param input.projectName  - Relative path under `AGENT_WORKSPACE_ROOT` for the new project.
      * @param input.overwrite    - When `true`, delete the target if it already exists (default: `false`).
      * @param input.metadataFile - Name of the JSON metadata file inside the template (default: `"template.json"`).
      * @returns Metadata about the scaffolded project (paths, template info).
      * @throws {Error} When inputs are invalid, template is missing, or target exists without overwrite.
      */
     async execute({ template, projectName, overwrite, metadataFile }) {
+        const workspaceRoot = getWorkspaceRoot();
         const templatePath = resolveInsideRoot(BOILERPLATE_ROOT, template);
-        const targetPath = resolveInsideRoot(PROJECT_OUTPUT_ROOT, projectName);
+        const targetPath = resolveInsideRoot(workspaceRoot, projectName);
+        await assertWritePathAllowed(targetPath);
         const allowOverwrite = overwrite === true;
 
         /* Validate metadata filename — must be a plain filename, no path separators. */
@@ -142,7 +138,7 @@ export const scaffoldProjectTool = createTool({
         return {
             template: path.relative(BOILERPLATE_ROOT, templatePath),
             projectPath: path.relative(process.cwd(), targetPath),
-            outputRoot: path.relative(process.cwd(), PROJECT_OUTPUT_ROOT),
+            outputRoot: path.relative(process.cwd(), workspaceRoot),
             boilerplateRoot: path.relative(process.cwd(), BOILERPLATE_ROOT),
             metadata
         };

@@ -23,6 +23,7 @@ export * from './math';
 export * from './sse';
 export * from './request-validation';
 export * from './safe-read-file';
+export * from './write-guard';
 export * from './model-resolution';
 export * from './utils';
 export * from './language';

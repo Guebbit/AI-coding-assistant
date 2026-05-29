@@ -1,8 +1,8 @@
 /**
  * Read-file tool — reads a file from disk and returns its UTF-8 content.
  *
- * The path is resolved relative to the current working directory.
- * Directory traversal outside the project root is blocked by the
+ * The path is resolved relative to the configured workspace root.
+ * Directory traversal outside the workspace root is blocked by the
  * shared `safeReadFile` helper.
  *
  * @module tools/fs.read
@@ -30,9 +30,9 @@ export const readFileTool = createTool({
      * Read the file at the given path and return its content.
      *
      * @param input      - Tool input object.
-     * @param input.path - Path to the file (relative to project root).
+     * @param input.path - Path to the file (relative to workspace root).
      * @returns The UTF-8 contents of the file.
-     * @throws {PathSafetyError} When `path` escapes the project root.
+     * @throws {PathSafetyError} When `path` escapes the workspace root.
      */
     execute({ path: filePath }) {
         return safeReadFile(filePath, 'utf-8');

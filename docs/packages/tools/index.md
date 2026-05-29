@@ -106,13 +106,13 @@ All SQL/NoSQL query tools share a common base in `base-db-tool.ts`.
 
 | Tool                          | What it can access                             | What it cannot touch                                            |
 | ----------------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
-| `read_file` family (`read_*`) | Files under project root                       | Paths outside project root                                      |
+| `read_file` family (`read_*`) | Files under `AGENT_WORKSPACE_ROOT`             | Paths outside workspace root                                    |
 | `shell`                       | Allowlisted commands                           | Dangerous/non-allowlisted commands (`rm`, `curl`, `bash`, etc.) |
 | `mysql_query` / `pg_query`    | `SELECT` queries                               | Mutating SQL (`INSERT`, `UPDATE`, `DELETE`, `DROP`, ...)        |
 | `mongo_query`                 | `find` and `aggregate`                         | Mutating operations                                             |
 | `browser_fetch`               | `http(s)` URLs                                 | `file://`, `ftp://`, `javascript:`                              |
-| `write_file`                  | Files inside `PROJECT_OUTPUT_ROOT`             | Repository source tree                                          |
-| `scaffold_project`            | `BOILERPLATE_ROOT` → `PROJECT_OUTPUT_ROOT`     | Anything outside those roots                                    |
+| `write_file`                  | Files inside `AGENT_WORKSPACE_ROOT` (minus deny rules) | Paths outside workspace root, `.gitignore` paths, denylist paths |
+| `scaffold_project`            | `BOILERPLATE_ROOT` → `AGENT_WORKSPACE_ROOT` (minus deny rules) | Anything outside those roots                                    |
 | `document_ingest`             | Vector upserts to configured Qdrant collection | Arbitrary filesystem writes                                     |
 | `knowledge_graph`             | Graph writes to configured Neo4j DB            | Filesystem/shell writes                                         |
 | `query_knowledge_graph`       | Read-only Cypher traversal                     | Mutating Cypher (`CREATE`, `MERGE`, `DELETE`, `SET`, ...)       |

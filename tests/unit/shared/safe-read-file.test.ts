@@ -33,9 +33,9 @@ describe('safeReadFile', () => {
         expect((content as Buffer).equals(source)).toBe(true);
     });
 
-    it('rejects path traversal outside project root', async () => {
+    it('rejects path traversal outside workspace root', async () => {
         await expect(safeReadFile('../../etc/passwd', 'utf-8')).rejects.toThrow(
-            'Access denied: path is outside the project root'
+            'Access denied: path is outside the workspace root'
         );
     });
 });

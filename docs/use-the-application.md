@@ -250,7 +250,7 @@ curl -X POST http://localhost:3001/run \
   }'
 ```
 
-The agent will create files under `data/generated-projects/` (configurable via `PROJECT_OUTPUT_ROOT`).
+The agent will create files under your workspace root (configured via `AGENT_WORKSPACE_ROOT`, default current working directory).
 
 ### Starting from a boilerplate
 
@@ -277,7 +277,7 @@ curl -X POST http://localhost:3001/run \
 
 The agent will:
 
-1. Copy the `react-ts` boilerplate into `data/generated-projects/my-portfolio/`
+1. Copy the `react-ts` boilerplate into `my-portfolio/` inside the workspace root
 2. Read the existing structure to understand the code
 3. Create the dark mode toggle component
 4. Wire it into the app
@@ -348,7 +348,8 @@ For comprehensive coverage, ingest your library's documentation PDFs or markdown
 | Variable              | Default                   | Description                           |
 | --------------------- | ------------------------- | ------------------------------------- |
 | `BOILERPLATE_ROOT`    | `data/boilerplates`       | Where your boilerplate templates live |
-| `PROJECT_OUTPUT_ROOT` | `data/generated-projects` | Where generated projects are written  |
+| `AGENT_WORKSPACE_ROOT` | current working directory | Trusted root for file reads/writes |
+| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*` | Comma-separated write-protected path patterns |
 
 ---
 

@@ -11,7 +11,7 @@ import fs from 'fs/promises';
 import { resolveSafePath } from './path-safety';
 
 /**
- * Safely read a file inside the project root.
+ * Safely read a file inside the workspace root.
  *
  * @param filePath - User-supplied path (relative or absolute).
  * @returns The raw file buffer when no encoding is provided.
@@ -19,7 +19,7 @@ import { resolveSafePath } from './path-safety';
 export async function safeReadFile(filePath: string): Promise<Buffer>;
 
 /**
- * Safely read a text file inside the project root using a specific encoding.
+ * Safely read a text file inside the workspace root using a specific encoding.
  *
  * @param filePath - User-supplied path (relative or absolute).
  * @param encoding - Node.js buffer encoding.
@@ -28,7 +28,7 @@ export async function safeReadFile(filePath: string): Promise<Buffer>;
 export async function safeReadFile(filePath: string, encoding: BufferEncoding): Promise<string>;
 
 /**
- * Safely read a file inside the project root.
+ * Safely read a file inside the workspace root.
  *
  * @param filePath - User-supplied path (relative or absolute).
  * @param encoding - Optional text encoding.
