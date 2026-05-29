@@ -29,6 +29,10 @@ flowchart LR
     B -->|low-spec| C[Short budget\nlow retries\nno self-debug call]
     B -->|standard| D[Balanced budget\nmoderate retries\nself-debug enabled]
     B -->|high-trust| E[Large budget\nhigh retries\nself-debug enabled]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ---

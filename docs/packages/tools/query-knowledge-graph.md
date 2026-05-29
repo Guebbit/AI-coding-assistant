@@ -60,6 +60,8 @@ flowchart LR
     B --> C[Build/validate Cypher]
     C --> D[Run read-only query]
     D --> E[Return rows + rowCount]
+    style A fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Good test prompts

@@ -60,6 +60,12 @@ flowchart TD
     Select --> Fast
     Select --> Reasoning
     Select --> Code["💻 code"]
+    style Input fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Reasoning fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Fast fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Classify fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Code fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Select fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ---
@@ -154,6 +160,11 @@ flowchart TD
     Profile --> Fast
     Profile --> Reasoning
     Profile --> Code["💻 code → coder model"]
+    style Reasoning fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Fast fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Code fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Task fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Classifier fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ---

@@ -87,6 +87,11 @@ flowchart TD
     C --> D["Tool connects to MongoDB using env vars, runs find()"]
     D --> E["Result: [...documents...]"]
     E --> F["Agent answers: '42 active users.'"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style F fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ## Good test prompts

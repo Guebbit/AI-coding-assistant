@@ -83,6 +83,7 @@ flowchart LR
     TS -->|RELATES_TO| Node["Node.js (6 docs)"]
     TS -->|RELATES_TO| Vitest["vitest (2 docs)"]
     TS -->|RELATES_TO| Express["Express (4 docs)"]
+    style Ollama fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 Vector search ([Qdrant](/glossary#qdrant)) would find documents _containing_ "TypeScript." The knowledge graph finds **concepts that TypeScript is connected to** — a fundamentally different kind of retrieval.

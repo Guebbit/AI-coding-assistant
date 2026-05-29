@@ -21,6 +21,7 @@ flowchart TD
     Integrations --> Shared
     Observability --> Shared
     Platform --> Shared
+    style API fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Capability areas

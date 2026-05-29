@@ -28,6 +28,12 @@ flowchart TD
     H -->|No| I[Continue loop]
     H -->|Yes| J[Failure classifier + recovery policy]
     J --> C
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style E fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style G fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style H fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Core design decisions

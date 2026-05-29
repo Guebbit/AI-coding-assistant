@@ -54,6 +54,10 @@ flowchart LR
     B --> C[Write .mmd file]
     C --> D[mmdc renders SVG/PNG]
     D --> E[Return source + file path]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style C fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style E fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ## Good test prompts

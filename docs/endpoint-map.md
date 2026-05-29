@@ -112,6 +112,17 @@ flowchart TD
     Upload --> ToolDirect["Tool with base64 data → Result"]
     Chat --> Persist["PostgreSQL persistence"]
     Info --> Static["Instance metadata — no LLM call"]
+    style Generic fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Specialized fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Upload fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Chat fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Info fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style AgentLoop fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style SingleLLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style ToolDirect fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Persist fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Static fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Client fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ---

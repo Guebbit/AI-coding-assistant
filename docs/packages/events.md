@@ -136,4 +136,6 @@ flowchart LR
     Bus -->|notify| Logger["API Logger"]
     Bus -->|notify| Custom["Your Handler"]
     Bus -->|notify| Metrics["Metrics / Alerts"]
+    style Logger fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Tools fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```

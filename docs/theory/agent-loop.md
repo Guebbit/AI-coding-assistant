@@ -26,6 +26,14 @@ flowchart TD
         Budget -->|"No"| Build
     end
     LOOP -.->|"Max steps exhausted"| Fallback["⚠️ Self-debug summary"]
+    style Build fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Route fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Ask fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Done fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style RunTool fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style HardStop fill:#ffebee,stroke:#c62828,color:#b71c1c
+    style Append fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Fallback fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## One step as a sequence
@@ -116,6 +124,10 @@ flowchart LR
     C["3. PolicyViolationError → hard stop, persisted as hard_stopped"]
     D["4. Unrecoverable LLM error → emits agent:error"]
     A --- B --- C --- D
+    style A fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#ffebee,stroke:#c62828,color:#b71c1c
+    style D fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ## Run states

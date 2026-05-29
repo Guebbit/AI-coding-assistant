@@ -6,6 +6,19 @@ Three commands to start, one `curl` to prove it works. You only need one Ollama 
 
 This guide gets you from zero to a working agent response as fast as possible.
 
+```mermaid
+flowchart LR
+    A["Pull Model"] --> B["Configure .env"]
+    B --> C["npm install\nnpm run dev"]
+    C --> D["curl POST /run"]
+    D --> E["✅ Response"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+```
+
 ---
 
 ## Prerequisites

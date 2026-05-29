@@ -37,6 +37,7 @@ flowchart TD
     review -->|"pass"| synthesize["synthesize"]
     review -->|"retry"| execute
     synthesize --> END([END])
+    style START fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 - Shows: only major control-flow transitions.
@@ -83,6 +84,7 @@ flowchart LR
     ST1 --> Merge
     ST2 --> Merge
     ST3 --> Merge
+    style Merge fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 - Shows: what runs in parallel vs what must wait on dependencies.

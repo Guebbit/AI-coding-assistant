@@ -45,6 +45,12 @@ flowchart TD
         P2 --> EMB["Embedding\nnomic-embed-text embeds:\n'{title}. {summary}'"]
         EMB --> QD[("Qdrant Storage\nOne point per article:\nvector + payload")]
     end
+    style PDF fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Ingestion fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style P1 fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style P2 fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style EMB fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style QD fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ### Query Pipeline
@@ -57,6 +63,10 @@ flowchart TD
     R --> R1["1. 'The Oceans' Tipping Point'\nMarch 2026, p.42  📄 Open"]
     R --> R2["2. 'Carbon Sinks Under Stress'\nNov 2025, p.68  📄 Open"]
     R --> R3["3. 'Reef Restoration Tech'\nJul 2025, p.34  📄 Open"]
+    style U fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style S fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style R fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style E fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ---

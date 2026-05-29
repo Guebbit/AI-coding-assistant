@@ -25,6 +25,10 @@ flowchart LR
         end
     end
     Qdrant -.->|"If Qdrant unavailable:\nfalls back to local ring buffer only"| Ring
+    style MEMORY fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Ring fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Qdrant fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Q1 fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ---
@@ -164,4 +168,9 @@ flowchart LR
         QSearch --> TopN["Top N results"]
         Query -.->|fallback| Ring
     end
+    style Ring fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Embed fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Qdrant fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style QSearch fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Query fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```

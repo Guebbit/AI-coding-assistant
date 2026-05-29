@@ -52,6 +52,13 @@ flowchart LR
     KG -->|entity graph| Agent
     Orchestrator -->|final answer| API
     API -->|response| User
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Tools fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style KG fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style User fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style API fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Orchestrator fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Memory fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ## Quick-start path

@@ -373,6 +373,14 @@ flowchart LR
     Embed --> Search["Cosine similarity search"]
     Qdrant --> Search
     Search --> Results["Ranked article list\nwith PDF locations"]
+    style PDFs fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Ingest fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Qdrant fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Question fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Embed fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Search fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Results fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style n fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ### Setting up a library

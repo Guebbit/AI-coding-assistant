@@ -32,6 +32,11 @@ flowchart TD
     API -->|creates and wires| Events["events\n(logs)"]
     Agent -->|asks what to do| LLM["llm\n(Ollama)"]
     Agent -->|runs| Tools["tools\n(actions)"]
+    style API fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Agent fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Memory fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Tools fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ---
@@ -168,4 +173,8 @@ flowchart TD
     LLM -->|JSON decision| Agent
     Tools -->|result| Agent
     Memory -->|past context| Agent
+    style API fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Tools fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Memory fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```

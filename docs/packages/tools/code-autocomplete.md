@@ -48,6 +48,7 @@ flowchart TD
     A["Your prefix + suffix"] --> B["Tool sends to Ollama\nusing suffix field (infill mode)"]
     B --> C["Code model (e.g. starcoder2)\ngenerates the middle/continuation"]
     C --> D["Returns completion string"]
+    style B fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ## Model defaults (priority order)

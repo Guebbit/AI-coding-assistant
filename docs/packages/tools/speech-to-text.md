@@ -67,6 +67,10 @@ flowchart TD
     B --> C["POST /v1/audio/transcriptions → Ollama\nmultipart/form-data: file + model + language + prompt"]
     C --> D["Whisper model transcribes audio"]
     D --> E["Tool returns transcribed text to agent"]
+    style A fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style E fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 There is also a dedicated upload endpoint: `POST /upload/speech-to-text` (accepts `multipart/form-data`).

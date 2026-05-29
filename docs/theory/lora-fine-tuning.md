@@ -59,6 +59,10 @@ flowchart LR
     W --> Sum["➕ Add"]
     B --> Sum
     Sum --> Output["Output"]
+    style LORA fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Input fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Sum fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style Output fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ### Key Parameters
@@ -86,6 +90,11 @@ flowchart TD
     Q3 -->|No| Q4{"Completely new\nmodel from scratch?"}
     Q4 -->|Yes| FULL["⚠️ Full training\nProbably not locally"]
     Q4 -->|No| PLAIN["You might not\nneed anything extra"]
+    style Start fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style RAG fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style LORA fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style BOTH fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style FULL fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ---

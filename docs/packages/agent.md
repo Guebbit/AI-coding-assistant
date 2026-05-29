@@ -16,6 +16,8 @@ The agent is the orchestration loop. It makes decisions in a loop and routes eac
 flowchart LR
     Think["Think"] --> Pick["Pick a tool"] --> Run["Run the tool"] --> Again["Think again"]
     Again -->|"repeat up to 5x"| Think
+    style Pick fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Run fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Where in code
@@ -40,6 +42,14 @@ flowchart TD
     S1 --> S2 --> S3 --> S4
     S4 -->|Yes| Done["✅ Return thought as answer"]
     S4 -->|No| S5 --> S6 --> S1
+    style Step fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style S1 fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style S2 fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style S3 fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style S5 fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style S6 fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Done fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style S4 fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ---
@@ -111,6 +121,13 @@ flowchart LR
     terror --- done["agent:done"]
     done --- max["agent:max_steps"]
     max --- err["agent:error"]
+    style start fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style step fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style routed fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style tresult fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style terror fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style done fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style max fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ---
@@ -145,4 +162,11 @@ flowchart TD
     Append --> Max{Steps ≥ 5?}
     Max -->|Yes| Fallback["⚠️ Fallback answer"]
     Max -->|No| Build
+    style Build fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Route fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Ask fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Done fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style Tool fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Append fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Fallback fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```

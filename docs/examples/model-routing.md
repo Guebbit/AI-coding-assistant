@@ -167,6 +167,10 @@ flowchart TD
     K --> M
     L --> M
     M --> N["Fallback: profile var → OLLAMA_MODEL → throw Error"]
+    style N fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style F fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style B fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ---

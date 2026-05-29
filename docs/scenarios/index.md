@@ -50,6 +50,14 @@ flowchart TD
     C --> H[Next loop step]
     F --> H
     G --> H
+    style A fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style F fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style G fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style H fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ---

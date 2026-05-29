@@ -4,6 +4,23 @@
 Quick reference for running Ollama locally. For LLM concepts, see the [Glossary](/glossary).
 :::
 
+## Setup flow
+
+```mermaid
+flowchart LR
+    A["Install NVIDIA\nDriver"] --> B["Install Container\nRuntime"]
+    B --> C["Install NVIDIA\nContainer Toolkit"]
+    C --> D["Start Ollama\nContainer"]
+    D --> E["Pull Model"]
+    E --> F["Ready"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style F fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+```
+
 ## Setup prerequisites
 
 - Linux + NVIDIA driver

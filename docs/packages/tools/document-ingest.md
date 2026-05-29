@@ -52,6 +52,9 @@ flowchart LR
     C --> D[Create embeddings]
     D --> E[Upsert vectors to Qdrant]
     E --> F[Return chunksIngested]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ## Good test prompts

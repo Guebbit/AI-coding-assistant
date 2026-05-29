@@ -34,6 +34,7 @@ flowchart TD
     cat -.semantic similarity.- kitten
     cat -.semantic similarity.- feline
     cat -.semantic similarity.- dog
+    style VectorSpace fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 The database must answer: _"which stored vectors are closest to my query vector?"_ — a task called **Approximate Nearest Neighbour ([ANN](/glossary#ann)) search**.
@@ -172,6 +173,14 @@ flowchart TD
         S1 --> DISK
         SN --> DISK
     end
+    style QdrantNode fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style REST fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style GRPC fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style S0 fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style S1 fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style SN fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style CM fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style DISK fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ### Practical Qdrant Settings for This Project

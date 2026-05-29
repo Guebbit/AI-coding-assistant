@@ -49,6 +49,11 @@ flowchart TD
     D --> E["Page renders fully (JS executes, dynamic content appears)"]
     E --> F["Tool extracts: title + innerText of the body"]
     F --> G["Agent reads the content and summarises the features for you"]
+    style A fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style F fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style G fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Real-life use cases

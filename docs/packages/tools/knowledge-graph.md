@@ -60,6 +60,9 @@ flowchart LR
     A[Text or file path] --> B[Entity/relationship extraction]
     B --> C[MERGE nodes and edges in Neo4j]
     C --> D[Return merge counts + persisted flag]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style C fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Good test prompts

@@ -42,6 +42,16 @@ flowchart TD
         H --> I
         I --> J["rows / rowCount / query"]
     end
+    style INGEST fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style STORE fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style D fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style E fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style QUERY fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style H fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style I fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style n fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ---

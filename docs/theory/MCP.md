@@ -20,6 +20,7 @@ MCP solves this by standardizing how tools are described and called.
 flowchart LR
     Old["No MCP\n(one-off integrations)"] -->|high maintenance| Pain["Custom code per provider"]
     MCP["With MCP\n(shared protocol)"] -->|lower maintenance| Reuse["One bridge, many servers"]
+    style Reuse fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ---
@@ -61,6 +62,10 @@ flowchart TD
     Local --> Discover["tools/list"]
     Remote --> Discover
     Discover --> Wrap["Wrap as native ITool"]
+    style Config fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Local fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Remote fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Wrap fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ---

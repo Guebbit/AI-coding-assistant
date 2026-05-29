@@ -76,6 +76,11 @@ flowchart TD
     C --> D["Tool connects to PostgreSQL using env vars, runs SELECT"]
     D --> E["Result: [{ total: 23 }]"]
     E --> F["Agent answers: '23 orders were placed today.'"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style F fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ## Good test prompts
