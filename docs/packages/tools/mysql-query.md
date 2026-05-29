@@ -65,6 +65,11 @@ flowchart TD
     C --> D["Tool connects to MySQL using env vars, runs SELECT"]
     D --> E["Result: [{ total: 47 }]"]
     E --> F["Agent answers: '47 users signed up this month.'"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style F fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ## Real-life use cases

@@ -57,6 +57,11 @@ flowchart TD
     C --> D["Tool runs ls -la packages"]
     D --> E["stdout: agent/ events/ llm/ memory/ tools/"]
     E --> F["Agent lists the modules for you"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ## Real-life use cases

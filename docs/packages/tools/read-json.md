@@ -44,6 +44,11 @@ flowchart LR
     B --> C[Safe file read]
     C --> D[JSON.parse]
     D --> E[Return parsed data]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ## Good test prompts

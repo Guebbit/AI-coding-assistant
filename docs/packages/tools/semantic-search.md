@@ -58,6 +58,10 @@ flowchart TD
     C --> D["Cosine similarity: query vector vs each document vector"]
     D --> E["Results sorted by score (highest = most relevant)"]
     E --> F["Top K results returned to agent"]
+    style B fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style C fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style D fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style n fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 ## Why this beats keyword search

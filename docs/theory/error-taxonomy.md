@@ -85,6 +85,15 @@ flowchart TD
     D --> I[Persist hard_stopped]
     E --> I
     F --> J[Persist max_steps]
+    style A fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#ffebee,stroke:#c62828,color:#b71c1c
+    style E fill:#ffebee,stroke:#c62828,color:#b71c1c
+    style F fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style H fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style I fill:#ffebee,stroke:#c62828,color:#b71c1c
+    style J fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style G fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ```mermaid

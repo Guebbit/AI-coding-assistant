@@ -35,6 +35,9 @@ flowchart TD
     review -->|"✅ reviewPassed = true"| synthesize
     review -->|"❌ reviewPassed = false\n(retry loop)"| execute
     synthesize --> DONE
+    style synthesize fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style START fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style DONE fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ---

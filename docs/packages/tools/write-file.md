@@ -83,6 +83,11 @@ flowchart TD
     D --> E["Creates parent directories if needed, writes the file"]
     E --> F["Returns: { path: '...', bytesWritten: 89 }"]
     F --> G["Agent confirms file was created"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style E fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ## Real-life use cases

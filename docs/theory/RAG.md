@@ -27,6 +27,11 @@ flowchart LR
     VDB --> R
     R --> LLM[LLM Generate]
     LLM --> A[Answer + Citations]
+    style Q fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style R fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style A fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style VDB fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 The LLM only "reads" the passages you gave it in the prompt. It cannot access knowledge outside of those passages (if you prompt it correctly). This gives you:
@@ -48,6 +53,12 @@ flowchart TD
     B --> C[2. Chunk\nSplit into overlapping ~500-token windows\nattach source metadata]
     C --> D["3. Embed\nEmbed each chunk → float[] vector\n(e.g. nomic-embed-text via Ollama)"]
     D --> E["4. Store\nInsert vector + metadata + text\ninto vector database (Qdrant, Chroma, …)"]
+    style D fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style E fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style n fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 **Key design choices at ingestion time:**
@@ -71,6 +82,12 @@ flowchart TD
     R --> P["Build Prompt\n'Answer using ONLY these sources.\nCite each source as [Source N].'"]
     P --> L[LLM Generate]
     L --> A[Answer + Citations\nto original sources]
+    style P fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style Q fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style E fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style S fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style L fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style A fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ---
@@ -100,6 +117,7 @@ flowchart LR
     N --> A1[Fast, simple, weaker multi-hop]
     RR --> A2[Better relevance for hard queries]
     G --> A3[Best for relation/multi-hop questions]
+    style Q fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
 ```
 
 ### Minimal (Personal tool)
@@ -119,6 +137,9 @@ flowchart LR
     API[API] --> QS[Query Service]
     QS --> VDB
     QS --> LLM[LLM\nlocal or cloud]
+    style API fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style VDB fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ### Hybrid search (better relevance)
@@ -139,6 +160,9 @@ flowchart TD
     Q[User Query] --> L1["Level 1: Article Summaries\n(one embedding per article)\nFast filter: which articles are relevant?"]
     L1 --> L2["Level 2: Paragraph Chunks\n(many embeddings per article)\nPrecise extraction: which passage answers the question?"]
     L2 --> A[Answer with exact citations]
+    style L2 fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style Q fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style A fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 This is the approach recommended for the Scientific American use case in this project.

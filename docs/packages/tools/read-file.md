@@ -36,6 +36,11 @@ flowchart TD
     B --> C["Agent calls: read_file → { path: 'package.json' }"]
     C --> D["Tool reads the file from disk and returns full text"]
     D --> E["Agent reads the JSON, finds the scripts block, and answers you"]
+    style A fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style D fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style E fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ## Real-life use cases

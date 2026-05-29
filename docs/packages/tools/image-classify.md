@@ -77,6 +77,12 @@ flowchart TD
     C --> D["Ollama passes image to vision model"]
     D --> E["Model returns text description"]
     E --> F["Tool returns description to agent"]
+    style A fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style D fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style E fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style F fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 There is also a dedicated upload endpoint: `POST /upload/image-classify` (accepts `multipart/form-data`).

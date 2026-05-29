@@ -16,6 +16,8 @@ flowchart TD
     B --> C[Tool executes]
     C --> D[Result appended to context]
     D --> E[Agent decides next action]
+    style A fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style C fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Tool contract (`createTool`)
@@ -186,4 +188,7 @@ flowchart LR
     Validate --> Execute[Run execute(input)]
     Execute --> Result[Result appended to context]
     Result --> Agent
+    style Tool fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Result fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style Execute fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```

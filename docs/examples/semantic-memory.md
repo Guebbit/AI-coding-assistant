@@ -155,6 +155,8 @@ flowchart LR
     end
 
     R1D -.->|stored in ring buffer + Qdrant| R2A
+    style R1C fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style R2B fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 |            | Run 1 (cold)    | Run 2 (warm) |

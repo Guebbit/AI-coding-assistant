@@ -20,6 +20,13 @@ flowchart TD
     end
     PROMPT --> LLM["LLM"]
     LLM --> Output["Model must return:\n{ thought, action, input }"]
+    style PROMPT fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style TASK fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style MEMORY fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style CONTEXT fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style TOOLS fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style Output fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
 ```
 
 ## Each block explained
@@ -72,6 +79,9 @@ flowchart LR
         Qdrant["Qdrant recall:\ntop N by similarity\n(relevant, not just recent)"]
     end
     Unbounded["⚠️ Unbounded memory =\nmassive prompt =\nslow + expensive + confused model"] -.->|"solved by"| Limits
+    style Ring fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Qdrant fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Unbounded fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 Capped memory keeps prompts focused and the model sharp.
@@ -142,6 +152,10 @@ flowchart TD
         Inject --> Benefit["agent benefits from previous work"]
     end
     Store -.-> Get
+    style Agent1 fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style Store fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Find fill:#e0f2f1,stroke:#00695c,color:#004d40
+    style Inject fill:#e0f2f1,stroke:#00695c,color:#004d40
 ```
 
 ```mermaid
@@ -154,6 +168,10 @@ flowchart TD
     end
     Prompt["Assembled Prompt"] --> LLM["LLM"]
     LLM --> JSON["{ thought, action, input }"]
+    style Task fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    style Mem fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
+    style ToolList fill:#fff3e0,stroke:#e65100,color:#bf360c
+    style LLM fill:#f3e5f5,stroke:#8e24aa,color:#4a148c
 ```
 
 Further reading:

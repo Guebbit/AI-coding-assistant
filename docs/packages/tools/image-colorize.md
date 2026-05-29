@@ -52,6 +52,7 @@ flowchart LR
     B --> C[POST /colorize]
     C --> D[Receive transformed image]
     D --> E[Agent returns/uses output image]
+    style B fill:#fff3e0,stroke:#e65100,color:#bf360c
 ```
 
 ## Good test prompts
