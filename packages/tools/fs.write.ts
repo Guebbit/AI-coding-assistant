@@ -1,14 +1,14 @@
 /**
  * Write-file tool — writes UTF-8 content to a file under the
- * configured project output root.
+ * configured workspace root.
  *
  * Supports three write modes:
  * - `"create"` (default) — fail if the file already exists.
  * - `"overwrite"` — replace existing file contents.
  * - `"append"` — append to the end of the file.
  *
- * All paths are sandboxed to `PROJECT_OUTPUT_ROOT` to prevent
- * accidental writes outside the designated output directory.
+ * All paths are sandboxed to `AGENT_WORKSPACE_ROOT` to prevent
+ * accidental writes outside the designated workspace directory.
  *
  * @module tools/fs.write
  */
@@ -16,20 +16,14 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { z } from 'zod';
-import { resolveInsideRoot } from '../shared';
+import { assertWritePathAllowed, getWorkspaceRoot, resolveInsideRoot } from '../shared';
 import { createTool } from './tool-builder';
-
-/** Absolute path to the designated output directory for generated files. */
-const PROJECT_OUTPUT_ROOT = path.resolve(
-    process.cwd(),
-    process.env.PROJECT_OUTPUT_ROOT ?? 'data/generated-projects'
-);
 
 /** Allowed write modes. */
 type WriteMode = 'create' | 'overwrite' | 'append';
 
 /**
- * Tool instance for writing files under the generated-projects root.
+ * Tool instance for writing files under the configured workspace root.
  *
  * Input:
  * ```json
@@ -43,7 +37,7 @@ type WriteMode = 'create' | 'overwrite' | 'append';
 export const writeFileTool = createTool({
     id: 'write_file',
     description:
-        'Write UTF-8 file content under the generated-projects root only. ' +
+        'Write UTF-8 file content under AGENT_WORKSPACE_ROOT only. ' +
         'Input: { path: string, content: string, mode?: "create" | "overwrite" | "append" }',
     inputSchema: z.object({
         path: z.string().trim().min(1, '"path" must be a non-empty string'),
@@ -58,23 +52,25 @@ export const writeFileTool = createTool({
     }),
 
     /**
-     * Write the given content to a file under `PROJECT_OUTPUT_ROOT`.
+     * Write the given content to a file under `AGENT_WORKSPACE_ROOT`.
      *
      * @param input         - Tool input object.
-     * @param input.path    - Relative path under the output root.
+     * @param input.path    - Relative path under the workspace root.
      * @param input.content - String content to write.
      * @param input.mode    - Write mode: `"create"`, `"overwrite"`, or `"append"`.
      * @returns Metadata about the write operation (path, mode, bytes written).
-     * @throws {PathSafetyError} When `path` escapes the configured output root.
+     * @throws {PathSafetyError} When `path` escapes the configured workspace root.
      * @throws {Error} When file exists in `create` mode.
      */
     async execute({ path: filePath, content, mode }) {
         const writeMode: WriteMode =
             mode === 'overwrite' || mode === 'append' || mode === 'create' ? mode : 'create';
 
-        const resolvedPath = resolveInsideRoot(PROJECT_OUTPUT_ROOT, filePath);
-        const parentDir = path.dirname(resolvedPath);
-        await fs.mkdir(parentDir, { recursive: true });
+        const workspaceRoot = getWorkspaceRoot();
+        const resolvedPath = resolveInsideRoot(workspaceRoot, filePath);
+        await assertWritePathAllowed(resolvedPath);
+        const parentDirectory = path.dirname(resolvedPath);
+        await fs.mkdir(parentDirectory, { recursive: true });
 
         if (writeMode === 'append') {
             await fs.appendFile(resolvedPath, content, 'utf-8');
@@ -98,7 +94,7 @@ export const writeFileTool = createTool({
             path: path.relative(process.cwd(), resolvedPath),
             mode: writeMode,
             bytesWritten: Buffer.byteLength(content, 'utf-8'),
-            outputRoot: path.relative(process.cwd(), PROJECT_OUTPUT_ROOT)
+            outputRoot: path.relative(process.cwd(), workspaceRoot)
         };
     }
 });

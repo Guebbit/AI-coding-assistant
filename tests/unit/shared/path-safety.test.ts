@@ -13,7 +13,8 @@ import fs from 'fs';
 import {
     resolveSafePath,
     resolveInsideRoot,
-    PathSafetyError
+    PathSafetyError,
+    getWorkspaceRoot
 } from '@/packages/shared/path-safety.js';
 
 describe('PathSafetyError', () => {
@@ -44,12 +45,25 @@ describe('resolveSafePath', () => {
     it('throws PathSafetyError when a path traverses outside the project root', () => {
         expect(() => resolveSafePath('../../etc/passwd')).toThrow(PathSafetyError);
         expect(() => resolveSafePath('../../etc/passwd')).toThrow(
-            'Access denied: path is outside the project root'
+            'Access denied: path is outside the workspace root'
         );
     });
 
     it('throws PathSafetyError for an absolute path outside the project root', () => {
         expect(() => resolveSafePath('/etc/passwd')).toThrow(PathSafetyError);
+    });
+
+    describe('getWorkspaceRoot', () => {
+        it('uses AGENT_WORKSPACE_ROOT when configured', () => {
+            const previousWorkspaceRoot = process.env.AGENT_WORKSPACE_ROOT;
+            process.env.AGENT_WORKSPACE_ROOT = 'packages';
+            expect(getWorkspaceRoot()).toBe(path.resolve(process.cwd(), 'packages'));
+            if (previousWorkspaceRoot === undefined) {
+                delete process.env.AGENT_WORKSPACE_ROOT;
+            } else {
+                process.env.AGENT_WORKSPACE_ROOT = previousWorkspaceRoot;
+            }
+        });
     });
 
     it('resolves the project root itself without throwing', () => {

@@ -1,7 +1,7 @@
 # Tool: `write_file`
 
 ::: tip TL;DR
-Writes files inside PROJECT_OUTPUT_ROOT only. Requires `allowWrite: true`. Modes: create, overwrite, append.
+Writes files inside `AGENT_WORKSPACE_ROOT` only. Requires `allowWrite: true`. Modes: create, overwrite, append.
 :::
 
 ## Purpose
@@ -10,9 +10,9 @@ Write UTF-8 file content for generated projects.
 
 ## What it does in plain English
 
-> "Create or update a file inside the generated-projects folder."
+> "Create or update a file inside the workspace root."
 
-This is the write counterpart to `read_file`. While `read_file` can read from anywhere under the project root, `write_file` is **strictly confined** to `PROJECT_OUTPUT_ROOT` — it can never touch your actual source code.
+This is the write counterpart to `read_file`. Both resolve paths from `AGENT_WORKSPACE_ROOT` (or `process.cwd()` when unset). `write_file` also blocks writes to ignored/sensitive paths.
 
 ## ⚠️ Write mode is opt-in
 
@@ -39,7 +39,7 @@ Without `allowWrite: true`, both `write_file` and `scaffold_project` are not reg
 
 | Field     | Required | Default    | Notes                                      |
 | --------- | -------- | ---------- | ------------------------------------------ |
-| `path`    | ✅       | —          | Relative path inside `PROJECT_OUTPUT_ROOT` |
+| `path`    | ✅       | —          | Relative path inside `AGENT_WORKSPACE_ROOT` |
 | `content` | ✅       | —          | UTF-8 text to write                        |
 | `mode`    | ❌       | `"create"` | `create` / `overwrite` / `append`          |
 
@@ -55,22 +55,25 @@ Without `allowWrite: true`, both `write_file` and `scaffold_project` are not reg
 
 ```json
 {
-    "path": "data/generated-projects/my-app/src/index.ts",
+    "path": "my-app/src/index.ts",
     "mode": "create",
     "bytesWritten": 22,
-    "outputRoot": "data/generated-projects"
+    "outputRoot": "."
 }
 ```
 
 ## Safety
 
-- Only writes under `PROJECT_OUTPUT_ROOT` (default `data/generated-projects`)
+- Only writes under `AGENT_WORKSPACE_ROOT` (default: current working directory)
 - Resolves the full path and rejects any traversal attempt (e.g. `../../src/index.ts`)
+- Blocks writes to paths matched by `.gitignore`
+- Blocks writes to paths matched by `AGENT_WRITE_DENYLIST` (default: `.git,.env,.env.*`)
 - Available only when `/run` body includes `"allowWrite": true`
 
 ## Environment variable
 
-- `PROJECT_OUTPUT_ROOT` (default `data/generated-projects`)
+- `AGENT_WORKSPACE_ROOT` (default current working directory)
+- `AGENT_WRITE_DENYLIST` (default `.git,.env,.env.*`)
 
 ## How the agent uses it (step-by-step)
 
