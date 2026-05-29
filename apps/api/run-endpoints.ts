@@ -14,9 +14,7 @@ import {
   rejectResponse,
   successResponse,
   t,
-  validateProfile,
-  validateTask,
-  validateToolPolicy,
+  validateRunRequest,
 } from "@/packages/shared";
 import { createAgent, VALID_PROFILES } from "./agents";
 import type { RunRequest, RunResponse } from "@/api";
@@ -29,30 +27,18 @@ export function registerRunRoutes(app: Express): void {
   app.post("/run", (req: Request, res: Response) => {
     const { task: rawTask, allowWrite, profile, toolPolicy } = req.body as Partial<RunRequest>;
 
-    const taskResult = validateTask(rawTask);
-    if ("error" in taskResult) {
-      rejectResponse(res, 400, "Bad Request", [taskResult.error]);
+    const validated = validateRunRequest({ task: rawTask, profile, toolPolicy }, VALID_PROFILES);
+    if ('error' in validated) {
+      rejectResponse(res, 400, "Bad Request", [validated.error]);
       return;
     }
-    const task = taskResult.task;
-
-    const profileError = validateProfile(profile, VALID_PROFILES);
-    if (profileError) {
-      rejectResponse(res, 400, "Bad Request", [profileError]);
-      return;
-    }
-
-    const toolPolicyResult = validateToolPolicy(toolPolicy);
-    if (toolPolicyResult.error) {
-      rejectResponse(res, 400, "Bad Request", [toolPolicyResult.error]);
-      return;
-    }
+    const task = validated.valid.task;
 
     logger.info("run_request_received", {
       component: "api.run.endpoints",
       task,
       profile: profile ?? null,
-      toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
+      toolPolicyMode: validated.valid.toolPolicy?.mode ?? null,
       requestId: req.requestId,
     });
     recordApiActivity({
@@ -62,7 +48,7 @@ export function registerRunRoutes(app: Express): void {
       data: {
         task,
         allowWrite: allowWrite === true,
-        toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
+        toolPolicyMode: validated.valid.toolPolicy?.mode ?? null,
       },
     }).catch(() => undefined);
 

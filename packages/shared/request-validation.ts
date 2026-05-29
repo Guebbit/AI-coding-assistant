@@ -153,3 +153,45 @@ export function validateToolPolicy(toolPolicy: unknown): {
         }
     };
 }
+
+/**
+ * Validated request fields for agent-run endpoints.
+ *
+ * Returned by `validateRunRequest` on success so callers avoid
+ * repeating the same 3-step validation dance.
+ */
+export interface IValidatedRunRequest {
+    task: string;
+    toolPolicy?: IToolPolicy;
+}
+
+/**
+ * Validate the common fields shared by `POST /run`, `POST /run/stream`,
+ * and `POST /run/swarm` endpoints in a single pass.
+ *
+ * Returns either a validated request object or an error string.
+ *
+ * @param body          - Raw request body (destructured by the caller).
+ * @param validProfiles - Set of allowed profile strings.
+ * @returns Validated request or error string.
+ */
+export function validateRunRequest(
+    body: { task?: unknown; profile?: unknown; toolPolicy?: unknown },
+    validProfiles: ReadonlySet<string>
+): { valid: IValidatedRunRequest } | { error: string } {
+    const taskResult = validateTask(body.task);
+    if ('error' in taskResult) return { error: taskResult.error };
+
+    const profileError = validateProfile(body.profile, validProfiles);
+    if (profileError) return { error: profileError };
+
+    const toolPolicyResult = validateToolPolicy(body.toolPolicy);
+    if (toolPolicyResult.error) return { error: toolPolicyResult.error };
+
+    return {
+        valid: {
+            task: taskResult.task,
+            toolPolicy: toolPolicyResult.toolPolicy
+        }
+    };
+}

@@ -13,11 +13,9 @@
 
 import path from 'path';
 import { z } from 'zod';
-import { safeReadFile } from '../shared';
+import { resolveDataSource } from '../shared';
+import { OLLAMA_BASE_URL } from '../llm/config';
 import { createTool } from './tool-builder';
-
-/** Ollama base URL for the transcription endpoint. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 
 /** Default speech-to-text model. */
 const DEFAULT_STT_MODEL = process.env.TOOL_STT_MODEL ?? 'whisper';
@@ -73,20 +71,15 @@ export const speechToTextTool = createTool({
      * @throws {Error} When neither `path` nor `data` is provided, or the API fails.
      */
     async execute({ path: audioPath, data, filename, model, language, prompt }) {
-        let audioData: Buffer;
         let resolvedFilename: string;
 
+        const audioData = await resolveDataSource(audioPath, data);
+
         if (typeof data === 'string' && data.trim() !== '') {
-            audioData = Buffer.from(data, 'base64');
             resolvedFilename =
                 typeof filename === 'string' && filename.trim() ? filename : 'audio.wav';
-        } else if (audioPath) {
-            audioData = await safeReadFile(audioPath);
-            resolvedFilename = path.basename(audioPath);
         } else {
-            throw new Error(
-                'Either "path" (file on disk) or "data" (base64 string) must be provided'
-            );
+            resolvedFilename = path.basename(audioPath!);
         }
 
         if (audioData.length === 0) {

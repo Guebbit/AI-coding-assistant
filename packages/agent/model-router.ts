@@ -16,7 +16,7 @@
  */
 
 import { generate } from '../llm/ollama';
-import { envNumber, resolveModel, stripCodeFences, PROFILE_LIST } from '../shared';
+import { envNumber, resolveModel, stripCodeFences, PROFILE_LIST, buildOllamaOptions } from '../shared';
 import type { ModelProfile } from '../shared';
 
 /* ── Budget environment variables ────────────────────────────────────── */
@@ -134,14 +134,7 @@ const PROFILE_OPTION_DEFAULTS: Record<
  */
 function resolveOptions(profile: ModelProfile): Record<string, unknown> {
     const prefix = `AGENT_MODEL_${profile.toUpperCase()}`;
-    const d = PROFILE_OPTION_DEFAULTS[profile];
-    return {
-        temperature: envNumber(process.env[`${prefix}_TEMPERATURE`], d.temperature),
-        top_p: envNumber(process.env[`${prefix}_TOP_P`], d.top_p),
-        top_k: envNumber(process.env[`${prefix}_TOP_K`], d.top_k),
-        num_ctx: envNumber(process.env[`${prefix}_NUM_CTX`], d.num_ctx),
-        repeat_penalty: envNumber(process.env[`${prefix}_REPEAT_PENALTY`], d.repeat_penalty)
-    };
+    return buildOllamaOptions(prefix, PROFILE_OPTION_DEFAULTS[profile]);
 }
 
 /**

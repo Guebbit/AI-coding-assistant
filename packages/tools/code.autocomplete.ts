@@ -9,7 +9,7 @@
 
 import { generate } from '../llm/ollama';
 import { z } from 'zod';
-import { envNumber, resolveModel } from '../shared';
+import { buildOllamaOptions, resolveModel } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Default IDE completion model, configurable via environment variable. */
@@ -68,13 +68,13 @@ export const codeAutocompleteTool = createTool({
             model: usedModel,
             stream: false,
             suffix: typeof suffix === 'string' && suffix.trim() ? suffix : undefined,
-            options: {
-                temperature: envNumber(process.env.TOOL_IDE_TEMPERATURE, 0.1),
-                top_p: envNumber(process.env.TOOL_IDE_TOP_P, 0.7),
-                top_k: envNumber(process.env.TOOL_IDE_TOP_K, 10),
-                num_ctx: envNumber(process.env.TOOL_IDE_NUM_CTX, 8192),
-                repeat_penalty: envNumber(process.env.TOOL_IDE_REPEAT_PENALTY, 1.2)
-            }
+            options: buildOllamaOptions('TOOL_IDE', {
+                temperature: 0.1,
+                top_p: 0.7,
+                top_k: 10,
+                num_ctx: 8192,
+                repeat_penalty: 1.2
+            })
         });
 
         return {
