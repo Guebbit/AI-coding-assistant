@@ -24,9 +24,7 @@ import type { IAgentEvent } from "@/packages/events/bus";
 import { logger } from "@/packages/logger/logger";
 import {
   rejectResponse,
-  validateTask,
-  validateProfile,
-  validateToolPolicy,
+  validateRunRequest,
   createSseWriter,
   setupSSEHeaders,
   onSSEClose,
@@ -54,24 +52,12 @@ export function registerStreamRoutes(app: Express): void {
   app.post("/run/stream", (req: Request, res: Response) => {
     const { task: rawTask, allowWrite, profile, toolPolicy } = req.body as Partial<RunRequest>;
 
-    const taskResult = validateTask(rawTask);
-    if ('error' in taskResult) {
-      rejectResponse(res, 400, "Bad Request", [taskResult.error]);
+    const validated = validateRunRequest({ task: rawTask, profile, toolPolicy }, VALID_PROFILES);
+    if ('error' in validated) {
+      rejectResponse(res, 400, "Bad Request", [validated.error]);
       return;
     }
-    const task = taskResult.task;
-
-    const profileError = validateProfile(profile, VALID_PROFILES);
-    if (profileError) {
-      rejectResponse(res, 400, "Bad Request", [profileError]);
-      return;
-    }
-
-    const toolPolicyResult = validateToolPolicy(toolPolicy);
-    if (toolPolicyResult.error) {
-      rejectResponse(res, 400, "Bad Request", [toolPolicyResult.error]);
-      return;
-    }
+    const task = validated.valid.task;
 
     /* ── Set SSE headers ──────────────────────────────────────────── */
     setupSSEHeaders(res);
@@ -98,7 +84,7 @@ export function registerStreamRoutes(app: Express): void {
       task,
       writeEnabled,
       profile: profile ?? null,
-      toolPolicyMode: toolPolicyResult.toolPolicy?.mode ?? null,
+      toolPolicyMode: validated.valid.toolPolicy?.mode ?? null,
     });
 
     agent

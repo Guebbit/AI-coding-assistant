@@ -13,14 +13,9 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import { logger } from '../logger/logger';
 import { getEmbedding } from '../llm/embeddings';
 import type { IMemoryEntry } from './types';
+import { QDRANT_URL, QDRANT_COLLECTION } from './config';
 
 /* ── Configuration ───────────────────────────────────────────────────── */
-
-/** URL of the Qdrant vector database REST API. */
-const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
-
-/** Qdrant collection name where memory vectors are stored. */
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? 'agent_memory';
 
 /* ── State ───────────────────────────────────────────────────────────── */
 

@@ -22,6 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { resolveSafePath, chunkText } from '../shared';
 import { getEmbedding } from '../llm/embeddings';
+import { QDRANT_URL, QDRANT_COLLECTION } from '../memory/config';
 import { createTool } from './tool-builder';
 import { z } from 'zod';
 import { readFileTool } from './fs.read';
@@ -33,12 +34,23 @@ import { readMarkdownTool } from './markdown.read';
 
 /* ── Configuration ──────────────────────────────────────────────────── */
 
-const QDRANT_URL = process.env.QDRANT_URL ?? 'http://localhost:6333';
-const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? 'agent_memory';
-
 const qdrant = new QdrantClient({ url: QDRANT_URL });
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
+
+/**
+ * Registry mapping file extensions to their reader tools.
+ * Adding a new supported format only requires adding a line here.
+ */
+const READER_TOOLS: Record<string, typeof readFileTool> = {
+    '.docx': readDocxTool,
+    '.csv': readCsvTool,
+    '.html': readHtmlTool,
+    '.htm': readHtmlTool,
+    '.json': readJsonTool,
+    '.md': readMarkdownTool,
+    '.markdown': readMarkdownTool
+};
 
 /**
  * Extract plain text from a file by dispatching to the appropriate reader.
@@ -51,36 +63,21 @@ const qdrant = new QdrantClient({ url: QDRANT_URL });
 async function extractText(filePath: string, extension: string): Promise<string> {
     /* Use relative path for tools that call resolveSafePath internally. */
     const rel = path.relative(process.cwd(), filePath);
+    const readerTool = READER_TOOLS[extension];
 
-    switch (extension) {
-        case '.docx': {
-            const r = (await readDocxTool.execute({ path: rel })) as { text: string };
-            return r.text;
-        }
-        case '.csv': {
-            const r = (await readCsvTool.execute({ path: rel })) as { text: string };
-            return r.text;
-        }
-        case '.html':
-        case '.htm': {
-            const r = (await readHtmlTool.execute({ path: rel })) as { text: string };
-            return r.text;
-        }
-        case '.json': {
-            const r = (await readJsonTool.execute({ path: rel })) as { data: unknown };
-            return JSON.stringify(r.data, null, 2);
-        }
-        case '.md':
-        case '.markdown': {
-            const r = (await readMarkdownTool.execute({ path: rel })) as { text: string };
-            return r.text;
-        }
-        default: {
-            /* Fallback: treat as plain text. */
-            const r = await readFileTool.execute({ path: rel });
-            return typeof r === 'string' ? r : JSON.stringify(r);
-        }
+    if (readerTool) {
+        const result = (await readerTool.execute({ path: rel })) as {
+            text?: string;
+            data?: unknown;
+        };
+        if (typeof result.text === 'string') return result.text;
+        /* JSON reader returns { data } */
+        return JSON.stringify(result.data, null, 2);
     }
+
+    /* Fallback: treat as plain text. */
+    const r = await readFileTool.execute({ path: rel });
+    return typeof r === 'string' ? r : JSON.stringify(r);
 }
 
 /* ── Tool ─────────────────────────────────────────────────────────────── */

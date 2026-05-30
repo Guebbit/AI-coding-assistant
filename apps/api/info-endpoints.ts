@@ -17,6 +17,7 @@ import type express from "express";
 import { logger } from "@/packages/logger/logger";
 import { rejectResponse, successResponse, buildResponseMeta, PROFILE_ENV_VARS } from "@/packages/shared";
 import type { ModelProfile } from "@/packages/shared";
+import { OLLAMA_BASE_URL } from "@/packages/llm/config";
 import { VALID_PROFILES } from "./agents";
 
 /** Help parameter metadata for a single endpoint. */
@@ -36,9 +37,6 @@ interface IHelpEndpoint {
 }
 
 /* ── Constants ───────────────────────────────────────────────────────── */
-
-/** Base URL for the Ollama REST API. */
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
 
 /* ── Mode / profile metadata ─────────────────────────────────────────── */
 

@@ -13,7 +13,7 @@
 
 import { PDFParse } from 'pdf-parse';
 import { z } from 'zod';
-import { safeReadFile } from '../shared';
+import { resolveDataSource } from '../shared';
 import { createTool } from './tool-builder';
 
 /**
@@ -53,17 +53,7 @@ export const readPdfTool = createTool({
      * @throws {Error} When neither `path` nor `data` is provided.
      */
     async execute({ path: pdfPath, data }) {
-        let buffer: Buffer;
-
-        if (typeof data === 'string' && data.trim() !== '') {
-            buffer = Buffer.from(data, 'base64');
-        } else if (typeof pdfPath === 'string' && pdfPath.trim() !== '') {
-            buffer = await safeReadFile(pdfPath);
-        } else {
-            throw new Error(
-                'Either "path" (file on disk) or "data" (base64 string) must be provided'
-            );
-        }
+        const buffer = await resolveDataSource(pdfPath, data);
 
         const parser = new PDFParse({ data: buffer });
         const parsed = await parser.getText();

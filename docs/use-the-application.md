@@ -345,11 +345,11 @@ For comprehensive coverage, ingest your library's documentation PDFs or markdown
 
 ### Environment variables
 
-| Variable              | Default                   | Description                           |
-| --------------------- | ------------------------- | ------------------------------------- |
-| `BOILERPLATE_ROOT`    | `data/boilerplates`       | Where your boilerplate templates live |
-| `AGENT_WORKSPACE_ROOT` | current working directory | Trusted root for file reads/writes |
-| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*` | Comma-separated write-protected path patterns |
+| Variable               | Default                   | Description                                   |
+| ---------------------- | ------------------------- | --------------------------------------------- |
+| `BOILERPLATE_ROOT`     | `data/boilerplates`       | Where your boilerplate templates live         |
+| `AGENT_WORKSPACE_ROOT` | current working directory | Trusted root for file reads/writes            |
+| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*`        | Comma-separated write-protected path patterns |
 
 ---
 

@@ -15,7 +15,7 @@
 
 import { z } from 'zod';
 import { generate } from '../llm/ollama';
-import { envNumber, safeReadFile } from '../shared';
+import { buildOllamaOptions, resolveDataSource } from '../shared';
 import { createTool } from './tool-builder';
 
 /** Default vision model, configurable via environment variable. */
@@ -68,17 +68,8 @@ export const imageClassifyTool = createTool({
      * @throws {Error} When neither `path` nor `data` is provided.
      */
     async execute({ path: imagePath, data, prompt, model }) {
-        let base64Image: string;
-
-        if (typeof data === 'string' && data.trim() !== '') {
-            base64Image = data;
-        } else if (imagePath) {
-            base64Image = (await safeReadFile(imagePath)).toString('base64');
-        } else {
-            throw new Error(
-                'Either "path" (file on disk) or "data" (base64 string) must be provided'
-            );
-        }
+        const buffer = await resolveDataSource(imagePath, data);
+        const base64Image = buffer.toString('base64');
 
         const usedModel = typeof model === 'string' && model.trim() ? model : DEFAULT_VISION_MODEL;
         const usedPrompt =
@@ -90,13 +81,13 @@ export const imageClassifyTool = createTool({
             model: usedModel,
             stream: false,
             images: [base64Image],
-            options: {
-                temperature: envNumber(process.env.TOOL_VISION_TEMPERATURE, 0.2),
-                top_p: envNumber(process.env.TOOL_VISION_TOP_P, 0.8),
-                top_k: envNumber(process.env.TOOL_VISION_TOP_K, 20),
-                num_ctx: envNumber(process.env.TOOL_VISION_NUM_CTX, 4096),
-                repeat_penalty: envNumber(process.env.TOOL_VISION_REPEAT_PENALTY, 1.3)
-            }
+            options: buildOllamaOptions('TOOL_VISION', {
+                temperature: 0.2,
+                top_p: 0.8,
+                top_k: 20,
+                num_ctx: 4096,
+                repeat_penalty: 1.3
+            })
         });
 
         return {

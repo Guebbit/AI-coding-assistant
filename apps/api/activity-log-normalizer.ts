@@ -12,6 +12,13 @@ const MAX_ARRAY_ITEMS = 100;
 const MAX_OBJECT_KEYS = 100;
 const REDACTED_KEYS = new Set(['imageData', 'binary', 'buffer', 'rawBytes']);
 
+/**
+ * Structured input for logging an API lifecycle event (request received,
+ * response sent, error, etc.) into the activity-log collection.
+ *
+ * Used by endpoints that want to record their own lifecycle signals
+ * without going through the internal event bus.
+ */
 export interface IApiActivityInput {
     kind: string;
     category?: string;

@@ -13,6 +13,6 @@ Each file demonstrates a correct pattern. Use as reference, not as copy-paste so
 
 ## Available Examples
 
-| File | Demonstrates |
-| ---- | ------------ |
-| (add as needed) | |
+| File            | Demonstrates |
+| --------------- | ------------ |
+| (add as needed) |              |

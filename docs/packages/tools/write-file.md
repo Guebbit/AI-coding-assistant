@@ -37,11 +37,11 @@ Without `allowWrite: true`, both `write_file` and `scaffold_project` are not reg
 }
 ```
 
-| Field     | Required | Default    | Notes                                      |
-| --------- | -------- | ---------- | ------------------------------------------ |
+| Field     | Required | Default    | Notes                                       |
+| --------- | -------- | ---------- | ------------------------------------------- |
 | `path`    | ✅       | —          | Relative path inside `AGENT_WORKSPACE_ROOT` |
-| `content` | ✅       | —          | UTF-8 text to write                        |
-| `mode`    | ❌       | `"create"` | `create` / `overwrite` / `append`          |
+| `content` | ✅       | —          | UTF-8 text to write                         |
+| `mode`    | ❌       | `"create"` | `create` / `overwrite` / `append`           |
 
 ### Modes explained
 

@@ -37,6 +37,13 @@ const LANGUAGE_MAP: Record<string, string> = {
     md: 'markdown'
 };
 
+/**
+ * Return `true` when the given language identifier or filename extension
+ * represents TypeScript (`.ts`, `.tsx`, `.mts`, `.cts`).
+ *
+ * @param language - Explicit language string (e.g. `"typescript"`).
+ * @param filename - File name used as fallback when `language` is absent.
+ */
 export function isTypeScriptLike(language?: string, filename?: string): boolean {
     if (language)
         return language.toLowerCase().startsWith('ts') || language.toLowerCase() === 'typescript';
@@ -47,6 +54,13 @@ export function isTypeScriptLike(language?: string, filename?: string): boolean 
     return false;
 }
 
+/**
+ * Return `true` when the given language identifier or filename extension
+ * represents JavaScript (`.js`, `.jsx`, `.mjs`, `.cjs`).
+ *
+ * @param language - Explicit language string (e.g. `"javascript"`).
+ * @param filename - File name used as fallback when `language` is absent.
+ */
 export function isJavaScriptLike(language?: string, filename?: string): boolean {
     if (language)
         return language.toLowerCase().startsWith('js') || language.toLowerCase() === 'javascript';
@@ -57,6 +71,14 @@ export function isJavaScriptLike(language?: string, filename?: string): boolean 
     return false;
 }
 
+/**
+ * Resolve a canonical lowercase language name from an explicit language
+ * identifier or a filename extension (uses `LANGUAGE_MAP` as the lookup).
+ * Returns `"plaintext"` when neither can be resolved.
+ *
+ * @param language - Explicit language string (highest priority).
+ * @param filename - File name used as fallback when `language` is absent.
+ */
 export function inferLanguage(language?: string, filename?: string): string {
     if (language?.trim()) return language.trim().toLowerCase();
     if (filename) {

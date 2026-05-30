@@ -16,6 +16,6 @@ in addition to the core `.ai/` files.
 
 ## Available Prompts
 
-| File | Use case |
-| ---- | -------- |
-| (add as needed) | |
+| File            | Use case |
+| --------------- | -------- |
+| (add as needed) |          |
