@@ -54,7 +54,7 @@ vi.mock('@/packages/agent/model-router.js', () => ({
 /* ── Fetch mock helpers ─────────────────────────────────────────────────── */
 
 /** Pending response bodies returned in order by the global mock fetch. */
-const fetchQueue: unknown[] = [];
+const fetchQueue: (unknown | symbol)[] = [];
 
 /** Build an Ollama /api/generate body for one agent step. */
 function agentResponse(thought: string, action: string, input: Record<string, unknown> = {}) {
@@ -71,7 +71,7 @@ function debugResponse(summary: string) {
 }
 
 /** Simulates an HTTP 500 failure from the Ollama endpoint. */
-const FETCH_FAIL = { __fetchFail: true };
+const FETCH_FAIL = Symbol('FETCH_FAIL');
 
 const embeddingOk = { embedding: [0.1, 0.2, 0.3, 0.4] };
 const qdrantOk = { vectors: { size: 4 }, status: 'green' };
@@ -91,7 +91,7 @@ const mockFetch = vi.fn(async (url: RequestInfo | URL) => {
     if (urlString.includes('/api/generate')) {
         const body = fetchQueue.shift();
         if (body === undefined) throw new Error('fetchQueue exhausted');
-        if ((body as { __fetchFail?: boolean }).__fetchFail) {
+        if (body === FETCH_FAIL) {
             return {
                 ok: false,
                 status: 500,
@@ -190,9 +190,7 @@ function makeEchoTool(): ITool {
 describe('[harness] Scenario 1 — read_file outside project root → hard stop', () => {
     it('terminates with hard_stopped status after two path violations', async () => {
         /* Two distinct paths to avoid the deduplicator. */
-        fetchQueue.push(
-            agentResponse('Reading a file.', 'read_file', { path: '/etc/passwd' })
-        );
+        fetchQueue.push(agentResponse('Reading a file.', 'read_file', { path: '/etc/passwd' }));
         fetchQueue.push(
             agentResponse('Trying another restricted path.', 'read_file', { path: '/etc/shadow' })
         );
@@ -324,7 +322,7 @@ describe('[harness] Scenario 4 — allowWrite=false + write tool → E_PERMISSIO
         /* Tool must NOT have been executed — policy blocked it first. */
         expect(writeTool.execute).not.toHaveBeenCalled();
         /* Answer must reference write access or allowWrite. */
-        expect(result.answer).toMatch(/write access|allowWrite/i);
+        expect(result.answer).toMatch(/write access|allowwrite/i);
         /* Status must be hard_stopped. */
         const saved = (saveAgentRun as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as {
             status: string;
@@ -438,7 +436,7 @@ describe('[harness] Drift-detection — .env access hard-stops; no further tool 
         /* No hallucinated tool calls after the hard stop. */
         expect(result.meta.steps).toBeLessThanOrEqual(2);
         /* The answer must be the policy violation message (no hallucinated JSON blobs). */
-        expect(result.answer).not.toMatch(/\{.*"action".*\}/s);
+        expect(result.answer).not.toMatch(/{.*"action".*}/s);
         expect(result.answer.trim().length).toBeGreaterThan(0);
         /* Status must be hard_stopped. */
         const saved = (saveAgentRun as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as {
