@@ -44,15 +44,15 @@
 
 ## Quick Reference
 
-| Need to know...          | Read                  |
-| ------------------------ | --------------------- |
-| What I MUST NOT do       | `RULES.md`            |
-| What tech to use         | `STACK.md`            |
-| How the system is built  | `ARCHITECTURE.md`     |
-| How to write code        | `CONVENTIONS.md`      |
-| How to execute a task    | `WORKFLOW.md`         |
-| How to validate work     | `CHECKLISTS/`         |
-| How to define a task     | `TASKS/TEMPLATE.md`   |
+| Need to know...         | Read                |
+| ----------------------- | ------------------- |
+| What I MUST NOT do      | `RULES.md`          |
+| What tech to use        | `STACK.md`          |
+| How the system is built | `ARCHITECTURE.md`   |
+| How to write code       | `CONVENTIONS.md`    |
+| How to execute a task   | `WORKFLOW.md`       |
+| How to validate work    | `CHECKLISTS/`       |
+| How to define a task    | `TASKS/TEMPLATE.md` |
 
 ---
 
@@ -73,22 +73,23 @@
 
 ## Identity (Quick)
 
-| Field     | Value                                                    |
-| --------- | -------------------------------------------------------- |
-| Name      | Manna                                                    |
-| Type      | Personal AI Agent Platform — local-first, extensible     |
-| Package   | `@guebbit/manna` (private, alpha)                        |
-| Runtime   | Node.js ≥ 18, pure ESM, TypeScript 5.8 strict           |
-| Entry     | `apps/api/index.ts` (Express, `PORT=3001`)               |
-| Core API  | `POST /run` (agent loop)                                 |
-| Contract  | `openapi.yaml` (Spectral-linted)                         |
-| Validate  | `npm run complete:check`                                 |
+| Field    | Value                                                |
+| -------- | ---------------------------------------------------- |
+| Name     | Manna                                                |
+| Type     | Personal AI Agent Platform — local-first, extensible |
+| Package  | `@guebbit/manna` (private, alpha)                    |
+| Runtime  | Node.js ≥ 18, pure ESM, TypeScript 5.8 strict        |
+| Entry    | `apps/api/index.ts` (Express, `PORT=3001`)           |
+| Core API | `POST /run` (agent loop)                             |
+| Contract | `openapi.yaml` (Spectral-linted)                     |
+| Validate | `npm run complete:check`                             |
 
 ---
 
 ## Cross-Tool Compatibility
 
 This system works with:
+
 - GitHub Copilot (agent mode)
 - Cursor
 - Claude Code

@@ -66,7 +66,10 @@ async function extractText(filePath: string, extension: string): Promise<string>
     const readerTool = READER_TOOLS[extension];
 
     if (readerTool) {
-        const result = (await readerTool.execute({ path: rel })) as { text?: string; data?: unknown };
+        const result = (await readerTool.execute({ path: rel })) as {
+            text?: string;
+            data?: unknown;
+        };
         if (typeof result.text === 'string') return result.text;
         /* JSON reader returns { data } */
         return JSON.stringify(result.data, null, 2);

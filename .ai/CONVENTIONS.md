@@ -17,18 +17,18 @@
 
 ## Naming Conventions
 
-| Entity                | Pattern             | Example                    |
-| --------------------- | ------------------- | -------------------------- |
-| Interfaces            | `IPascalCase`       | `IToolResult`              |
-| Enums                 | `EPascalCase`       | `EOperatingMode`           |
-| Enum members          | `PascalCase` or `UPPER_CASE` | `LowSpec`, `HIGH_TRUST` |
-| Type aliases          | `PascalCase`        | `AgentStepResult`          |
-| Classes               | `PascalCase`        | `PolicyProcessor`          |
-| Functions             | `camelCase`         | `resolveOperatingMode`     |
-| Variables             | `camelCase`         | `maxSteps`                 |
-| Constants             | `camelCase` or `UPPER_CASE` | `MAX_ENTRIES`     |
-| File names            | `kebab-case.ts`     | `model-router.ts`          |
-| Test files            | `*.test.ts`         | `agent.test.ts`            |
+| Entity       | Pattern                      | Example                 |
+| ------------ | ---------------------------- | ----------------------- |
+| Interfaces   | `IPascalCase`                | `IToolResult`           |
+| Enums        | `EPascalCase`                | `EOperatingMode`        |
+| Enum members | `PascalCase` or `UPPER_CASE` | `LowSpec`, `HIGH_TRUST` |
+| Type aliases | `PascalCase`                 | `AgentStepResult`       |
+| Classes      | `PascalCase`                 | `PolicyProcessor`       |
+| Functions    | `camelCase`                  | `resolveOperatingMode`  |
+| Variables    | `camelCase`                  | `maxSteps`              |
+| Constants    | `camelCase` or `UPPER_CASE`  | `MAX_ENTRIES`           |
+| File names   | `kebab-case.ts`              | `model-router.ts`       |
+| Test files   | `*.test.ts`                  | `agent.test.ts`         |
 
 ---
 

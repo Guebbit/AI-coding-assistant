@@ -1,12 +1,36 @@
+/**
+ * SSE event bridge — translates in-process bus events into Server-Sent Events.
+ *
+ * ROLE: Single place that decides which internal agent/swarm events are
+ * forwarded to connected SSE clients, and how each payload is shaped.
+ * Keeps SSE formatting concerns out of the agent and orchestrator code.
+ *
+ * @module apps/api/sse-event-bridge
+ */
+
 import type { IAgentEvent } from "@/packages/events/bus";
 import { SSE_PAYLOAD_MAX_LENGTH } from "@/packages/shared";
 
+/** Callback injected by the endpoint that writes one SSE event to the HTTP response. */
 type WriteEvent = (eventType: string, data: unknown) => void;
 
+/** Optional context passed when an agent run belongs to a sequential workflow. */
 interface IAgentSseOptions {
+  /** Position of this agent step within a multi-step workflow (0-indexed). */
   workflowIndex?: number;
 }
 
+/**
+ * Forward a single agent bus event to the SSE stream.
+ *
+ * Handles `agent:step`, `tool:result`, `tool:error`, `agent:model_routed`,
+ * and `agent:hard_stop`. Truncates large payloads to `SSE_PAYLOAD_MAX_LENGTH`.
+ *
+ * @param event      - The internal event emitted by the agent.
+ * @param writeEvent - SSE write callback provided by the endpoint.
+ * @param options    - Optional workflow context for multi-step runs.
+ * @returns `true` when the event was handled and forwarded, `false` when ignored.
+ */
 export function writeAgentEventToSse(
   event: IAgentEvent,
   writeEvent: WriteEvent,
@@ -81,6 +105,17 @@ export function writeAgentEventToSse(
   }
 }
 
+/**
+ * Forward a single swarm bus event to the SSE stream.
+ *
+ * Handles swarm-specific events (`swarm:decomposed`, `swarm:subtask_start`,
+ * `swarm:subtask_done`, `swarm:subtask_error`) and falls back to
+ * `writeAgentEventToSse` for regular agent events.
+ *
+ * @param event      - The internal event emitted by the swarm/orchestrator.
+ * @param writeEvent - SSE write callback provided by the endpoint.
+ * @returns `true` when the event was handled and forwarded, `false` when ignored.
+ */
 export function writeSwarmEventToSse(event: IAgentEvent, writeEvent: WriteEvent): boolean {
   switch (event.type) {
     case "swarm:decomposed":

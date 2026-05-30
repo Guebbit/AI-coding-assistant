@@ -16,7 +16,13 @@
  */
 
 import { generate } from '../llm/ollama';
-import { envNumber, resolveModel, stripCodeFences, PROFILE_LIST, buildOllamaOptions } from '../shared';
+import {
+    envNumber,
+    resolveModel,
+    stripCodeFences,
+    PROFILE_LIST,
+    buildOllamaOptions
+} from '../shared';
 import type { ModelProfile } from '../shared';
 
 /* ── Budget environment variables ────────────────────────────────────── */

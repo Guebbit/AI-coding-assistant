@@ -59,6 +59,13 @@ export interface ITool {
     execute(input: Record<string, unknown>): Promise<unknown>;
 }
 
+/**
+ * Optional mixin for tool results that include source citations.
+ *
+ * Tools that return information from external sources (e.g. semantic search,
+ * library search) should include a `citations` array so the agent can
+ * surface provenance information in the final answer.
+ */
 export interface IToolResultWithCitations {
     citations: IToolCitation[];
 }

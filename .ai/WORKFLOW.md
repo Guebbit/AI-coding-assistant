@@ -92,10 +92,10 @@ If during implementation you discover:
 
 ## Task Size Guidelines
 
-| Size    | Characteristics                              | Approach              |
-| ------- | -------------------------------------------- | --------------------- |
-| Small   | 1-3 files, single concern                   | Implement directly    |
-| Medium  | 4-10 files, single feature                  | Plan → implement      |
-| Large   | 10+ files, multiple concerns                | Decompose into subtasks|
+| Size   | Characteristics              | Approach                |
+| ------ | ---------------------------- | ----------------------- |
+| Small  | 1-3 files, single concern    | Implement directly      |
+| Medium | 4-10 files, single feature   | Plan → implement        |
+| Large  | 10+ files, multiple concerns | Decompose into subtasks |
 
 Large tasks MUST be decomposed into independent subtasks, each following this full workflow.

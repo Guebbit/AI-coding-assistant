@@ -95,14 +95,14 @@ apps/api/ → packages/* → packages/shared/
 
 1. Load relevant memory (ring buffer + Qdrant semantic recall).
 2. Run up to `maxSteps` iterations:
-   1. `processInputStep` hooks (inject context, filter tools, hard-stop).
-   2. Build prompt: task + context + memory + tool catalogue.
-   3. Model router selects profile (or honours forced one).
-   4. Call LLM; parse with Zod (`agentStepSchema`).
-   5. `processOutputStep` hooks (rewrite or block action).
-   6. If `action === "none"` → return; else execute tool.
-   7. `processToolResult` hooks (error budgets).
-   8. Append result + tool citations to context.
+    1. `processInputStep` hooks (inject context, filter tools, hard-stop).
+    2. Build prompt: task + context + memory + tool catalogue.
+    3. Model router selects profile (or honours forced one).
+    4. Call LLM; parse with Zod (`agentStepSchema`).
+    5. `processOutputStep` hooks (rewrite or block action).
+    6. If `action === "none"` → return; else execute tool.
+    7. `processToolResult` hooks (error budgets).
+    8. Append result + tool citations to context.
 3. Return final answer + citations + metadata; persist in PostgreSQL.
 
 ---
@@ -127,11 +127,11 @@ START → decompose → execute_subtasks → review → synthesize → END
 Lifecycle hooks: `processInputStep`, `processOutputStep`, `processToolResult`.
 **PolicyProcessor is ALWAYS first.**
 
-| Processor     | Always on? | Role                                           |
-| ------------- | ---------- | ---------------------------------------------- |
-| Policy        | Yes        | Write-tool denial, error budget, hard-stops    |
-| Verification  | Opt-in     | Fast-model "right tool?" check + feedback      |
-| Tool reranker | Opt-in     | Cosine-similarity reranks, passes top-N tools  |
+| Processor     | Always on? | Role                                          |
+| ------------- | ---------- | --------------------------------------------- |
+| Policy        | Yes        | Write-tool denial, error budget, hard-stops   |
+| Verification  | Opt-in     | Fast-model "right tool?" check + feedback     |
+| Tool reranker | Opt-in     | Cosine-similarity reranks, passes top-N tools |
 
 ---
 
@@ -185,14 +185,14 @@ flowchart LR
 
 ## Sources of Truth
 
-| Concern             | Authoritative source                       |
-| ------------------- | ------------------------------------------ |
-| REST API contract   | `openapi.yaml`                             |
-| TypeScript config   | `tsconfig.json`                            |
-| Linting rules       | `eslint.config.ts`                         |
-| Formatting          | `.prettierrc`                              |
-| Test config         | `vitest.config.ts`, `vitest.eval.config.ts`|
-| Environment vars    | `.env.example`                             |
-| MCP servers         | `data/mcp-servers.json`                    |
-| SQL migrations      | `packages/persistence/migrations/`         |
-| Commit policy       | `commitlint.config.js`                     |
+| Concern           | Authoritative source                        |
+| ----------------- | ------------------------------------------- |
+| REST API contract | `openapi.yaml`                              |
+| TypeScript config | `tsconfig.json`                             |
+| Linting rules     | `eslint.config.ts`                          |
+| Formatting        | `.prettierrc`                               |
+| Test config       | `vitest.config.ts`, `vitest.eval.config.ts` |
+| Environment vars  | `.env.example`                              |
+| MCP servers       | `data/mcp-servers.json`                     |
+| SQL migrations    | `packages/persistence/migrations/`          |
+| Commit policy     | `commitlint.config.js`                      |

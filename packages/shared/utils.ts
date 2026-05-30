@@ -70,14 +70,14 @@ export function withTimeout<T>(
  * @throws {Error} When neither `path` nor `data` is provided.
  */
 export async function resolveDataSource(
-    pathParam: string | undefined,
-    dataParam: string | undefined
+    pathParameter: string | undefined,
+    dataParameter: string | undefined
 ): Promise<Buffer> {
-    if (typeof dataParam === 'string' && dataParam.trim() !== '') {
-        return Buffer.from(dataParam, 'base64');
+    if (typeof dataParameter === 'string' && dataParameter.trim() !== '') {
+        return Buffer.from(dataParameter, 'base64');
     }
-    if (typeof pathParam === 'string' && pathParam.trim() !== '') {
-        return safeReadFile(pathParam);
+    if (typeof pathParameter === 'string' && pathParameter.trim() !== '') {
+        return safeReadFile(pathParameter);
     }
     throw new Error('Either "path" (file on disk) or "data" (base64 string) must be provided');
 }

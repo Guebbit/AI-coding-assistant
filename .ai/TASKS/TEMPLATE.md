@@ -35,9 +35,7 @@
 
 <!-- Explicitly list files/modules that MUST NOT be touched -->
 
--
-
----
+- ***
 
 ## Acceptance Criteria
 
@@ -53,9 +51,7 @@
 
 <!-- Technical approach, patterns to follow, references to check -->
 
--
-
----
+- ***
 
 ## Validation Steps
 

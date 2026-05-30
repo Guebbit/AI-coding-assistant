@@ -20,7 +20,11 @@ describe('writeFileTool workspace guards', () => {
         process.env.AGENT_WORKSPACE_ROOT = temporaryWorkspaceRoot;
         process.env.AGENT_WRITE_DENYLIST = '.git,.env,.env.*';
 
-        await fs.writeFile(path.join(temporaryWorkspaceRoot, '.gitignore'), 'dist/\n*.log\n', 'utf-8');
+        await fs.writeFile(
+            path.join(temporaryWorkspaceRoot, '.gitignore'),
+            'dist/\n*.log\n',
+            'utf-8'
+        );
     });
 
     afterEach(async () => {
@@ -38,9 +42,15 @@ describe('writeFileTool workspace guards', () => {
     });
 
     it('allows writes inside non-ignored workspace paths', async () => {
-        await writeFileTool.execute({ path: 'src/allowed.ts', content: 'export const ok = true;\n' });
+        await writeFileTool.execute({
+            path: 'src/allowed.ts',
+            content: 'export const ok = true;\n'
+        });
 
-        const written = await fs.readFile(path.join(temporaryWorkspaceRoot, 'src/allowed.ts'), 'utf-8');
+        const written = await fs.readFile(
+            path.join(temporaryWorkspaceRoot, 'src/allowed.ts'),
+            'utf-8'
+        );
         expect(written).toBe('export const ok = true;\n');
     });
 

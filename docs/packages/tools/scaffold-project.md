@@ -66,11 +66,11 @@ If `metadataFile` exists in the template folder, it is parsed as JSON (or return
 
 ## Environment variables
 
-| Variable              | Default                   |
-| --------------------- | ------------------------- |
-| `BOILERPLATE_ROOT`    | `data/boilerplates`       |
+| Variable               | Default                   |
+| ---------------------- | ------------------------- |
+| `BOILERPLATE_ROOT`     | `data/boilerplates`       |
 | `AGENT_WORKSPACE_ROOT` | Current working directory |
-| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*` |
+| `AGENT_WRITE_DENYLIST` | `.git,.env,.env.*`        |
 
 ## How the folder structure works
 
