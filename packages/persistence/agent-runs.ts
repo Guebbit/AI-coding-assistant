@@ -1,5 +1,5 @@
 /**
- * Agent/swarm/eval run persistence — INSERT + query helpers.
+ * Agent/eval run persistence — INSERT + query helpers.
  *
  * WHY: Groups all "run history" CRUD in one place (SRP).
  * Each function is fail-open via `withClient` from `./pool`.
@@ -12,8 +12,6 @@ import { withClient } from './pool';
 import type {
     IAgentRunInput,
     IAgentRunRecord,
-    ISwarmRunInput,
-    ISwarmRunRecord,
     IEvalResultInput,
     IEvalResultRecord,
     IFetchRecentRunsOptions
@@ -68,48 +66,6 @@ export async function saveAgentRun(input: IAgentRunInput): Promise<IAgentRunReco
     });
 }
 
-/* ── saveSwarmRun ────────────────────────────────────────────────────────── */
-
-/**
- * Persist the result of a swarm orchestration run.
- *
- * @returns The saved record, or `null` when the database is unavailable.
- */
-export async function saveSwarmRun(input: ISwarmRunInput): Promise<ISwarmRunRecord | null> {
-    return withClient(async (client) => {
-        const { rows } = await client.query<ISwarmRunRecord>(
-            `INSERT INTO swarm_runs
-                (task, decomposition, subtasks, results, answer,
-                 start_time, end_time, total_duration_ms, status)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-             RETURNING
-                id, task,
-                decomposition, subtasks, results, answer,
-                start_time AS "startTime", end_time AS "endTime",
-                total_duration_ms AS "totalDurationMs",
-                status, created_at AS "createdAt"`,
-            [
-                input.task,
-                JSON.stringify(input.decomposition),
-                JSON.stringify(input.subtasks),
-                JSON.stringify(input.results),
-                input.answer,
-                input.startTime,
-                input.endTime,
-                input.totalDurationMs,
-                input.status
-            ]
-        );
-        const row = rows[0];
-        logger.info('persistence_swarm_run_saved', {
-            component: 'persistence.db',
-            id: row.id,
-            status: row.status
-        });
-        return row;
-    });
-}
-
 /* ── saveEvalResult ──────────────────────────────────────────────────────── */
 
 /**
@@ -150,16 +106,15 @@ export async function saveEvalResult(input: IEvalResultInput): Promise<IEvalResu
 /* ── fetchRecentRuns ─────────────────────────────────────────────────────── */
 
 /**
- * Fetch the most recent agent or swarm runs (newest first).
+ * Fetch the most recent agent runs (newest first).
  *
  * @returns Array of run records, or `[]` when the DB is unavailable.
  */
 export async function fetchRecentRuns(
     options: IFetchRecentRunsOptions = {}
-): Promise<IAgentRunRecord[] | ISwarmRunRecord[]> {
-    const { type = 'agent', limit = 20, status } = options;
+): Promise<IAgentRunRecord[]> {
+    const { limit = 20, status } = options;
 
-    const table = type === 'swarm' ? 'swarm_runs' : 'agent_runs';
     const parameters: unknown[] = [limit];
     let whereClause = '';
     if (status) {
@@ -167,10 +122,10 @@ export async function fetchRecentRuns(
         whereClause = `WHERE status = $${parameters.length}`;
     }
 
-    const query = `SELECT * FROM ${table} ${whereClause} ORDER BY created_at DESC LIMIT $1`;
+    const query = `SELECT * FROM agent_runs ${whereClause} ORDER BY created_at DESC LIMIT $1`;
 
     const result = (await withClient((client) => client.query(query, parameters))) as {
-        rows: IAgentRunRecord[] | ISwarmRunRecord[];
+        rows: IAgentRunRecord[];
     } | null;
     return result?.rows ?? [];
 }

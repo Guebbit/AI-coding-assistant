@@ -27,9 +27,7 @@ Every example is **fake but realistic** — the requests, event logs, and respon
 
 ## Multi-Agent
 
-| Example                                       | What it shows                                                    |
-| --------------------------------------------- | ---------------------------------------------------------------- |
-| [Swarm Orchestration](swarm-orchestration.md) | Decompose → execute → review → synthesize with parallel subtasks |
+_No multi-agent examples yet._
 
 ## Integrations
 

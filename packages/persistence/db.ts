@@ -5,7 +5,7 @@
  *
  * The persistence package is split by domain (SRP):
  *   - `pool.ts`       — PG pool singleton + fail-open `withClient` executor
- *   - `agent-runs.ts` — Agent/swarm/eval run CRUD
+ *   - `agent-runs.ts` — Agent/eval run CRUD
  *   - `chat.ts`       — Conversation + message CRUD
  *   - `library.ts`    — Library + article CRUD
  *   - `activity-log.ts` — MongoDB-backed append-only activity history
@@ -23,7 +23,7 @@
  */
 
 export { getPool, closePool } from './pool';
-export { saveAgentRun, saveSwarmRun, saveEvalResult, fetchRecentRuns } from './agent-runs';
+export { saveAgentRun, saveEvalResult, fetchRecentRuns } from './agent-runs';
 export {
     listConversations,
     createConversation,

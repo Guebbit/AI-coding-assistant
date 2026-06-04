@@ -1,9 +1,9 @@
 /**
  * Shared SSE (Server-Sent Events) helpers.
  *
- * The stream, swarm, and workflow endpoints each duplicated the same
- * `sseFrame` function, SSE header setup, and client-disconnect cleanup
- * pattern.  This module centralises all three.
+ * The stream and workflow endpoints share the same `sseFrame` function,
+ * SSE header setup, and client-disconnect cleanup pattern. This module
+ * centralises all three.
  *
  * @module shared/sse
  */

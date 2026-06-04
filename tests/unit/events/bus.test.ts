@@ -88,7 +88,7 @@ describe('wildcard "*" subscription', () => {
         on('*', handler);
         emit({ type: 'agent:start', payload: {} });
         emit({ type: 'tool:result', payload: {} });
-        emit({ type: 'swarm:done', payload: {} });
+        emit({ type: 'agent:done', payload: {} });
         expect(handler).toHaveBeenCalledTimes(3);
     });
 

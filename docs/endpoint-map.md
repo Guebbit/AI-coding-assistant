@@ -39,9 +39,6 @@ Manna API  (default port :3001)
 │
 ├── POST /run/stream                 — Streaming variant of /run (SSE)
 │
-├── POST /run/swarm                  — Multi-agent swarm orchestration
-├── POST /run/swarm/stream           — Streaming variant of /run/swarm (SSE)
-│
 ├── POST /workflow                   — Sequential multi-step workflow (each step bounded independently)
 │   ├── Accepts: steps[] (required), carry?, allowWrite?, profile?, maxStepsPerStep?
 │   └── carry modes: none | summary (default) | full

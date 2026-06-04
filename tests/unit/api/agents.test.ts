@@ -85,10 +85,6 @@ vi.mock('@/packages/shared', async (importOriginal) => {
     return { ...real, PROFILE_LIST: ['fast', 'reasoning', 'code'] };
 });
 
-vi.mock('@/packages/orchestrator/graph', () => ({
-    LangGraphSwarmOrchestrator: vi.fn().mockImplementation(() => ({})),
-}));
-
 let createAgent: (allowWrite: boolean) => { addProcessor: typeof mockAddProcessor };
 
 beforeAll(async () => {

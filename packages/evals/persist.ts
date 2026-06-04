@@ -25,17 +25,16 @@
  * ## Example — fetch recent agent runs from the DB
  *
  * ```typescript
- * import { fetchRecentAgentRuns, fetchRecentSwarmRuns } from '../evals/persist';
+ * import { fetchRecentAgentRuns } from '../evals/persist';
  *
  * const agentRuns = await fetchRecentAgentRuns(5);
- * const swarmRuns = await fetchRecentSwarmRuns(5);
  * ```
  *
  * @module evals/persist
  */
 
 import { saveEvalResult, fetchRecentRuns } from '../persistence/db';
-import type { IEvalResultRecord, IAgentRunRecord, ISwarmRunRecord } from '../persistence/types';
+import type { IEvalResultRecord, IAgentRunRecord } from '../persistence/types';
 import type { IScorer, IScorerRunInput } from './types';
 import { logger } from '../logger/logger';
 
@@ -43,10 +42,10 @@ import { logger } from '../logger/logger';
  * Extended scorer input that includes optional run association fields.
  */
 export interface IScorerRunInputWithRunId extends IScorerRunInput {
-    /** UUID of the associated agent or swarm run (optional). */
+    /** UUID of the associated agent run (optional). */
     runId?: string | null;
-    /** Whether `runId` refers to an agent or swarm run. */
-    runType?: 'agent' | 'swarm' | null;
+    /** Whether `runId` refers to an agent run. */
+    runType?: 'agent' | null;
 }
 
 /**
@@ -94,15 +93,5 @@ export function scoreAndPersist(
  * @returns Array of agent run records (newest first), or `[]` if unavailable.
  */
 export async function fetchRecentAgentRuns(limit = 20): Promise<IAgentRunRecord[]> {
-    return fetchRecentRuns({ type: 'agent', limit }) as Promise<IAgentRunRecord[]>;
-}
-
-/**
- * Fetch the most recent swarm runs from the database.
- *
- * @param limit - Maximum number of records to return (default: 20).
- * @returns Array of swarm run records (newest first), or `[]` if unavailable.
- */
-export async function fetchRecentSwarmRuns(limit = 20): Promise<ISwarmRunRecord[]> {
-    return fetchRecentRuns({ type: 'swarm', limit }) as Promise<ISwarmRunRecord[]>;
+    return fetchRecentRuns({ limit }) as Promise<IAgentRunRecord[]>;
 }

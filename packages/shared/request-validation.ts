@@ -1,11 +1,10 @@
 /**
  * Shared HTTP request validation helpers.
  *
- * The `POST /run`, `POST /run/stream`, `POST /run/swarm`, and
- * `POST /workflow` endpoints all duplicate the same task and profile
- * validation logic.  This module centralises those checks so that
- * validation rules are defined once and any change propagates to
- * every consumer.
+ * The `POST /run`, `POST /run/stream`, and `POST /workflow` endpoints
+ * all duplicate the same task and profile validation logic. This module
+ * centralises those checks so that validation rules are defined once
+ * and any change propagates to every consumer.
  *
  * @module shared/request-validation
  */
@@ -166,8 +165,8 @@ export interface IValidatedRunRequest {
 }
 
 /**
- * Validate the common fields shared by `POST /run`, `POST /run/stream`,
- * and `POST /run/swarm` endpoints in a single pass.
+ * Validate the common fields shared by `POST /run` and `POST /run/stream`
+ * endpoints in a single pass.
  *
  * Returns either a validated request object or an error string.
  *

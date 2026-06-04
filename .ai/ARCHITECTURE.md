@@ -20,7 +20,7 @@
 ## Capability Map (Target Direction)
 
 ```
-runtime/        → agent, workflows, swarm, policies
+runtime/        → agent, workflows, policies
 knowledge/      → memory, graph, retrieval
 documents/      → library, ingestion, parsing, indexing
 integrations/   → tools, mcp, llm, browser, db connectors
@@ -39,8 +39,6 @@ This is a documentation and refactoring direction. Today these live under `packa
 apps/api/           Express HTTP layer (routes, middlewares, SSE bridge)
 packages/
   agent/            Reason→act→observe loop, model router, vision
-  orchestrator/     LangGraph swarm graph (nodes, state)
-  swarm/            Task decomposer + swarm result types
   llm/              Ollama client, embeddings, model config
   memory/           Hybrid ring buffer + Qdrant semantic memory
   graph/            Neo4j knowledge graph + NER extractor
@@ -107,21 +105,6 @@ apps/api/ → packages/* → packages/shared/
 
 ---
 
-## Swarm Orchestration (`packages/orchestrator/`)
-
-```
-START → decompose → execute_subtasks → review → synthesize → END
-                          ↑                │
-                          └── retry ◄──────┘
-```
-
-- **decompose**: reasoning-profile call → structured subtasks.
-- **execute_subtasks**: fresh worker Agent per subtask.
-- **review**: retry (up to `SWARM_MAX_REVIEW_RETRIES`) or proceed.
-- **synthesize**: combine subtask outputs.
-
----
-
 ## Processor Middleware (`packages/processors/`)
 
 Lifecycle hooks: `processInputStep`, `processOutputStep`, `processToolResult`.
@@ -160,15 +143,13 @@ Lifecycle hooks: `processInputStep`, `processOutputStep`, `processToolResult`.
 
 ```mermaid
 flowchart LR
-    User -->|POST /run or /run/swarm| API[Express API]
+    User -->|POST /run| API[Express API]
     API --> Middleware[Helmet / CORS / RateLimit / RequestId]
     Middleware --> Router{Endpoint}
     Router -->|/run| Agent
-    Router -->|/run/swarm| Orchestrator[LangGraph Swarm]
     Router -->|/workflow| Workflow[Sequential workflow]
     Router -->|/chat| Chat[Chat persistence]
     Router -->|/library| Library[PDF library]
-    Orchestrator --> Agent
     Agent --> Processors[Policy / Verification / Reranker]
     Agent --> LLM[Ollama]
     Agent --> Tools[Native + MCP tools]

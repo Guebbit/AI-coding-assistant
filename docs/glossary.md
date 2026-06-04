@@ -117,12 +117,6 @@ A database of **entities** (people, concepts, technologies) and **relationships*
 
 **See also:** [Neo4j](#neo4j), [Cypher](#cypher), [GraphRAG](#graphrag)
 
-## LangGraph {#langgraph}
-
-A framework for building stateful, graph-based agent workflows with explicit nodes and edges. Manna's swarm orchestrator uses LangGraph to define the state machine: decompose → execute → review → synthesize.
-
-**See also:** [State Machine](#state-machine), [Swarm](#swarm)
-
 ## LLM (Large Language Model) {#llm}
 
 An AI model trained on massive text data that can generate and understand text. Examples: Llama, Qwen, GPT. In Manna, LLMs run locally through Ollama and make the decisions in the agent loop.
@@ -215,21 +209,9 @@ Finding content by **meaning** rather than exact keywords. "automobile" matches 
 
 ## SSE (Server-Sent Events) {#sse}
 
-A web standard for streaming real-time updates from server to client over a single HTTP connection. Used by Manna's `/run/stream` and `/run/swarm/stream` endpoints to push step-by-step progress.
+A web standard for streaming real-time updates from server to client over a single HTTP connection. Used by Manna's `/run/stream` and `/workflow/stream` endpoints to push step-by-step progress.
 
 **See also:** [Pub/Sub](#pub-sub)
-
-## State Machine {#state-machine}
-
-A system that moves through a set of defined **states** via **transitions**. Manna's swarm orchestrator is a LangGraph state machine with nodes: decompose → execute → review → synthesize.
-
-**See also:** [LangGraph](#langgraph), [Swarm](#swarm)
-
-## Swarm / Multi-Agent {#swarm}
-
-Multiple AI agents working together on a complex task. One agent **decomposes** the task into subtasks, others solve them in parallel, and results are **merged** into a final answer. Triggered via `POST /run/swarm`.
-
-**See also:** [State Machine](#state-machine), [LangGraph](#langgraph)
 
 ## Token {#token}
 

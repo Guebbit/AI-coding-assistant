@@ -76,6 +76,5 @@ flowchart LR
 
 ## Related
 
-- [orchestrator](/packages/orchestrator)
 - [How It Works (Layered)](/theory/how-it-works-layered)
 - [Prompt](/glossary#prompt)

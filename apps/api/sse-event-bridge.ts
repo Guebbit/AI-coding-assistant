@@ -1,9 +1,9 @@
 /**
  * SSE event bridge — translates in-process bus events into Server-Sent Events.
  *
- * ROLE: Single place that decides which internal agent/swarm events are
+ * ROLE: Single place that decides which internal agent events are
  * forwarded to connected SSE clients, and how each payload is shaped.
- * Keeps SSE formatting concerns out of the agent and orchestrator code.
+ * Keeps SSE formatting concerns out of the agent code.
  *
  * @module apps/api/sse-event-bridge
  */
@@ -102,35 +102,5 @@ export function writeAgentEventToSse(
     }
     default:
       return false;
-  }
-}
-
-/**
- * Forward a single swarm bus event to the SSE stream.
- *
- * Handles swarm-specific events (`swarm:decomposed`, `swarm:subtask_start`,
- * `swarm:subtask_done`, `swarm:subtask_error`) and falls back to
- * `writeAgentEventToSse` for regular agent events.
- *
- * @param event      - The internal event emitted by the swarm/orchestrator.
- * @param writeEvent - SSE write callback provided by the endpoint.
- * @returns `true` when the event was handled and forwarded, `false` when ignored.
- */
-export function writeSwarmEventToSse(event: IAgentEvent, writeEvent: WriteEvent): boolean {
-  switch (event.type) {
-    case "swarm:decomposed":
-      writeEvent("decomposed", event.payload);
-      return true;
-    case "swarm:subtask_start":
-      writeEvent("subtask_start", event.payload);
-      return true;
-    case "swarm:subtask_done":
-      writeEvent("subtask_done", event.payload);
-      return true;
-    case "swarm:subtask_error":
-      writeEvent("subtask_error", event.payload);
-      return true;
-    default:
-      return writeAgentEventToSse(event, writeEvent);
   }
 }

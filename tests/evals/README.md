@@ -1,6 +1,6 @@
 # Eval Test Suite
 
-These tests exercise the **full agent and swarm flows end-to-end** using a real Ollama instance.  
+These tests exercise the **full agent flow end-to-end** using a real Ollama instance.  
 They are intentionally excluded from `npm test` (CI) because they are slow and require external services.
 
 ## Prerequisites
@@ -39,7 +39,6 @@ OLLAMA_BASE_URL=http://192.168.1.10:11434 npm run test:eval
 | File                 | What it tests                                    |
 | -------------------- | ------------------------------------------------ |
 | `agent-loop.eval.ts` | Full single-agent run: task → tool call → answer |
-| `swarm.eval.ts`      | Swarm decompose → execute → synthesise flow      |
 
 ## Writing new evals
 

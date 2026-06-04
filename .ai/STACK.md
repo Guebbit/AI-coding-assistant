@@ -16,7 +16,6 @@
 | Validation     | Zod + `zod-to-json-schema`         | Every LLM/API boundary              |
 | LLM provider   | Ollama (local)                     | `packages/llm/ollama.ts`            |
 | Embeddings     | Ollama                             | `packages/llm/embeddings.ts`        |
-| State machine  | LangGraph (LangChain Core)         | Swarm orchestration only            |
 | Vector DB      | Qdrant                             | Semantic memory + RAG               |
 | Graph DB       | Neo4j                              | Knowledge graph                     |
 | Primary DB     | PostgreSQL                         | Chat, run history, migrations       |
