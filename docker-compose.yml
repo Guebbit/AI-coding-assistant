@@ -4,7 +4,7 @@
 # Services:
 #   ollama        — Local LLM runtime (GPU-accelerated via NVIDIA)
 #   qdrant        — Local vector database for agent memory
-#   postgres      — Primary persistence (agent/swarm runs, chat, evals)
+#   postgres      — Primary persistence (agent runs, chat, evals)
 #   neo4j         — Knowledge graph (entity/relationship store)
 #   manna         — Manna Express API (containerized apps/api server)
 #

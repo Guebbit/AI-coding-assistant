@@ -3,7 +3,6 @@
 --
 -- Tables:
 --   agent_runs   — one row per Agent.run() execution
---   swarm_runs   — one row per LangGraphSwarmOrchestrator.run() execution
 --   eval_results — one row per scorer evaluation of any run
 -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -27,24 +26,6 @@ CREATE TABLE IF NOT EXISTS agent_runs (
 
 CREATE INDEX IF NOT EXISTS idx_agent_runs_created_at ON agent_runs (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_agent_runs_status     ON agent_runs (status);
-
--- ── swarm_runs ────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS swarm_runs (
-    id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    task             TEXT        NOT NULL,
-    decomposition    JSONB,
-    subtasks         JSONB,
-    results          JSONB,
-    answer           TEXT,
-    start_time       TIMESTAMPTZ NOT NULL,
-    end_time         TIMESTAMPTZ,
-    total_duration_ms INTEGER,
-    status           TEXT        NOT NULL DEFAULT 'completed',
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_swarm_runs_created_at ON swarm_runs (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_swarm_runs_status     ON swarm_runs (status);
 
 -- ── eval_results ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS eval_results (

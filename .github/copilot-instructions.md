@@ -48,22 +48,22 @@ openapi.yaml        REST API contract
 
 ## Tech Stack (non-negotiable)
 
-| Concern | Choice |
-|---|---|
-| Runtime | Node.js ≥ 18, **pure ESM** (`"type": "module"`) |
-| Language | TypeScript 5.8, `strict: true`, `tsc --noEmit` |
-| Validation | Zod at every LLM/API/tool boundary |
-| API | Express 4.x |
-| LLM | Ollama (local) — profiles: `fast` / `reasoning` / `code` |
-| Vector DB | Qdrant |
-| Graph DB | Neo4j |
-| Primary DB | PostgreSQL |
-| Activity log | MongoDB |
-| Logging | Winston (`packages/logger/logger.ts`) — never `console.log` |
-| Testing | Vitest (`vitest.config.ts`) |
-| Lint | ESLint 10 flat config (`eslint.config.ts`) |
-| Format | Prettier (`.prettierrc`) |
-| Commits | Conventional Commits (`commitlint.config.js`) |
+| Concern      | Choice                                                      |
+| ------------ | ----------------------------------------------------------- |
+| Runtime      | Node.js ≥ 18, **pure ESM** (`"type": "module"`)             |
+| Language     | TypeScript 5.8, `strict: true`, `tsc --noEmit`              |
+| Validation   | Zod at every LLM/API/tool boundary                          |
+| API          | Express 4.x                                                 |
+| LLM          | Ollama (local) — profiles: `fast` / `reasoning` / `code`    |
+| Vector DB    | Qdrant                                                      |
+| Graph DB     | Neo4j                                                       |
+| Primary DB   | PostgreSQL                                                  |
+| Activity log | MongoDB                                                     |
+| Logging      | Winston (`packages/logger/logger.ts`) — never `console.log` |
+| Testing      | Vitest (`vitest.config.ts`)                                 |
+| Lint         | ESLint 10 flat config (`eslint.config.ts`)                  |
+| Format       | Prettier (`.prettierrc`)                                    |
+| Commits      | Conventional Commits (`commitlint.config.js`)               |
 
 **Banned:** `require`/CommonJS, `any` type, `console.log`, raw non-parameterized SQL, `axios`, `lodash`, OpenAI/Anthropic SDKs, GraphQL, microservice frameworks.
 
@@ -114,27 +114,27 @@ openapi.yaml        REST API contract
 
 ## Validation Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run build` | TypeScript type-check (`tsc --noEmit`) |
-| `npm run test` | Vitest unit + integration |
-| `npm run lint` | ESLint |
-| `npm run prettier:check` | Format check |
-| `npm run lint:openapi` | Spectral over `openapi.yaml` |
-| `npm run docs:check` | Tool-doc coverage + internal link check |
-| `npm run complete:check` | Full CI gate (all of the above) |
+| Command                  | Purpose                                 |
+| ------------------------ | --------------------------------------- |
+| `npm run build`          | TypeScript type-check (`tsc --noEmit`)  |
+| `npm run test`           | Vitest unit + integration               |
+| `npm run lint`           | ESLint                                  |
+| `npm run prettier:check` | Format check                            |
+| `npm run lint:openapi`   | Spectral over `openapi.yaml`            |
+| `npm run docs:check`     | Tool-doc coverage + internal link check |
+| `npm run complete:check` | Full CI gate (all of the above)         |
 
 ---
 
 ## Deep-Dive References
 
-| Need | File |
-|---|---|
-| Behavioral constraints | `.ai/RULES.md` |
-| Full tech stack | `.ai/STACK.md` |
-| System structure & boundaries | `.ai/ARCHITECTURE.md` |
-| Coding standards | `.ai/CONVENTIONS.md` |
-| Execution sequence | `.ai/WORKFLOW.md` |
-| Validation gates | `.ai/CHECKLISTS/` |
-| Task definition template | `.ai/TASKS/TEMPLATE.md` |
-| Architecture decisions | `.ai/ADR/` |
+| Need                          | File                    |
+| ----------------------------- | ----------------------- |
+| Behavioral constraints        | `.ai/RULES.md`          |
+| Full tech stack               | `.ai/STACK.md`          |
+| System structure & boundaries | `.ai/ARCHITECTURE.md`   |
+| Coding standards              | `.ai/CONVENTIONS.md`    |
+| Execution sequence            | `.ai/WORKFLOW.md`       |
+| Validation gates              | `.ai/CHECKLISTS/`       |
+| Task definition template      | `.ai/TASKS/TEMPLATE.md` |
+| Architecture decisions        | `.ai/ADR/`              |

@@ -1,7 +1,7 @@
 # Manna — Personal AI Agent Platform Documentation
 
 ::: tip TL;DR
-Local-first AI agent platform for multi-step reasoning, tool execution, orchestration, and domain workflows (coding, research, data, documents, knowledge graphs).
+Local-first AI agent platform for multi-step reasoning, tool execution, and domain workflows (coding, research, data, documents, knowledge graphs).
 :::
 
 ## New here? Start in 5 minutes
@@ -33,7 +33,6 @@ Local-first AI agent platform for multi-step reasoning, tool execution, orchestr
 - Capability-oriented **modular monolith** (single runtime; not microservices at this stage)
 - [Agent loop](/glossary#agent-loop) with tool execution and [memory](/glossary#ring-buffer)
 - [Ollama](/glossary#ollama) backend with per-step [model routing](/glossary#model-router)
-- [Swarm orchestrator](/packages/orchestrator) — LangGraph state machine that decomposes tasks across multiple specialised agents
 - [Knowledge graph](/packages/graph) — GraphRAG layer (Neo4j) for entity/relationship retrieval alongside vector search
 - [MCP integration](/theory/MCP) — plug in any Model Context Protocol server as a tool source
 
@@ -76,5 +75,5 @@ flowchart LR
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Learn**          | [Quickstart](./quickstart.md) · [Examples](/examples/) · [Scenarios](/scenarios/) · [Glossary](/glossary)                                                                                                                                                                                |
 | **Theory**         | [Capability Map](/theory/capability-modular-monolith) · [Agent Loop](/theory/agent-loop) · [Tool Selection Plan](/theory/tool-selection-strategy-plan) · [Operating Modes](/theory/operating-modes) · [Error Taxonomy](/theory/error-taxonomy) · [RAG](/theory/RAG) · [MCP](/theory/MCP) |
-| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Orchestrator](/packages/orchestrator) · [Knowledge Graph](/packages/graph)                                                                                   |
+| **Reference**      | [Endpoint Map](/endpoint-map) · [Packages](/packages/) · [Tools](/packages/tools/) · [Model Selection](/model-selection) · [Knowledge Graph](/packages/graph)                                                                                                                            |
 | **Infrastructure** | [Ollama Setup](/infra/ollama-notes) · [Ollama Models](/infra/ollama-models) · [Library Ingestion](/library-ingestion)                                                                                                                                                                    |

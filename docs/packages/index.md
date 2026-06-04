@@ -12,7 +12,7 @@ See the capability map: [Capability-Oriented Modular Monolith](/theory/capabilit
 
 | Capability      | Current package map                              |
 | --------------- | ------------------------------------------------ |
-| `runtime`       | `agent`, `orchestrator`, `swarm`, `processors`   |
+| `runtime`       | `agent`, `processors`                            |
 | `knowledge`     | `memory`, `graph` (+ retrieval tooling)          |
 | `documents`     | `library` (+ ingestion/parsing/indexing tooling) |
 | `integrations`  | `tools`, `mcp`, `llm` (+ browser/DB connectors)  |
@@ -50,17 +50,6 @@ Makes decisions in a loop. For each step: builds a prompt, routes to a model, as
 **Role**: orchestration  
 **Key method**: `agent.run(task) -> Promise<string>`  
 [Full docs ->](/packages/agent)
-
----
-
-### `orchestrator` -- LangGraph Swarm
-
-Coordinates multiple `Agent` instances to solve a complex task via a LangGraph state machine.
-Supports cyclic review→retry workflows. Replaces the legacy `SwarmOrchestrator`.
-
-**Role**: multi-agent swarm orchestration  
-**Key method**: `orchestrator.run(task, config) -> Promise<ISwarmResult>`  
-[Full docs ->](/packages/orchestrator)
 
 ---
 
@@ -156,7 +145,6 @@ sequenceDiagram
 ## Package pages
 
 - [agent -- The Brain](/packages/agent)
-- [orchestrator -- LangGraph Swarm](/packages/orchestrator)
 - [llm -- Model Connection](/packages/llm)
 - [memory -- Short-term Storage](/packages/memory)
 - [mcp -- MCP Bridge](/packages/mcp)

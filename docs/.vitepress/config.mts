@@ -91,7 +91,6 @@ export default withMermaid(
                         { text: 'Database Query', link: '/examples/database-query' },
                         { text: 'Web Scraping', link: '/examples/web-scraping' },
                         { text: 'Semantic Memory', link: '/examples/semantic-memory' },
-                        { text: 'Swarm Orchestration', link: '/examples/swarm-orchestration' },
                         { text: 'MCP Integration', link: '/examples/mcp-integration' },
                         { text: 'Knowledge Graph', link: '/examples/knowledge-graph' },
                         { text: 'Streaming Events', link: '/examples/streaming-events' },
@@ -127,7 +126,6 @@ export default withMermaid(
                     items: [
                         { text: 'Overview', link: '/packages/' },
                         { text: 'agent — The Brain', link: '/packages/agent' },
-                        { text: 'orchestrator — LangGraph Swarm', link: '/packages/orchestrator' },
                         { text: 'llm — Model Connection', link: '/packages/llm' },
                         { text: 'memory — Short-term Storage', link: '/packages/memory' },
                         { text: 'mcp — MCP Bridge', link: '/packages/mcp' },

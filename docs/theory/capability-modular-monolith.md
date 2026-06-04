@@ -28,7 +28,7 @@ flowchart TD
 
 | Area            | Brief description                                            | Page                                                       |
 | --------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| `runtime`       | Agent execution flow: loop, workflows, swarm, policies.      | [/capabilities/runtime](/capabilities/runtime)             |
+| `runtime`       | Agent execution flow: loop, workflows, policies.             | [/capabilities/runtime](/capabilities/runtime)             |
 | `knowledge`     | Memory, graph, retrieval, citation-oriented knowledge logic. | [/capabilities/knowledge](/capabilities/knowledge)         |
 | `documents`     | Library ingestion and document parsing/indexing pipelines.   | [/capabilities/documents](/capabilities/documents)         |
 | `integrations`  | External adapters: tools, MCP, LLM, browser, DB connectors.  | [/capabilities/integrations](/capabilities/integrations)   |

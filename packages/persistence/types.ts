@@ -8,7 +8,6 @@
  * @module persistence/types
  */
 
-import type { IDecomposition, ISubtaskResult } from '../swarm/types';
 import type { IDiagnosticEntry } from '../diagnostics/types';
 
 /* ── Agent run ───────────────────────────────────────────────────────────── */
@@ -31,7 +30,7 @@ export interface IToolCall {
     durationMs: number;
 }
 
-/** Status of a finished agent or swarm run. */
+/** Status of a finished agent run. */
 export type RunStatus = 'completed' | 'max_steps' | 'error' | 'hard_stopped';
 
 /**
@@ -65,41 +64,16 @@ export interface IAgentRunRecord extends IAgentRunInput {
     createdAt: Date;
 }
 
-/* ── Swarm run ───────────────────────────────────────────────────────────── */
-
-/**
- * Input payload for {@link saveSwarmRun}.
- */
-export interface ISwarmRunInput {
-    task: string;
-    decomposition: IDecomposition;
-    subtasks: IDecomposition['subtasks'];
-    results: ISubtaskResult[];
-    answer: string;
-    startTime: Date;
-    endTime: Date;
-    totalDurationMs: number;
-    status: RunStatus;
-}
-
-/**
- * Full swarm run record as stored in (and returned from) PostgreSQL.
- */
-export interface ISwarmRunRecord extends ISwarmRunInput {
-    id: string;
-    createdAt: Date;
-}
-
 /* ── Eval result ─────────────────────────────────────────────────────────── */
 
 /**
  * Input payload for {@link saveEvalResult}.
  */
 export interface IEvalResultInput {
-    /** UUID of the associated agent or swarm run (optional). */
+    /** UUID of the associated agent run (optional). */
     runId?: string | null;
-    /** Whether `runId` points to an agent run or a swarm run. */
-    runType?: 'agent' | 'swarm' | null;
+    /** Whether `runId` points to an agent run. */
+    runType?: 'agent' | null;
     /** Scorer identifier (e.g. `"tool-accuracy"`). */
     scorer: string;
     /** Normalised score in [0, 1]. */
@@ -224,14 +198,7 @@ export interface ICreateArticleInput {
 /* ── Activity log (MongoDB) ─────────────────────────────────────────────── */
 
 /** Append-only activity-log categories emitted by runtime + API lifecycle events. */
-export type ActivityLogCategory =
-    | 'agent'
-    | 'tool'
-    | 'swarm'
-    | 'workflow'
-    | 'chat'
-    | 'api'
-    | 'system';
+export type ActivityLogCategory = 'agent' | 'tool' | 'workflow' | 'chat' | 'api' | 'system';
 
 /** Input payload for creating one append-only activity-log document. */
 export interface IActivityLogInput {
@@ -293,8 +260,6 @@ export interface IActivityLogQueryResult {
 
 /** Options for {@link fetchRecentRuns}. */
 export interface IFetchRecentRunsOptions {
-    /** Which table to query. Defaults to `'agent'`. */
-    type?: 'agent' | 'swarm';
     /** Maximum number of rows to return. Defaults to 20. */
     limit?: number;
     /** Filter by status. */

@@ -1,7 +1,6 @@
 /**
  * Shared agent wiring — constructs and exports the `createAgent`
- * selector and the swarm orchestrator factory used by all API route
- * modules.
+ * selector used by all API route modules.
  *
  * Extracting agent setup into this module avoids duplication between
  * route modules while keeping each one focused on its own HTTP concerns.
@@ -14,7 +13,6 @@ import type { ModelProfile } from "@/packages/agent/model-router";
 import { PROFILE_LIST } from "@/packages/shared";
 import { loadMCPTools } from "@/packages/mcp";
 import { logger } from "@/packages/logger/logger";
-import { LangGraphSwarmOrchestrator } from "@/packages/orchestrator/graph";
 import type { IProcessor } from "@/packages/processors/types";
 import { createPolicyProcessor } from "@/packages/processors/policy";
 import {
@@ -95,9 +93,6 @@ const WRITE_TOOL_NAMES = new Set(nativeWriteTools.map((t) => t.name));
  *
  * `PolicyProcessor` is always registered first so capability gates and
  * error-budget enforcement run before any other middleware.
- *
- * Shared by both single-agent and swarm paths so the same middleware
- * applies regardless of execution mode.
  *
  * @param allowWrite - Whether write tools are permitted for this agent instance.
  * @returns An array of active {@link IProcessor} instances.
@@ -196,23 +191,4 @@ export const VALID_PROFILES = new Set<ModelProfile>(PROFILE_LIST);
 export function createAgent(allowWrite: boolean): Agent {
   const tools = allowWrite ? [...readOnlyTools, ...writeTools] : readOnlyTools;
   return attachProcessors(new Agent(tools), allowWrite);
-}
-
-/* ── Swarm factory ───────────────────────────────────────────────────── */
-
-/**
- * Create a {@link LangGraphSwarmOrchestrator} with the appropriate tool set
- * and processors.
- *
- * The returned orchestrator is backed by a LangGraph state machine that
- * supports cyclic review→retry workflows.
- *
- * @param allowWrite - Whether write tools should be available to worker agents.
- * @returns A configured `LangGraphSwarmOrchestrator` instance.
- */
-export function createSwarmOrchestrator(allowWrite: boolean): LangGraphSwarmOrchestrator {
-  const tools = allowWrite
-    ? [...readOnlyTools, ...writeTools]
-    : readOnlyTools;
-  return new LangGraphSwarmOrchestrator(tools, buildProcessors(allowWrite));
 }

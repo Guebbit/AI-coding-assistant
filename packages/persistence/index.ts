@@ -5,13 +5,13 @@
  * single entry point:
  *
  * ```typescript
- * import { saveAgentRun, saveSwarmRun, saveEvalResult, fetchRecentRuns } from '../persistence';
- * import type { IAgentRunRecord, ISwarmRunRecord, IEvalResultRecord } from '../persistence';
+ * import { saveAgentRun, saveEvalResult, fetchRecentRuns } from '../persistence';
+ * import type { IAgentRunRecord, IEvalResultRecord } from '../persistence';
  * ```
  *
  * Architecture (SRP split):
  *  - `pool.ts`       — PG pool singleton + fail-open withClient executor
- *  - `agent-runs.ts` — Agent/swarm/eval run persistence
+ *  - `agent-runs.ts` — Agent/eval run persistence
  *  - `chat.ts`       — Conversation + message CRUD
  *  - `library.ts`    — Library + article CRUD
  *  - `activity-log.ts` — MongoDB-backed append-only activity history

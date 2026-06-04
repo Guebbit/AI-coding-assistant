@@ -119,28 +119,6 @@ const HELP_CATALOGUE: IHelpEndpoint[] = [
   },
   {
     method: "POST",
-    path: "/run/swarm",
-    summary: "Submit a task to the multi-agent swarm orchestrator. Decomposes the task into subtasks.",
-    params: [
-      { name: "task", type: "string", required: true, description: "Natural-language task." },
-      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
-      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile." },
-      { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
-    ],
-  },
-  {
-    method: "POST",
-    path: "/run/swarm/stream",
-    summary: "Same as POST /run/swarm but streams swarm lifecycle events via SSE.",
-    params: [
-      { name: "task", type: "string", required: true, description: "Natural-language task." },
-      { name: "allowWrite", type: "boolean", required: false, description: "Enable write tools." },
-      { name: "profile", type: '"fast" | "reasoning" | "code"', required: false, description: "Force a model profile." },
-      { name: "maxSubtasks", type: "number", required: false, description: "Maximum number of subtasks (default 6)." },
-    ],
-  },
-  {
-    method: "POST",
     path: "/workflow",
     summary: "Run an ordered list of steps sequentially, each handled by a fresh agent.",
     params: [
