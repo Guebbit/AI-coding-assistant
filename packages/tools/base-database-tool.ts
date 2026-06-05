@@ -41,7 +41,7 @@ import type { ITool } from './types';
  *
  * @template TInput - Shape of the tool's input (must be a plain object).
  */
-export interface IDbToolOptions<TInput extends Record<string, unknown>> {
+export interface IDatabaseToolOptions<TInput extends Record<string, unknown>> {
     /** Unique tool name exposed to the agent (e.g. `"mysql_query"`). */
     name: string;
 
@@ -80,9 +80,9 @@ export interface IDbToolOptions<TInput extends Record<string, unknown>> {
  * ## Usage
  *
  * ```typescript
- * import { createDbTool } from './base-db-tool';
+ * import { createDatabaseTool } from './base-db-tool';
  *
- * export const myDbTool = createDbTool({
+ * export const myDbTool = createDatabaseTool({
  *   name: 'mydb_query',
  *   description: 'Run read-only queries against MyDB. Input: { query: string }',
  *   validateInput(raw) {
@@ -103,11 +103,11 @@ export interface IDbToolOptions<TInput extends Record<string, unknown>> {
  * ```
  *
  * @template TInput - Narrowed input type returned by `validateInput`.
- * @param options - Tool configuration (see {@link IDbToolOptions}).
+ * @param options - Tool configuration (see {@link IDatabaseToolOptions}).
  * @returns A fully-formed `ITool` ready to be passed to an `Agent`.
  */
-export function createDbTool<TInput extends Record<string, unknown>>(
-    options: IDbToolOptions<TInput>
+export function createDatabaseTool<TInput extends Record<string, unknown>>(
+    options: IDatabaseToolOptions<TInput>
 ): ITool {
     return {
         name: options.name,

@@ -28,11 +28,11 @@ import type { ITool } from '@/packages/tools/types.js';
 import { clearModelCapabilitiesCache } from '@/packages/llm/ollama.js';
 import { createPolicyProcessor } from '@/packages/processors/policy.js';
 import { PathSafetyError } from '@/packages/shared/path-safety.js';
-import { saveAgentRun } from '@/packages/persistence/db.js';
+import { saveAgentRun } from '@/packages/persistence/database.js';
 
 /* ── Mocks ─────────────────────────────────────────────────────────────── */
 
-vi.mock('@/packages/persistence/db.js', () => ({
+vi.mock('@/packages/persistence/database.js', () => ({
     saveAgentRun: vi.fn().mockResolvedValue(null)
 }));
 vi.mock('@/packages/diagnostics/index.js', () => ({

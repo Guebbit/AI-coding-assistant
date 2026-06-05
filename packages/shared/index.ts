@@ -25,6 +25,6 @@ export * from './request-validation';
 export * from './safe-read-file';
 export * from './write-guard';
 export * from './model-resolution';
-export * from './utils';
+export * from './utilities';
 export * from './language';
 export * from './operating-mode';

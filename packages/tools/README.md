@@ -13,7 +13,7 @@ All tools implement:
 ## Database adapter abstraction
 
 All database-backed tools are built on `base-db-tool.ts` which provides the
-`createDbTool` factory. Each engine only implements:
+`createDatabaseTool` factory. Each engine only implements:
 
 - `validateInput` — reject bad/unsafe input before touching the database
 - `run` — open connection → execute read-only operation → close in `finally`
@@ -76,7 +76,7 @@ for the full guide including how to add new engines.
 - `knowledgeGraphTool`
 - `queryKnowledgeGraphTool`
 - `createTool` (factory)
-- `createDbTool` (database factory)
+- `createDatabaseTool` (database factory)
 - `validateSqlInput` (shared SQL guard)
 - `ITool` type
 

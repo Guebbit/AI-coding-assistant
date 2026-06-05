@@ -13,7 +13,12 @@ import { randomUUID } from 'node:crypto';
 import { generate } from '../llm/ollama';
 import { getEmbedding } from '../llm/embeddings';
 import { logger } from '../logger/logger';
-import { createArticle, updateLibraryStats, countArticles, upsertLibrary } from '../persistence/db';
+import {
+    createArticle,
+    updateLibraryStats,
+    countArticles,
+    upsertLibrary
+} from '../persistence/database';
 import { extractPageRange } from './pdf-extraction';
 import { ensureCollection, upsertPoint } from './library-store';
 import type { IArticleStub, IImportResult, IPdfEntry } from './types';

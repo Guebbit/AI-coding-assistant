@@ -62,11 +62,11 @@ const READER_TOOLS: Record<string, typeof readFileTool> = {
  */
 async function extractText(filePath: string, extension: string): Promise<string> {
     /* Use relative path for tools that call resolveSafePath internally. */
-    const rel = path.relative(process.cwd(), filePath);
+    const relativePath = path.relative(process.cwd(), filePath);
     const readerTool = READER_TOOLS[extension];
 
     if (readerTool) {
-        const result = (await readerTool.execute({ path: rel })) as {
+        const result = (await readerTool.execute({ path: relativePath })) as {
             text?: string;
             data?: unknown;
         };
@@ -76,7 +76,7 @@ async function extractText(filePath: string, extension: string): Promise<string>
     }
 
     /* Fallback: treat as plain text. */
-    const r = await readFileTool.execute({ path: rel });
+    const r = await readFileTool.execute({ path: relativePath });
     return typeof r === 'string' ? r : JSON.stringify(r);
 }
 

@@ -33,7 +33,7 @@
  * @module evals/persist
  */
 
-import { saveEvalResult, fetchRecentRuns } from '../persistence/db';
+import { saveEvalResult, fetchRecentRuns } from '../persistence/database';
 import type { IEvalResultRecord, IAgentRunRecord } from '../persistence/types';
 import type { IScorer, IScorerRunInput } from './types';
 import { logger } from '../logger/logger';

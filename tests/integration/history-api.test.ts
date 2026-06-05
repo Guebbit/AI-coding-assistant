@@ -7,7 +7,7 @@ vi.mock('@/packages/logger/logger', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 
-vi.mock('@/packages/persistence/db', () => ({
+vi.mock('@/packages/persistence/database', () => ({
     getActivityLogAvailability: vi.fn(),
     listActivityLog: vi.fn(),
     exportActivityLog: vi.fn(),
@@ -20,7 +20,7 @@ import {
     exportActivityLog,
     getActivityLogAvailability,
     listActivityLog
-} from '@/packages/persistence/db';
+} from '@/packages/persistence/database';
 
 async function startServer(): Promise<{ server: Server; baseUrl: string }> {
     const app = express();

@@ -68,7 +68,7 @@ vi.mock('@/packages/logger/logger', () => ({
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }));
 
-vi.mock('@/packages/persistence/db', () => ({
+vi.mock('@/packages/persistence/database', () => ({
     listConversations: vi.fn(async () =>
         [...persistenceState.conversations.values()].map((conversation) => {
             const { messages, ...withoutMessages } = cloneConversation(conversation);

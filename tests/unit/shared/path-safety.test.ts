@@ -32,8 +32,8 @@ describe('PathSafetyError', () => {
 describe('resolveSafePath', () => {
     it('resolves a simple relative path within the project root', () => {
         const cwd = process.cwd();
-        const result = resolveSafePath('packages/shared/utils.ts');
-        expect(result).toBe(path.resolve(cwd, 'packages/shared/utils.ts'));
+        const result = resolveSafePath('packages/shared/utilities.ts');
+        expect(result).toBe(path.resolve(cwd, 'packages/shared/utilities.ts'));
     });
 
     it('resolves an absolute path inside the project root', () => {

@@ -85,8 +85,8 @@ export async function writeDiagnosticLog(
 ): Promise<string> {
     if (!LOG_ENABLED) return '';
 
-    const absDir = path.resolve(process.cwd(), LOG_DIR);
-    await fs.mkdir(absDir, { recursive: true });
+    const absDirectory = path.resolve(process.cwd(), LOG_DIR);
+    await fs.mkdir(absDirectory, { recursive: true });
 
     const iso = new Date().toISOString().replace(/[.:]/g, '-');
     const slug = slugify(taskSlug);
@@ -95,8 +95,8 @@ export async function writeDiagnosticLog(
      * injection even after slugify. */
     const safeFilename = `${iso}_${slug}.md`.replace(/[^\w .\-]/g, '_');
 
-    /* resolveInsideRoot ensures the file stays inside absDir. */
-    const filePath = resolveInsideRoot(absDir, safeFilename);
+    /* resolveInsideRoot ensures the file stays inside absDirectory. */
+    const filePath = resolveInsideRoot(absDirectory, safeFilename);
 
     const rows = entries
         .map(

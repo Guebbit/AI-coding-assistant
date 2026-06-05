@@ -24,7 +24,7 @@ import {
     getLibrary,
     listArticles,
     countArticles
-} from '@/packages/persistence/db';
+} from '@/packages/persistence/database';
 import { runImport, searchLibrary } from '@/packages/library';
 import type { IImportRequest, ISearchRequest, IPdfEntry } from '@/packages/library';
 

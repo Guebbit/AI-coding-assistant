@@ -78,14 +78,14 @@ export const semanticSearchTool = createTool({
      */
     async execute({ query, documents, paths, topK }) {
         /* Collect documents from inline strings and/or file paths. */
-        const docs: Array<{ source: string; text: string }> = [];
+        const documents_: Array<{ source: string; text: string }> = [];
 
         if (Array.isArray(documents)) {
             for (const [index, value] of documents.entries()) {
                 if (typeof value !== 'string' || value.trim() === '') {
                     continue;
                 }
-                docs.push({
+                documents_.push({
                     source: `document:${index + 1}`,
                     text: value.slice(0, MAX_DOC_CHARS)
                 });
@@ -98,18 +98,18 @@ export const semanticSearchTool = createTool({
                     continue;
                 }
                 const content = await safeReadFile(filePath, 'utf-8');
-                docs.push({
+                documents_.push({
                     source: `file:${filePath}`,
                     text: content.slice(0, MAX_DOC_CHARS)
                 });
             }
         }
 
-        if (docs.length === 0) {
+        if (documents_.length === 0) {
             throw new Error('Provide at least one item in "documents" or "paths"');
         }
 
-        if (docs.length > MAX_DOCUMENTS) {
+        if (documents_.length > MAX_DOCUMENTS) {
             throw new Error(`Too many documents. Maximum supported: ${MAX_DOCUMENTS}`);
         }
 
@@ -117,7 +117,7 @@ export const semanticSearchTool = createTool({
         const queryEmbedding = await getEmbedding(query);
 
         const ranked: IRankedDocument[] = [];
-        for (const document of docs) {
+        for (const document of documents_) {
             const embedding = await getEmbedding(document.text);
             ranked.push({
                 source: document.source,

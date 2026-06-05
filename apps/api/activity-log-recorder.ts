@@ -6,7 +6,7 @@
 
 import type { IAgentEvent } from '@/packages/events/bus';
 import { logger } from '@/packages/logger/logger';
-import { appendActivityLog } from '@/packages/persistence/db';
+import { appendActivityLog } from '@/packages/persistence/database';
 import {
     normalizeApiActivityToActivityLog,
     normalizeBusEventToActivityLog,

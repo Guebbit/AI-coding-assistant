@@ -20,7 +20,7 @@ vi.mock('@/packages/llm/embeddings', () => ({
 }));
 
 // Mock persistence DB functions
-vi.mock('@/packages/persistence/db', () => ({
+vi.mock('@/packages/persistence/database', () => ({
     upsertLibrary: vi.fn().mockResolvedValue({ id: 'test-lib', name: 'Test Lib' }),
     createArticle: vi.fn().mockResolvedValue({ id: 'article-1' }),
     updateLibraryStats: vi.fn().mockResolvedValue(undefined),
@@ -57,7 +57,7 @@ import {
     createArticle,
     updateLibraryStats,
     countArticles
-} from '@/packages/persistence/db';
+} from '@/packages/persistence/database';
 import { ensureCollection, upsertPoint } from '@/packages/library/library-store';
 import { extractPageRange } from '@/packages/library/pdf-extraction';
 import { discoverStructure, importPdf, runImport } from '@/packages/library/ingestion';

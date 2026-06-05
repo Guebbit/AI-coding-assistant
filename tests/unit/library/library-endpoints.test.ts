@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* ── Mock all heavy dependencies ────────────────────────────────────── */
 
-vi.mock('@/packages/persistence/db', () => ({
+vi.mock('@/packages/persistence/database', () => ({
     listLibraries: vi.fn(),
     getLibrary: vi.fn(),
     listArticles: vi.fn(),
@@ -48,7 +48,7 @@ vi.mock('@/packages/logger/logger', () => ({
 
 /* ── Import mocks + module under test ──────────────────────────────── */
 
-import { listLibraries, getLibrary, listArticles } from '@/packages/persistence/db';
+import { listLibraries, getLibrary, listArticles } from '@/packages/persistence/database';
 import { runImport, searchLibrary } from '@/packages/library';
 import { registerLibraryRoutes } from '@/apps/api/library-endpoints';
 

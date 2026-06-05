@@ -55,7 +55,7 @@ vi.mock('@/packages/shared', async (importOriginal) => {
     };
 });
 
-vi.mock('@/packages/persistence/db', () => ({
+vi.mock('@/packages/persistence/database', () => ({
     listLibraries: vi.fn(async () => [...libraries.values()]),
     getLibrary: vi.fn(async (libraryId: string) => libraries.get(libraryId)),
     listArticles: vi.fn(async (libraryId: string) => articlesByLibrary.get(libraryId) ?? []),

@@ -28,7 +28,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getPool, closePool } from './db';
+import { getPool, closePool } from './database';
 import { logger } from '../logger/logger';
 
 /** Directory containing `*.sql` migration files. */

@@ -14,21 +14,21 @@ Manna's database tools share a common lifecycle:
 4. Close the connection (in a `finally` block — always)
 5. Return JSON-serialisable results
 
-`base-db-tool.ts` captures this pattern in a `createDbTool` factory so each engine only implements what makes it unique.
+`base-db-tool.ts` captures this pattern in a `createDatabaseTool` factory so each engine only implements what makes it unique.
 
 ## Architecture
 
 ```mermaid
 classDiagram
     class ITool
-    class createDbTool
+    class createDatabaseTool
     class mysql_query
     class pg_query
     class mongo_query
-    ITool <|.. createDbTool
-    createDbTool <|-- mysql_query
-    createDbTool <|-- pg_query
-    createDbTool <|-- mongo_query
+    ITool <|.. createDatabaseTool
+    createDatabaseTool <|-- mysql_query
+    createDatabaseTool <|-- pg_query
+    createDatabaseTool <|-- mongo_query
 ```
 
 ## Available tools
@@ -39,12 +39,12 @@ classDiagram
 | [`pg_query`](./pg-query)       | PostgreSQL | `SELECT`             | `PG_*`         |
 | [`mongo_query`](./mongo-query) | MongoDB    | `find` / `aggregate` | `MONGO_*`      |
 
-## How `createDbTool` works
+## How `createDatabaseTool` works
 
 ```typescript
-import { createDbTool } from './base-db-tool';
+import { createDatabaseTool } from './base-db-tool';
 
-export const myTool = createDbTool({
+export const myTool = createDatabaseTool({
     name: 'mydb_query',
     description: 'Run read-only queries against MyDB. Input: { query: string }',
 
@@ -80,7 +80,7 @@ Further reading:
 Follow these eight steps:
 
 1. **Install the driver** — `npm install <driver-package>` (and `@types/<driver>` if needed).
-2. **Create `packages/tools/<engine>.query.ts`** implementing `createDbTool`:
+2. **Create `packages/tools/<engine>.query.ts`** implementing `createDatabaseTool`:
     - `validateInput` — guard required fields and reject forbidden operations.
     - `run` — open connection → execute → close in `finally`.
 3. **Read config from env vars** — use a dedicated prefix (e.g. `ORACLE_*`).

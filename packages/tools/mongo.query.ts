@@ -8,14 +8,14 @@
  * Only `find` and `aggregate` operations are supported.  Write operations
  * (insertOne, updateMany, deleteOne, drop, etc.) are not exposed.
  *
- * Implements the {@link createDbTool} pattern from `base-db-tool.ts`.
+ * Implements the {@link createDatabaseTool} pattern from `base-db-tool.ts`.
  * See that module for instructions on adding new database engines.
  *
  * @module tools/mongo.query
  */
 
 import { MongoClient, type Document } from 'mongodb';
-import { createDbTool as createDatabaseTool } from './base-db-tool';
+import { createDatabaseTool as createDatabaseTool } from './base-database-tool';
 
 /** Validated input shape for the MongoDB query tool. */
 interface IMongoQueryInput extends Record<string, unknown> {

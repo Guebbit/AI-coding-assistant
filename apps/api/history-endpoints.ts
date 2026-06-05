@@ -10,7 +10,7 @@ import {
     exportActivityLog,
     getActivityLogAvailability,
     listActivityLog
-} from '@/packages/persistence/db';
+} from '@/packages/persistence/database';
 import { buildResponseMeta, rejectResponse, successResponse } from '@/packages/shared';
 
 const DEFAULT_LIMIT = 100;

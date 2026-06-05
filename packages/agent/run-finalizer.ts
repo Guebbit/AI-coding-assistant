@@ -16,7 +16,7 @@ import { generate } from '../llm/ollama';
 import { resolveModel } from '../shared';
 import { writeDiagnosticLog, cleanupOldLogs } from '../diagnostics';
 import type { IDiagnosticEntry } from '../diagnostics';
-import { saveAgentRun } from '../persistence/db';
+import { saveAgentRun } from '../persistence/database';
 import { PolicyViolationError } from '../processors/policy';
 import type { IToolCitation } from '../tools/citations';
 import type { RunContext, IAgentRunMeta, IAgentRunResult } from './run-context';

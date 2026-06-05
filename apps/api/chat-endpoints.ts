@@ -37,7 +37,7 @@ import {
     createMessage,
     updateMessage,
     deleteMessage
-} from '@/packages/persistence/db';
+} from '@/packages/persistence/database';
 import type { ChatRole, IChatMessage } from '@/packages/persistence/types';
 
 /* ── Validation helpers ──────────────────────────────────────────────────── */

@@ -1,12 +1,12 @@
 /**
- * Unit tests for the envNumber helper (packages/shared/utils.ts).
+ * Unit tests for the envNumber helper (packages/shared/utilities.ts).
  *
  * envNumber parses environment variable strings into numbers using
  * parseFloat, returning a fallback on failure.
  */
 
 import { describe, it, expect } from 'vitest';
-import { envNumber } from '@/packages/shared/utils.js';
+import { envNumber } from '@/packages/shared/utilities.js';
 
 describe('envNumber', () => {
     it('returns the parsed float for a decimal string', () => {

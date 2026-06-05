@@ -12,14 +12,14 @@
  * (INSERT, UPDATE, DELETE, DROP, etc.) is rejected **before** it
  * reaches the database.
  *
- * Implements the {@link createDbTool} pattern from `base-db-tool.ts`.
+ * Implements the {@link createDatabaseTool} pattern from `base-db-tool.ts`.
  * See that module for instructions on adding new database engines.
  *
  * @module tools/pg.query
  */
 
 import pg from 'pg';
-import { createDbTool as createDatabaseTool, validateSqlInput } from './base-db-tool';
+import { createDatabaseTool as createDatabaseTool, validateSqlInput } from './base-database-tool';
 
 /** Shared PostgreSQL pool reused across tool calls. */
 let pgPool: pg.Pool | null = null;

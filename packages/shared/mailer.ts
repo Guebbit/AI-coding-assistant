@@ -16,7 +16,7 @@
  */
 
 import { createTransport, type SendMailOptions, type SentMessageInfo } from 'nodemailer';
-import { envNumber } from './utils';
+import { envNumber } from './utilities';
 
 /**
  * Returns `true` when the mailer is configured (i.e. `SMTP_HOST` is set).

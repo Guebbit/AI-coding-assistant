@@ -13,7 +13,7 @@
  * reaches the database.  Multi-statement execution is disabled at
  * the connection level for defence-in-depth.
  *
- * Implements the {@link createDbTool} pattern from `base-db-tool.ts`.
+ * Implements the {@link createDatabaseTool} pattern from `base-db-tool.ts`.
  * See that module for instructions on adding new database engines.
  *
  * @module tools/mysql.query
@@ -21,7 +21,7 @@
 
 import mysql from 'mysql2/promise';
 import type { ExecuteValues } from 'mysql2';
-import { createDbTool as createDatabaseTool, validateSqlInput } from './base-db-tool';
+import { createDatabaseTool as createDatabaseTool, validateSqlInput } from './base-database-tool';
 
 /** Shared MySQL pool reused across tool calls. */
 let mysqlPool: mysql.Pool | null = null;
